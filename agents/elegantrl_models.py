@@ -66,7 +66,7 @@ class DRLAgent:
             raise NotImplementedError("NotImplementedError")
 
         stock_dim = self.price_array.shape[1]
-        self.state_dim = 1 + 2 + 3 * stock_dim + self.tech_array.shape[1]
+        self.state_dim = 1 + stock_dim + self.tech_array.shape[1]
         self.action_dim = stock_dim
         self.env_args = {
             "env_name": "StockEnv",
@@ -158,7 +158,7 @@ class DRLAgent:
                 a_tensor.detach().cpu().numpy()[0]
             )  # not need detach(), because using torch.no_grad() outside
             state, reward, done, _ = env.step(action)
-            total_asset = env.amount + (env.price_ary[env.day] * env.stocks).sum()
+            total_asset = env.total_asset
             episode_total_assets.append(total_asset)
             episode_return = total_asset / env.initial_total_asset
             episode_returns.append(episode_return)
