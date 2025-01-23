@@ -701,65 +701,6 @@ ERL_PARAMS = {"learning_rate": 3e-6,"batch_size": 2048,"gamma":  0.985,
         "eval_times":1} 
 
 
-# DP = DataProcessor(data_source = 'alpaca',
-#                  API_KEY = API_KEY, 
-#                  API_SECRET = API_SECRET, 
-#                  API_BASE_URL = API_BASE_URL
-#                  )
-# data = DP.download_data(start_date = '2024-01-01', 
-#                        end_date = '2024-05-01',
-#                        ticker_list = ticker_list, 
-#                        time_interval= '10Min')
-# print(data.head())
-
-# data = DP.clean_data(data)
-# data = DP.add_technical_indicator(data, INDICATORS)
-# data = DP.add_vix(data)
-# print('shape of the date:', data.shape)
-# #save data into npy array file
-# np.save('./paperT_dow_30_data.npy', data)
-
-# train(start_date = '2024-01-01', 
-#       end_date = '2024-05-01',
-#       ticker_list = ticker_list, 
-#       data_source = 'alpaca',
-#       time_interval= '10Min', 
-#       technical_indicator_list= INDICATORS,
-#       drl_lib='elegantrl', 
-#       env=env,
-#       model_name='ppo',
-#       if_vix=True, 
-#       API_KEY = API_KEY, 
-#       API_SECRET = API_SECRET, 
-#       API_BASE_URL = API_BASE_URL,
-#       erl_params=ERL_PARAMS,
-#       cwd='./papertrading_erl', #current_working_dir
-#       break_step=1e5)
-
-# account_value_erl=test(start_date = '2024-05-02', 
-#                       end_date = '2024-05-15',
-#                       ticker_list = ticker_list, 
-#                       data_source = 'alpaca',
-#                       time_interval= '10Min', 
-#                       technical_indicator_list= INDICATORS,
-#                       drl_lib='elegantrl', 
-#                       env=env, 
-#                       model_name='ppo',
-#                       if_vix=True, 
-#                       API_KEY = API_KEY, 
-#                       API_SECRET = API_SECRET, 
-#                       API_BASE_URL = API_BASE_URL,
-#                       cwd='./papertrading_erl',
-#                       net_dimension = ERL_PARAMS['net_dimension'])
-# from finrl.plot import backtest_stats, backtest_plot, get_daily_return, get_baseline
-# import matplotlib
-# matplotlib.use('TkAgg')
-# print(account_value_erl)
-# #ploting the results:
-# plt.plot(account_value_erl)
-# plt.show()
-
-#seting up paper tarding on the alpaca:
 class AlpacaPaperTrading():
 
     def __init__(self,ticker_list, time_interval, drl_lib, agent, cwd, net_dim, 
@@ -1118,26 +1059,16 @@ class StockEnvEmpty(gym.Env):
 # year-month-day
 train(start_date='2025-01-01',
     end_date='2025-01-13',
-    ticker_list=CRYPTO_TICKER,   # <--- Use new list here
+    ticker_list=CRYPTO_TICKER, 
     data_source='binance',
     time_interval='5m',
     technical_indicator_list=INDICATORS,
     drl_lib='elegantrl',
-    env=CryptoTradingEnv,  # same custom env
+    env=CryptoTradingEnv,
     model_name='ppo',
-    if_vix=False,         # for crypto, typically skip VIX
+    if_vix=False,   # for crypto, typically skip 
+    erl_params=ERL_PARAMS,
+    cwd='./papertrading_crypto',
+    break_step=5e5,
+    gpu_id=0   
 )
-
-'''def train(
-    start_date,
-    end_date,
-    ticker_list,
-    data_source,
-    time_interval,
-    technical_indicator_list,
-    drl_lib,
-    env,
-    model_name,
-   
-    **kwargs,
-):'''
