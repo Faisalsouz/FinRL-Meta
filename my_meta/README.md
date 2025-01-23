@@ -223,6 +223,7 @@ Why: This pipeline can adapt to crypto or stocks with minimal changes, letting y
 
 
 
+<<<<<<< HEAD
 #######################################################################################
 #######################################################################################
 1. ActorPPO and CriticPPO
@@ -449,3 +450,5 @@ No formal “episode ends” in real time, so your code effectively trades indef
 
 
 
+=======
+>>>>>>> Added readme with some concepts of setup
