@@ -223,3 +223,111 @@ Why: This pipeline can adapt to crypto or stocks with minimal changes, letting y
 
 
 
+#######################################################################################
+#######################################################################################
+1. ActorPPO and CriticPPO
+(a) ActorPPO
+What it is: A policy network for the PPO algorithm. It outputs an action distribution (e.g., a Normal distribution) given the current state.
+Why we need it: PPO is an actor-critic method, which means we have two separate neural networks:
+Actor (policy) that decides actions.
+Critic (value function) that estimates how good a state (or state–action) is.
+(b) CriticPPO
+What it is: A value network for PPO.
+Why we need it: The Critic estimates 
+𝑉
+(
+𝑠
+)
+V(s) (or sometimes 
+𝑄
+(
+𝑠
+,
+𝑎
+)
+Q(s,a)) so that the PPO algorithm can compute advantages. The advantage function tells the Actor if a certain action was better or worse than the average expectation.
+Together, ActorPPO and CriticPPO are just neural network definitions that get used by the AgentPPO class. The agent orchestrates how to use them for training and action selection.
+
+2. AgentBase and AgentPPO
+(a) AgentBase
+What it is: A generic parent class for DRL agents. It might define:
+
+Common attributes like device (CPU vs. GPU),
+Common methods such as optimizer_update or soft_update,
+Shared hyperparameters (e.g. gamma, batch_size).
+Why we need it: The idea is to avoid rewriting the same initialization and utility functions for every RL algorithm. If you implement DDPG, TD3, PPO, etc., they all share some common structure (like handling device, optimizers).
+
+(b) AgentPPO
+What it is: A specific agent class implementing the PPO algorithm.
+Why we need it:
+It inherits from AgentBase.
+It specifically knows how to explore the environment with the PPO policy, store the data, compute advantages, and update the Actor and Critic with the PPO clipping objective.
+So, difference between AgentBase and AgentPPO:
+
+AgentBase = a generic template for agent code (device management, optimization scaffolding).
+AgentPPO = actual PPO logic (the ratio clipping, advantage calculation, etc.).
+3. DLRAgent
+What it is: A higher-level wrapper class that you or the FinRL code uses to:
+
+Initialize an environment with data arrays (price_array, tech_array, etc.),
+Generate the RL Config (like the agent class, net dimensions, etc.),
+Call train_model() or DRL_prediction().
+Why we need it: Instead of writing the lines to instantiate AgentPPO or AgentTD3 yourself, you can pass the model name (“ppo”, “ddpg”, etc.) to DLRAgent. It picks the correct agent class, sets up the environment, and runs the training.
+
+Difference between DLRAgent vs. AgentPPO:
+
+DLRAgent is more like a manager or coordinator that says, “Given I want to do PPO, let me build the environment and pass it to PPO.”
+AgentPPO is the actual algorithm that does forward/backprop steps with the neural networks.
+4. PendulumEnv
+What it is: A demo environment from gym. The classic Pendulum-v0 or Pendulum-v1 is often used as a test environment to show RL code working in a simpler control problem (swinging a pendulum).
+Why we need it: In many codebases, we keep PendulumEnv or similar “toy envs” around for quick debugging or demonstration.
+Connection to other environments:
+PendulumEnv is not directly related to your Stock/Crypto environment. It's just a minimal example.
+You can ignore it if you only focus on trading. But it’s often included to ensure your PPO code is correct on a known benchmark.
+5. Evaluator
+What it is: A helper class to evaluate the agent’s performance at intervals during training.
+
+Why we need it: The training code calls evaluator.evaluate_and_save(...) every so often (e.g., every 20k steps) to:
+
+Run the policy in the environment (without exploration noise).
+Compute average cumulative return over multiple test episodes.
+Possibly save the policy weights if it’s improved.
+Connection: The Evaluator uses the same environment class (like CryptoTradingEnv) but in a test mode. It’s purely for monitoring and logging how well the agent is doing.
+
+6. StockEnvEmpty
+What it is: A dummy environment with the correct action_dim and state_dim but no real data or step logic.
+Why:
+Some RL frameworks (like Ray’s RLlib or certain stable_baselines3 setups) require an environment class to be passed in for initialization.
+If you’re loading a policy checkpoint (like from RLlib’s PPO), you might not actually run the environment, but the library still asks for an env with the correct spaces.
+Is it used for real trading?
+No. It's basically a placeholder for library compatibility or for easily loading an RLlib model.
+Connection:
+Not used in your normal training or paper trading. Only used if you want to restore an RLlib agent with “something” that has matching observation/action spaces.
+7. Putting It All Together
+ActorPPO + CriticPPO
+The neural networks that define how to act (actor) and how to value states (critic).
+AgentBase
+A parent class that sets up basic agent structure (device, optimizers).
+AgentPPO
+A child class inheriting from AgentBase. It holds the actual PPO algorithm (clip ratio, advantage, etc.).
+DLRAgent
+A high-level wrapper that configures everything (which agent type, environment, hyperparameters) and calls the training or inference function.
+PendulumEnv
+A gym toy environment (unrelated to trading) used for testing your PPO or code logic.
+Evaluator
+A helper that checks the agent’s performance at certain intervals and saves the best model.
+StockEnvEmpty
+A dummy environment used for compatibility or loading RLlib/trainer agents.
+Final Summary
+The actor and critic are just neural network definitions for the PPO method.
+The agent classes (AgentBase, AgentPPO) define how to run and update those networks.
+The DLRAgent is a convenience wrapper to tie everything together for your user-facing code.
+PendulumEnv is a “toy” or “example” environment.
+StockEnvEmpty is a minimal “fake” environment used for library compatibility (like RLlib).
+Each piece plays a unique role in the structure of your RL pipeline.
+
+
+
+
+
+

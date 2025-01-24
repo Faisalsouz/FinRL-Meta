@@ -5,6 +5,7 @@ from __future__ import annotations
 # from finrl.config import INDICATORS
 # from finrl.meta.env_stock_trading.env_stocktrading_np import StockTradingEnv
 from my_meta.custom_crypto_env import CryptoTradingEnv
+from my_meta.custom_crypto_paper_trading import AlpacaPaperTradingCryptoLive
 from finrl.meta.env_stock_trading.env_stock_papertrading import AlpacaPaperTrading
 #from finrl.meta.data_processor import DataProcessor
 from meta.data_processor import DataProcessor
@@ -15,7 +16,7 @@ import pandas as pd
 import os
 import time
 import gym
-import numpy as np
+
 import numpy.random as rd
 import torch
 import torch.nn as nn
@@ -25,21 +26,30 @@ from torch.distributions.normal import Normal
 import torch
 from finrl.config import ERL_PARAMS
 
-from finrl.config import RLlib_PARAMS
-from finrl.config import SAC_PARAMS
-from finrl.config import TRAIN_END_DATE
-from finrl.config import TRAIN_START_DATE
-from finrl.config_tickers import DOW_30_TICKER
+# from finrl.config import RLlib_PARAMS
+# from finrl.config import SAC_PARAMS
+# from finrl.config import TRAIN_END_DATE
+# from finrl.config import TRAIN_START_DATE
+# from finrl.config_tickers import DOW_30_TICKER
 
-from finrl.config import RLlib_PARAMS
-from finrl.config import TEST_END_DATE
-from finrl.config import TEST_START_DATE
-from finrl.config_tickers import DOW_30_TICKER
+# from finrl.config import RLlib_PARAMS
+# from finrl.config import TEST_END_DATE
+# from finrl.config import TEST_START_DATE
+# from finrl.config_tickers import DOW_30_TICKER
 import matplotlib.pyplot as plt
-import threading
-import datetime
-from finrl.meta.data_processors.processor_alpaca import AlpacaProcessor
-import alpaca_trade_api as tradeapi
+
+
+
+
+
+
+
+
+
+
+
+# from finrl.meta.data_processors.processor_alpaca import AlpacaProcessor
+
 
 CRYPTO_TICKER = ["BTCUSDT", "ETHUSDT", "SOLUSDT"]  # Example
 ticker_list = CRYPTO_TICKER
@@ -187,6 +197,7 @@ class AgentBase:
 
         self.states = None  # assert self.states == (1, state_dim)
         self.device = torch.device(f"cuda:{gpu_id}" if (torch.cuda.is_available() and (gpu_id >= 0)) else "cpu")
+        print("Using device:", self.device)
 
         act_class = getattr(self, "act_class", None)
         cri_class = getattr(self, "cri_class", None)
@@ -681,320 +692,14 @@ def test(
 
 
         
-# parameters
-API_KEY = "PK0HYWTXV4JHULYVK2KY"
-API_SECRET = "11ErKPAJ8JdCy6LbSYRWPcEzdzZGse4iJgSzGl7g"
-API_BASE_URL = 'https://paper-api.alpaca.markets'
-data_url = 'wss://data.alpaca.markets'
-env = CryptoTradingEnv
-
-ticker_list = CRYPTO_TICKER
-action_dim = len(ticker_list)
-print(ticker_list)
-print(len(ticker_list))
-
-print(INDICATORS)
-state_dim = 1 + 3 * action_dim + len(INDICATORS) * action_dim
-print(state_dim)
-ERL_PARAMS = {"learning_rate": 3e-6,"batch_size": 2048,"gamma":  0.985,
-        "seed":312,"net_dimension":[128,64], "target_step":5000, "eval_gap":30,
-        "eval_times":1} 
 
 
-class AlpacaPaperTrading():
 
-    def __init__(self,ticker_list, time_interval, drl_lib, agent, cwd, net_dim, 
-                 state_dim, action_dim, API_KEY, API_SECRET, 
-                 API_BASE_URL, tech_indicator_list, turbulence_thresh=30, 
-                 max_stock=1e2, latency = None):
-        #load agent
-        self.drl_lib = drl_lib
-        if agent =='ppo':
-            if drl_lib == 'elegantrl':              
-                agent_class = AgentPPO
-                agent = agent_class(net_dim, state_dim, action_dim)
-                actor = agent.act
-                # load agent
-                try:  
-                    cwd = cwd + '/actor.pth'
-                    print(f"| load actor from: {cwd}")
-                    actor.load_state_dict(torch.load(cwd, map_location=lambda storage, loc: storage))
-                    self.act = actor
-                    self.device = agent.device
-                except BaseException:
-                    raise ValueError("Fail to load agent!")
-                        
-            elif drl_lib == 'rllib':
-                from ray.rllib.agents import ppo
-                from ray.rllib.agents.ppo.ppo import PPOTrainer
-                
-                config = ppo.DEFAULT_CONFIG.copy()
-                config['env'] = StockEnvEmpty
-                config["log_level"] = "WARN"
-                config['env_config'] = {'state_dim':state_dim,
-                            'action_dim':action_dim,}
-                trainer = PPOTrainer(env=StockEnvEmpty, config=config)
-                trainer.restore(cwd)
-                try:
-                    trainer.restore(cwd)
-                    self.agent = trainer
-                    print("Restoring from checkpoint path", cwd)
-                except:
-                    raise ValueError('Fail to load agent!')
-                    
-            elif drl_lib == 'stable_baselines3':
-                from stable_baselines3 import PPO
-                
-                try:
-                    #load agent
-                    self.model = PPO.load(cwd)
-                    print("Successfully load model", cwd)
-                except:
-                    raise ValueError('Fail to load agent!')
-                    
-            else:
-                raise ValueError('The DRL library input is NOT supported yet. Please check your input.')
-               
-        else:
-            raise ValueError('Agent input is NOT supported yet.')
-            
-            
-            
-        #connect to Alpaca trading API
-        try:
-            self.alpaca = tradeapi.REST(API_KEY,API_SECRET,API_BASE_URL, 'v2')
-        except:
-            raise ValueError('Fail to connect Alpaca. Please check account info and internet connection.')
-        
-        #read trading time interval
-        if time_interval == '1s':
-            self.time_interval = 1
-        elif time_interval == '5s':
-            self.time_interval = 5
-        elif time_interval == '1Min':
-            self.time_interval = 60
-        elif time_interval == '5Min':
-            self.time_interval = 60 * 5
-        elif time_interval == '15Min':
-            self.time_interval = 60 * 15
-        else:
-            raise ValueError('Time interval input is NOT supported yet.')
-        
-        #read trading settings
-        self.tech_indicator_list = tech_indicator_list
-        self.turbulence_thresh = turbulence_thresh
-        self.max_stock = max_stock 
-        
-        #initialize account
-        self.stocks = np.asarray([0] * len(ticker_list)) #stocks holding
-        self.stocks_cd = np.zeros_like(self.stocks) 
-        self.cash = None #cash record 
-        self.stocks_df = pd.DataFrame(self.stocks, columns=['stocks'], index = ticker_list)
-        self.asset_list = []
-        self.price = np.asarray([0] * len(ticker_list))
-        self.stockUniverse = ticker_list
-        self.turbulence_bool = 0
-        self.equities = []
-        
-    def test_latency(self, test_times = 10): 
-        total_time = 0
-        for i in range(0, test_times):
-            time0 = time.time()
-            self.get_state()
-            time1 = time.time()
-            temp_time = time1 - time0
-            total_time += temp_time
-        latency = total_time/test_times
-        print('latency for data processing: ', latency)
-        return latency
-        
-    def run(self):
-        orders = self.alpaca.list_orders(status="open")
-        for order in orders:
-          self.alpaca.cancel_order(order.id)
-    
-        # Wait for market to open.
-        print("Waiting for market to open...")
-        tAMO = threading.Thread(target=self.awaitMarketOpen)
-        tAMO.start()
-        tAMO.join()
-        print("Market opened.")
-        while True:
 
-          # Figure out when the market will close so we can prepare to sell beforehand.
-          clock = self.alpaca.get_clock()
-          closingTime = clock.next_close.replace(tzinfo=datetime.timezone.utc).timestamp()
-          currTime = clock.timestamp.replace(tzinfo=datetime.timezone.utc).timestamp()
-          self.timeToClose = closingTime - currTime
-    
-          if(self.timeToClose < (60)):
-            # Close all positions when 1 minutes til market close.
-            print("Market closing soon. Stop trading.")
-            break
-            
-            '''# Close all positions when 1 minutes til market close.
-            print("Market closing soon.  Closing positions.")
-    
-            positions = self.alpaca.list_positions()
-            for position in positions:
-              if(position.side == 'long'):
-                orderSide = 'sell'
-              else:
-                orderSide = 'buy'
-              qty = abs(int(float(position.qty)))
-              respSO = []
-              tSubmitOrder = threading.Thread(target=self.submitOrder(qty, position.symbol, orderSide, respSO))
-              tSubmitOrder.start()
-              tSubmitOrder.join()
-    
-            # Run script again after market close for next trading day.
-            print("Sleeping until market close (15 minutes).")
-            time.sleep(60 * 15)'''
-            
-          else:
-            trade = threading.Thread(target=self.trade)
-            trade.start()
-            trade.join()
-            last_equity = float(self.alpaca.get_account().last_equity)
-            cur_time = time.time()
-            self.equities.append([cur_time,last_equity])
-            time.sleep(self.time_interval)
-            
-    def awaitMarketOpen(self):
-        isOpen = self.alpaca.get_clock().is_open
-        while(not isOpen):
-          clock = self.alpaca.get_clock()
-          openingTime = clock.next_open.replace(tzinfo=datetime.timezone.utc).timestamp()
-          currTime = clock.timestamp.replace(tzinfo=datetime.timezone.utc).timestamp()
-          timeToOpen = int((openingTime - currTime) / 60)
-          print(str(timeToOpen) + " minutes til market open.")
-          time.sleep(60)
-          isOpen = self.alpaca.get_clock().is_open
-    
-    def trade(self):
-        state = self.get_state()
-        
-        if self.drl_lib == 'elegantrl':
-            with torch.no_grad():
-                s_tensor = torch.as_tensor((state,), device=self.device)
-                a_tensor = self.act(s_tensor)  
-                action = a_tensor.detach().cpu().numpy()[0]  
-            action = (action * self.max_stock).astype(int)
-            
-        elif self.drl_lib == 'rllib':
-            action = self.agent.compute_single_action(state)
-        
-        elif self.drl_lib == 'stable_baselines3':
-            action = self.model.predict(state)[0]
-            
-        else:
-            raise ValueError('The DRL library input is NOT supported yet. Please check your input.')
-        
-        self.stocks_cd += 1
-        if self.turbulence_bool == 0:
-            min_action = 10  # stock_cd
-            for index in np.where(action < -min_action)[0]:  # sell_index:
-                sell_num_shares = min(self.stocks[index], -action[index])
-                qty =  abs(int(sell_num_shares))
-                respSO = []
-                tSubmitOrder = threading.Thread(target=self.submitOrder(qty, self.stockUniverse[index], 'sell', respSO))
-                tSubmitOrder.start()
-                tSubmitOrder.join()
-                self.cash = float(self.alpaca.get_account().cash)
-                self.stocks_cd[index] = 0
 
-            for index in np.where(action > min_action)[0]:  # buy_index:
-                if self.cash < 0:
-                    tmp_cash = 0
-                else:
-                    tmp_cash = self.cash
-                buy_num_shares = min(tmp_cash // self.price[index], abs(int(action[index])))
-                if (buy_num_shares != buy_num_shares): # if buy_num_change = nan
-                    qty = 0 # set to 0 quantity
-                else:
-                    qty = abs(int(buy_num_shares))
-                qty = abs(int(buy_num_shares))
-                respSO = []
-                tSubmitOrder = threading.Thread(target=self.submitOrder(qty, self.stockUniverse[index], 'buy', respSO))
-                tSubmitOrder.start()
-                tSubmitOrder.join()
-                self.cash = float(self.alpaca.get_account().cash)
-                self.stocks_cd[index] = 0
-                
-        else:  # sell all when turbulence
-            positions = self.alpaca.list_positions()
-            for position in positions:
-                if(position.side == 'long'):
-                    orderSide = 'sell'
-                else:
-                    orderSide = 'buy'
-                qty = abs(int(float(position.qty)))
-                respSO = []
-                tSubmitOrder = threading.Thread(target=self.submitOrder(qty, position.symbol, orderSide, respSO))
-                tSubmitOrder.start()
-                tSubmitOrder.join()
-            
-            self.stocks_cd[:] = 0
-            
-    
-    def get_state(self):
-        alpaca = AlpacaProcessor(api=self.alpaca)
-        price, tech, turbulence = alpaca.fetch_latest_data(ticker_list = self.stockUniverse, time_interval='1Min',
-                                                     tech_indicator_list=self.tech_indicator_list)
-        turbulence_bool = 1 if turbulence >= self.turbulence_thresh else 0
-        
-        turbulence = (self.sigmoid_sign(turbulence, self.turbulence_thresh) * 2 ** -5).astype(np.float32)
-        
-        tech = tech * 2 ** -7
-        positions = self.alpaca.list_positions()
-        stocks = [0] * len(self.stockUniverse)
-        for position in positions:
-            ind = self.stockUniverse.index(position.symbol)
-            stocks[ind] = ( abs(int(float(position.qty))))
-        
-        stocks = np.asarray(stocks, dtype = float)
-        cash = float(self.alpaca.get_account().cash)
-        self.cash = cash
-        self.stocks = stocks
-        self.turbulence_bool = turbulence_bool 
-        self.price = price
-        
-        
-        
-        amount = np.array(self.cash * (2 ** -12), dtype=np.float32)
-        scale = np.array(2 ** -6, dtype=np.float32)
-        state = np.hstack((amount,
-                    turbulence,
-                    self.turbulence_bool,
-                    price * scale,
-                    self.stocks * scale,
-                    self.stocks_cd,
-                    tech,
-                    )).astype(np.float32)
-        state[np.isnan(state)] = 0.0
-        state[np.isinf(state)] = 0.0
-        print(len(self.stockUniverse))
-        return state
-        
-    def submitOrder(self, qty, stock, side, resp):
-        if(qty > 0):
-          try:
-            self.alpaca.submit_order(stock, qty, side, "market", "day")
-            print("Market order of | " + str(qty) + " " + stock + " " + side + " | completed.")
-            resp.append(True)
-          except:
-            print("Order of | " + str(qty) + " " + stock + " " + side + " | did not go through.")
-            resp.append(False)
-        else:
-          print("Quantity is 0, order of | " + str(qty) + " " + stock + " " + side + " | not completed.")
-          resp.append(True)
 
-    @staticmethod
-    def sigmoid_sign(ary, thresh):
-        def sigmoid(x):
-            return 1 / (1 + np.exp(-x * np.e)) - 0.5
 
-        return sigmoid(ary / thresh) * thresh
+
     
 class StockEnvEmpty(gym.Env):
     #Empty Env used for loading rllib agent
@@ -1016,8 +721,61 @@ class StockEnvEmpty(gym.Env):
 
     def step(self, actions):
         return
-    
-    # runing the paper trading:
+############################################
+# parameters for training and paper trading.
+############################################
+data_url = 'wss://data.alpaca.markets'
+env = CryptoTradingEnv
+ticker_list = CRYPTO_TICKER
+action_dim = len(ticker_list) # for training 
+print(ticker_list)
+print(len(ticker_list))
+print(INDICATORS)
+state_dim = 1 + 3 * action_dim + len(INDICATORS) * action_dim # for Traning.
+print(state_dim)
+ERL_PARAMS = {"learning_rate": 3e-6,"batch_size": 2048,"gamma":  0.985,
+        "seed":312,"net_dimension":[128,64], "target_step":5000, "eval_gap":30,
+        "eval_times":1} # For training.
+#############################
+# end of the parameters
+#############################
+
+
+# runing the paper trading:
+
+CRYPTO_TICKER = ["BTCUSD", "ETHUSD", "SOLUSD"]  # or any supported by Alpaca
+INDICATORS = ["macd","rsi","cci","dx"]
+API_KEY = "PK0HYWTXV4JHULYVK2KY"
+API_SECRET = "11ErKPAJ8JdCy6LbSYRWPcEzdzZGse4iJgSzGl7g"
+API_BASE_URL = "https://paper-api.alpaca.markets" #new url for crpto wss://stream.data.alpaca.markets/v1beta3/crypto/us
+agent_cwd = "FinRL_Meta/papertrading_crypto"  # folder containing actor.pth from training
+net_dimensions = [128,64]    # same as you used in training
+# typical state_dim for:  1 + 3*action_dim + len(INDICATORS)*action_dim
+# e.g. 1 + 3*3 + 4*3 = 1 + 9 + 12 = 22 (for 3 tickers, 4 indicators)
+# state_dimension = 22
+# action_dimension = len(CRYPTO_TICKER)
+
+crp_paper_ttarding = AlpacaPaperTradingCryptoLive(
+        ticker_list=CRYPTO_TICKER,
+        time_interval='5Min',
+        drl_lib='elegantrl',
+        agent='ppo',
+        cwd=agent_cwd,
+        net_dim=net_dimensions,
+        state_dim=state_dim,
+        action_dim=action_dim,
+        API_KEY=API_KEY,
+        API_SECRET=API_SECRET,
+        API_BASE_URL=API_BASE_URL,
+        tech_indicator_list=INDICATORS,
+        max_stock=100.0
+    )
+crp_paper_ttarding.run()
+
+###########################
+#  old paper training call
+###########################
+
 # paper_trading_erl = AlpacaPaperTrading(ticker_list = DOW_30_TICKER, 
 #                                     time_interval = '1Min', 
 #                                     drl_lib = 'elegantrl', 
@@ -1035,40 +793,26 @@ class StockEnvEmpty(gym.Env):
 # paper_trading_erl.run()
 
 
-#############################
-# Train function for crpyto environment. 
-#################################
-# train(
-#     start_date='2025-01-01',
-#     end_date='2025-02-01',
-#     ticker_list=CRYPTO_TICKER,   # <--- Use new list here
+
+
+
+
+##################################
+# start training. function
+##################################
+
+# train(start_date='2024-01-01',
+#     end_date='2025-01-24',
+#     ticker_list=CRYPTO_TICKER, 
 #     data_source='binance',
-#     time_interval='15Min',
+#     time_interval='5m',
 #     technical_indicator_list=INDICATORS,
 #     drl_lib='elegantrl',
-#     env=StockTradingEnv,  # same custom env
+#     env=CryptoTradingEnv,
 #     model_name='ppo',
-#     if_vix=False,         # for crypto, typically skip VIX
-#     API_KEY=API_KEY,
-#     API_SECRET=API_SECRET,
-#     API_BASE_URL=API_BASE_URL,
+#     if_vix=False,   # for crypto, typically skip 
 #     erl_params=ERL_PARAMS,
-#     cwd='./papertrading_crypto', # new folder for saving
-#     break_step=1e5
-# ) 
-# year-month-day
-train(start_date='2025-01-01',
-    end_date='2025-01-13',
-    ticker_list=CRYPTO_TICKER, 
-    data_source='binance',
-    time_interval='5m',
-    technical_indicator_list=INDICATORS,
-    drl_lib='elegantrl',
-    env=CryptoTradingEnv,
-    model_name='ppo',
-    if_vix=False,   # for crypto, typically skip 
-    erl_params=ERL_PARAMS,
-    cwd='./papertrading_crypto',
-    break_step=5e5,
-    gpu_id=0   
-)
+#     cwd='./papertrading_crypto',
+#     break_step=1e5,
+#     gpu_id=0   
+# )
