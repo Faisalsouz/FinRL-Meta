@@ -224,6 +224,9 @@ Why: This pipeline can adapt to crypto or stocks with minimal changes, letting y
 
 
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> Added custom paper trading env
 #######################################################################################
 #######################################################################################
 1. ActorPPO and CriticPPO
@@ -328,6 +331,7 @@ StockEnvEmpty is a minimal “fake” environment used for library compatibility
 Each piece plays a unique role in the structure of your RL pipeline.
 
 
+<<<<<<< HEAD
 ################################## paper trading. #####################################
 
 1. Overall Flow
@@ -452,3 +456,9 @@ No formal “episode ends” in real time, so your code effectively trades indef
 
 =======
 >>>>>>> Added readme with some concepts of setup
+=======
+
+
+
+
+>>>>>>> Added custom paper trading env

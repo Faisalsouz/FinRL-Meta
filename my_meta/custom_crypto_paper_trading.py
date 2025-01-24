@@ -15,6 +15,7 @@ import numpy as np
 ##########################################################
 # 1) Function: fetch_latest_data_crypto
 ##########################################################
+<<<<<<< HEAD
 import pandas as pd
 import numpy as np
 import datetime as dt
@@ -116,11 +117,37 @@ def fetch_latest_data_crypto(
         tmp_df = barset.df.reset_index()  # => columns: ['symbol','timestamp','open','high','low','close','volume']
         if tmp_df.empty:
             continue
+=======
+def fetch_latest_data_crypto(
+    api,
+    ticker_list,
+    time_interval,
+    tech_indicator_list,
+    limit=100,
+    data_source="alpaca",    # e.g. "alpaca" or "ccxt"
+    select_stockstats_talib=0
+):
+    """
+    Fetch recent crypto bars from Alpaca, compute real indicators, return the last price & tech arrays.
+    """
+    data_df_list = []
+
+    # 1) Pull bars from Alpaca
+    for tic in ticker_list:
+        barset = api.get_crypto_bars(
+            symbol=tic,
+            timeframe=time_interval,
+            limit=limit,
+            exchanges='US'
+        )
+        tmp_df = barset.df.reset_index()  # => columns: ['symbol','timestamp','open','high','low','close','volume','tic']
+>>>>>>> Added custom paper trading env
         tmp_df['tic'] = tic
         # rename 'timestamp' -> 'time'
         tmp_df.rename(columns={'timestamp':'time'}, inplace=True)
         data_df_list.append(tmp_df)
 
+<<<<<<< HEAD
     if len(data_df_list) == 0:
         # No data at all
         return np.array([]), np.array([])
@@ -225,6 +252,127 @@ def _calculate_indicators_generic(
     df = df.dropna(axis=0, how='any').reset_index(drop=True)
 
     return df
+=======
+    if len(data_df_list)==0:
+        return np.array([]), np.array([])
+
+    df = pd.concat(data_df_list, ignore_index=True)
+    # Now df columns might be: ['symbol','time','open','high','low','close','volume','tic']
+
+    # 2) Actually compute real indicators
+    df = calculate_technical_indicators(
+        df=df,
+        data_source=data_source,
+        tech_indicator_list=tech_indicator_list,
+        select_stockstats_talib=select_stockstats_talib,
+        drop_na_timesteps=1
+    )
+
+    # 3) Take the last row per ticker => "latest" bar
+    #    We want 1 row per ticker for final state
+    latest_rows = df.groupby('tic').tail(1).copy()
+    # match order
+    latest_rows['sort_order'] = latest_rows['tic'].apply(lambda x: ticker_list.index(x))
+    latest_rows.sort_values('sort_order', inplace=True)
+
+    # 4) Extract final arrays:
+    latest_price = latest_rows['close'].values.astype(np.float32)
+
+    # gather indicator columns from tech_indicator_list
+    # e.g. if stockstats approach => we might have them named exactly same
+    # if talib approach => they might be 'macd','rsi','cci','dx' in df
+    tech_list_data = []
+    for indicator in tech_indicator_list:
+        tech_list_data.append(latest_rows[indicator].values.astype(np.float32))
+
+    latest_tech = np.array(tech_list_data).T  # shape (#tickers, #indicators)
+
+    return latest_price, latest_tech
+
+
+def calculate_technical_indicators(
+    df: pd.DataFrame,
+    data_source: str,
+    tech_indicator_list: list,
+    select_stockstats_talib: int = 0,
+    drop_na_timesteps: int = 1
+) -> pd.DataFrame:
+    """
+    Calculate technical indicators using either stockstats or talib,
+    then return the enriched dataframe.
+
+    df must have columns: ['time','tic','open','high','low','close','volume'].
+
+    data_source : e.g. "ccxt","binance","alpaca", etc. for minor naming differences
+    tech_indicator_list : e.g. ['macd','rsi','cci','dx']
+    select_stockstats_talib : 0 => stockstats, 1 => talib
+    drop_na_timesteps : if 1, remove any timesteps with NaN indicator values
+    """
+
+    # rename date -> time if needed
+    if "date" in df.columns:
+        df.rename(columns={"date": "time"}, inplace=True)
+
+    # if coming from ccxt or other source might need minor renaming
+    if data_source == "ccxt":
+        if "index" in df.columns:
+            df.rename(columns={"index":"time"}, inplace=True)
+
+    df.reset_index(drop=False, inplace=True)
+    # remove weird multi-level columns if they exist
+    if "level_1" in df.columns:
+        df.drop(columns=["level_1"], inplace=True)
+    if "level_0" in df.columns and "tic" not in df.columns:
+        df.rename(columns={"level_0": "tic"}, inplace=True)
+
+    print("tech_indicator_list:", tech_indicator_list)
+
+    # === Stockstats approach
+    if select_stockstats_talib == 0:
+        stock = stockstats.StockDataFrame.retype(df)
+        unique_tickers = stock.tic.unique()
+        for indicator in tech_indicator_list:
+            print("Calculating indicator:", indicator)
+            indicator_df = pd.DataFrame()
+            for tic in unique_tickers:
+                try:
+                    temp_indicator = stock[stock.tic == tic][indicator]
+                    temp_indicator = pd.DataFrame(temp_indicator)
+                    temp_indicator["tic"] = tic
+                    # match times
+                    temp_indicator["time"] = df[df.tic == tic]["time"].to_list()
+                    indicator_df = pd.concat([indicator_df, temp_indicator],
+                                             ignore_index=True)
+                except Exception as e:
+                    print("Indicator error:", e)
+            if not indicator_df.empty:
+                df = df.merge(indicator_df[["tic","time",indicator]],
+                              on=["tic","time"], how="left")
+
+    # === Talib approach
+    else:
+        final_df = pd.DataFrame()
+        for tic in df.tic.unique():
+            tic_df = df[df.tic == tic].copy()
+            # Example: compute macd, rsi, cci, dx using talib
+            macd, macd_signal, macd_hist = talib.MACD(
+                tic_df["close"], fastperiod=12, slowperiod=26, signalperiod=9
+            )
+            rsi = talib.RSI(tic_df["close"], timeperiod=14)
+            cci = talib.CCI(tic_df["high"], tic_df["low"], tic_df["close"], timeperiod=14)
+            dx  = talib.DX(tic_df["high"], tic_df["low"], tic_df["close"], timeperiod=14)
+
+            tic_df["macd"] = macd
+            tic_df["macd_signal"] = macd_signal
+            tic_df["macd_hist"] = macd_hist
+            tic_df["rsi"] = rsi
+            tic_df["cci"] = cci
+            tic_df["dx"] = dx
+
+            final_df = pd.concat([final_df, tic_df], axis=0)
+
+        df = final_df
+>>>>>>> Added custom paper trading env
 
     # sort & optionally drop NaN timesteps
     df.sort_values(by=["time","tic"], inplace=True)
@@ -262,10 +410,13 @@ class AlpacaPaperTradingCryptoLive:
         tech_indicator_list,   # e.g. ['macd','rsi','cci','dx']
         max_stock=1e2,         # scale factor for buy/sell
     ):
+<<<<<<< HEAD
         self.API_BASE_URL=API_BASE_URL
         self.API_SECRET=API_SECRET
         self.API_KEY=API_KEY
         
+=======
+>>>>>>> Added custom paper trading env
         # 1) Load the trained PPO actor
         self.drl_lib = drl_lib
         if agent == 'ppo':
@@ -343,6 +494,7 @@ class AlpacaPaperTradingCryptoLive:
         state = self.get_state()
         if self.drl_lib == 'elegantrl':
             with torch.no_grad():
+<<<<<<< HEAD
                 # new (no warning)
                 s_tensor = torch.as_tensor(state, dtype=torch.float32, device=self.device).unsqueeze(0)
 
@@ -351,6 +503,12 @@ class AlpacaPaperTradingCryptoLive:
                 print('Actions value at function trade before scaling,:', action)
             action = (action * self.max_stock).astype(int)
             print('Actions value at function trade,:', action)
+=======
+                s_tensor = torch.as_tensor([state], dtype=torch.float32, device=self.device)
+                a_tensor = self.act(s_tensor)
+                action = a_tensor.detach().cpu().numpy()[0]
+            action = (action * self.max_stock).astype(int)
+>>>>>>> Added custom paper trading env
         else:
             # placeholder
             action = np.zeros(len(self.stockUniverse))
@@ -390,6 +548,7 @@ class AlpacaPaperTradingCryptoLive:
         (defined above in the same file).
         Build a state vector of [scaled_cash, price*scale, stocks*scale, stocks_cd, tech_indicators].
         """
+<<<<<<< HEAD
         
        
         price, tech = fetch_latest_data_crypto(
@@ -400,6 +559,14 @@ class AlpacaPaperTradingCryptoLive:
             time_interval='1Min',  # or '5Min'
             tech_indicator_list=self.tech_indicator_list,
        
+=======
+        price, tech = fetch_latest_data_crypto(
+            api=self.alpaca,
+            ticker_list=self.stockUniverse,
+            time_interval='1Min',  # or '5Min'
+            tech_indicator_list=self.tech_indicator_list,
+            limit=100,  # enough bars for MACD etc.
+>>>>>>> Added custom paper trading env
             data_source="alpaca",
             select_stockstats_talib=1  # if you want the talib approach
         )
