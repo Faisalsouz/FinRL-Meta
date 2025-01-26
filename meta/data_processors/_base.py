@@ -154,17 +154,112 @@ class _Base:
 
     # select_stockstats_talib: 0 (stockstats, default), or 1 (use talib). Users can choose the method.
     # drop_na_timestep: 0 (not dropping timesteps that contain nan), or 1 (dropping timesteps that contain nan, default). Users can choose the method.
+    # def add_technical_indicator(
+    #     self,
+    #     tech_indicator_list: List[str],
+    #     select_stockstats_talib: int = 0,
+    #     drop_na_timesteps: int = 1,
+    # ):
+    #     """
+    #     calculate technical indicators
+    #     use stockstats/talib package to add technical inidactors
+    #     :param data: (df) pandas dataframe
+    #     :return: (df) pandas dataframe
+    #     """
+    #     if "date" in self.dataframe.columns.values.tolist():
+    #         self.dataframe.rename(columns={"date": "time"}, inplace=True)
+
+    #     if self.data_source == "ccxt":
+    #         self.dataframe.rename(columns={"index": "time"}, inplace=True)
+
+    #     self.dataframe.reset_index(drop=False, inplace=True)
+    #     if "level_1" in self.dataframe.columns:
+    #         self.dataframe.drop(columns=["level_1"], inplace=True)
+    #     if "level_0" in self.dataframe.columns and "tic" not in self.dataframe.columns:
+    #         self.dataframe.rename(columns={"level_0": "tic"}, inplace=True)
+    #     assert select_stockstats_talib in {0, 1}
+    #     print("tech_indicator_list: ", tech_indicator_list)
+    #     if select_stockstats_talib == 0:  # use stockstats
+    #         stock = stockstats.StockDataFrame.retype(self.dataframe)
+    #         unique_ticker = stock.tic.unique()
+    #         for indicator in tech_indicator_list:
+    #             print("indicator: ", indicator)
+    #             indicator_df = pd.DataFrame()
+    #             for i in range(len(unique_ticker)):
+    #                 try:
+    #                     temp_indicator = stock[stock.tic == unique_ticker[i]][indicator]
+    #                     temp_indicator = pd.DataFrame(temp_indicator)
+    #                     temp_indicator["tic"] = unique_ticker[i]
+    #                     temp_indicator["time"] = self.dataframe[
+    #                         self.dataframe.tic == unique_ticker[i]
+    #                     ]["time"].to_list()
+    #                     indicator_df = pd.concat(
+    #                         [indicator_df, temp_indicator],
+    #                         axis=0,
+    #                         join="outer",
+    #                         ignore_index=True,
+    #                     )
+    #                 except Exception as e:
+    #                     print(e)
+    #             if not indicator_df.empty:
+    #                 self.dataframe = self.dataframe.merge(
+    #                     indicator_df[["tic", "time", indicator]],
+    #                     on=["tic", "time"],
+    #                     how="left",
+    #                 )
+    #     else:  # use talib
+    #         final_df = pd.DataFrame()
+    #         for i in self.dataframe.tic.unique():
+    #             tic_df = self.dataframe[self.dataframe.tic == i]
+    #             (
+    #                 tic_df.loc["macd"],
+    #                 tic_df.loc["macd_signal"],
+    #                 tic_df.loc["macd_hist"],
+    #             ) = talib.MACD(
+    #                 tic_df["close"],
+    #                 fastperiod=12,
+    #                 slowperiod=26,
+    #                 signalperiod=9,
+    #             )
+    #             tic_df.loc["rsi"] = talib.RSI(tic_df["close"], timeperiod=14)
+    #             tic_df.loc["cci"] = talib.CCI(
+    #                 tic_df["high"],
+    #                 tic_df["low"],
+    #                 tic_df["close"],
+    #                 timeperiod=14,
+    #             )
+    #             tic_df.loc["dx"] = talib.DX(
+    #                 tic_df["high"],
+    #                 tic_df["low"],
+    #                 tic_df["close"],
+    #                 timeperiod=14,
+    #             )
+    #             final_df = pd.concat([final_df, tic_df], axis=0, join="outer")
+    #         self.dataframe = final_df
+
+    #     self.dataframe.sort_values(by=["time", "tic"], inplace=True)
+    #     if drop_na_timesteps:
+    #         time_to_drop = self.dataframe[
+    #             self.dataframe.isna().any(axis=1)
+    #         ].time.unique()
+    #         self.dataframe = self.dataframe[~self.dataframe.time.isin(time_to_drop)]
+    #     print("Succesfully add technical indicators")
+
+
     def add_technical_indicator(
         self,
-        tech_indicator_list: List[str],
+        tech_indicator_list,
         select_stockstats_talib: int = 0,
         drop_na_timesteps: int = 1,
     ):
         """
-        calculate technical indicators
-        use stockstats/talib package to add technical inidactors
-        :param data: (df) pandas dataframe
-        :return: (df) pandas dataframe
+        Calculate technical indicators using Stockstats or TALib, 
+        then merge them into self.dataframe. 
+        (Modified approach to avoid length mismatches.)
+
+        :param tech_indicator_list: List of indicators, e.g. ["macd","rsi_14","cci_14","dx_14"]
+        :param select_stockstats_talib: 0 => use stockstats, 1 => use talib
+        :param drop_na_timesteps: 0 => keep NaN rows, 1 => drop any row with NaN in any column
         """
         if "date" in self.dataframe.columns.values.tolist():
             self.dataframe.rename(columns={"date": "time"}, inplace=True)
@@ -177,73 +272,108 @@ class _Base:
             self.dataframe.drop(columns=["level_1"], inplace=True)
         if "level_0" in self.dataframe.columns and "tic" not in self.dataframe.columns:
             self.dataframe.rename(columns={"level_0": "tic"}, inplace=True)
-        assert select_stockstats_talib in {0, 1}
+
         print("tech_indicator_list: ", tech_indicator_list)
+
         if select_stockstats_talib == 0:  # use stockstats
             stock = stockstats.StockDataFrame.retype(self.dataframe)
-            unique_ticker = stock.tic.unique()
+
+            unique_tickers = stock['tic'].unique()
+
+            # We'll build up a big DataFrame with columns [time, tic, indicator]
+            # and then merge it once at the end.
             for indicator in tech_indicator_list:
                 print("indicator: ", indicator)
+
                 indicator_df = pd.DataFrame()
-                for i in range(len(unique_ticker)):
+
+                for tkr in unique_tickers:
+                    sub_df = stock[stock['tic'] == tkr]  # same ticker slice
+
+                    # If Stockstats doesn't directly create the column "indicator", 
+                    # you might need to do 'sub_df.get(indicator)' or 'sub_df[indicator]' to force calculation
                     try:
-                        temp_indicator = stock[stock.tic == unique_ticker[i]][indicator]
-                        temp_indicator = pd.DataFrame(temp_indicator)
-                        temp_indicator["tic"] = unique_ticker[i]
-                        temp_indicator["time"] = self.dataframe[
-                            self.dataframe.tic == unique_ticker[i]
-                        ]["time"].to_list()
-                        indicator_df = pd.concat(
-                            [indicator_df, temp_indicator],
-                            axis=0,
-                            join="outer",
-                            ignore_index=True,
-                        )
+                        _ = sub_df[indicator]  # force computation
                     except Exception as e:
                         print(e)
+                        continue
+
+                    # Convert the sub_df's [indicator] series to a small df
+                    temp_indicator = pd.DataFrame(sub_df[indicator]).copy()  # <-- CHANGED
+                    temp_indicator.reset_index(inplace=True)                 # <-- CHANGED
+                    # Now temp_indicator has columns like ['index','(indicator_name)']
+                    # the 'index' might be the original row index (which includes 'time') in some form
+
+                    # We also want 'time','tic' in this small DF
+                    # If your original dataframe has 'time' in the index, then your 'index' might be time. 
+                    # We'll re-merge carefully:
+                    temp_indicator['tic'] = tkr   # set ticker
+                    # If your original stock frame uses numeric index, we can merge on that index,
+                    # or we can do:
+                    #   temp_indicator['time'] = sub_df['time'].values
+                    #   but be sure lengths match:
+
+                    # Instead, let's store the old index in a column if needed:
+                    # If sub_df has a 'time' column, we can do the following:
+                    temp_indicator['time'] = sub_df['time'].values  # <-- CHANGED line
+
+                    # Now 'temp_indicator' columns: ['index','(indicator)','tic','time']
+                    # We'll keep only the needed ones:
+                    keep_cols = ['time','tic', indicator]
+                    temp_indicator = temp_indicator[keep_cols]
+
+                    # Accumulate for this indicator
+                    indicator_df = pd.concat([indicator_df, temp_indicator],
+                                            ignore_index=True)
+
+                # After gathering all tickers for this indicator, merge it back
                 if not indicator_df.empty:
-                    self.dataframe = self.dataframe.merge(
-                        indicator_df[["tic", "time", indicator]],
-                        on=["tic", "time"],
-                        how="left",
-                    )
+                    self.dataframe = pd.merge(
+                        self.dataframe,
+                        indicator_df,
+                        on=['time','tic'],
+                        how='left'
+                    )  # <-- CHANGED: merges by 'time' and 'tic' instead of forcing same row length
+
         else:  # use talib
+            # The original talib approach
             final_df = pd.DataFrame()
             for i in self.dataframe.tic.unique():
-                tic_df = self.dataframe[self.dataframe.tic == i]
-                (
-                    tic_df.loc["macd"],
-                    tic_df.loc["macd_signal"],
-                    tic_df.loc["macd_hist"],
-                ) = talib.MACD(
-                    tic_df["close"],
-                    fastperiod=12,
-                    slowperiod=26,
-                    signalperiod=9,
+                tic_df = self.dataframe[self.dataframe.tic == i].copy()
+                # compute MACD, RSI, CCI, DX, etc. 
+                # example for one set:
+                #  (If you want your 4 indicators, rename them to match talib calls)
+                import talib
+
+                macd, macd_signal, macd_hist = talib.MACD(
+                    tic_df["close"], fastperiod=12, slowperiod=26, signalperiod=9
                 )
-                tic_df.loc["rsi"] = talib.RSI(tic_df["close"], timeperiod=14)
-                tic_df.loc["cci"] = talib.CCI(
-                    tic_df["high"],
-                    tic_df["low"],
-                    tic_df["close"],
-                    timeperiod=14,
+                tic_df["macd"] = macd
+                tic_df["macd_signal"] = macd_signal
+                tic_df["macd_hist"] = macd_hist
+
+                tic_df["rsi"] = talib.RSI(tic_df["close"], timeperiod=14)
+                tic_df["cci"] = talib.CCI(
+                    tic_df["high"], tic_df["low"], tic_df["close"], timeperiod=14
                 )
-                tic_df.loc["dx"] = talib.DX(
-                    tic_df["high"],
-                    tic_df["low"],
-                    tic_df["close"],
-                    timeperiod=14,
+                tic_df["dx"] = talib.DX(
+                    tic_df["high"], tic_df["low"], tic_df["close"], timeperiod=14
                 )
+
                 final_df = pd.concat([final_df, tic_df], axis=0, join="outer")
+
             self.dataframe = final_df
 
+        # Now sort
         self.dataframe.sort_values(by=["time", "tic"], inplace=True)
+
         if drop_na_timesteps:
-            time_to_drop = self.dataframe[
-                self.dataframe.isna().any(axis=1)
-            ].time.unique()
+            # Drop rows that contain any NaN in any column
+            time_to_drop = self.dataframe[self.dataframe.isna().any(axis=1)]["time"].unique()
             self.dataframe = self.dataframe[~self.dataframe.time.isin(time_to_drop)]
+
         print("Succesfully add technical indicators")
+
 
     def add_turbulence(self):
         """

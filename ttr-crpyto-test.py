@@ -690,17 +690,6 @@ def test(
 
 #starting the paper trading:
 
-
-        
-
-
-
-
-
-
-
-
-    
 class StockEnvEmpty(gym.Env):
     #Empty Env used for loading rllib agent
     def __init__(self,config):
@@ -743,57 +732,38 @@ ERL_PARAMS = {"learning_rate": 3e-6,"batch_size": 2048,"gamma":  0.985,
 
 # runing the paper trading:
 
-CRYPTO_TICKER = ["BTCUSD", "ETHUSD", "SOLUSD"]  # or any supported by Alpaca
+CRYPTO_TICKER_PT = ["BTC/USDT", "ETH/USDT", "SOL/USDT"]  # or any supported by Alpaca
+CRYPTO_TICKER_TR = ["BTCUSDT", "ETHUSDT", "SOLUSDT"] 
 INDICATORS = ["macd","rsi","cci","dx"]
 API_KEY = "PK0HYWTXV4JHULYVK2KY"
 API_SECRET = "11ErKPAJ8JdCy6LbSYRWPcEzdzZGse4iJgSzGl7g"
 API_BASE_URL = "https://paper-api.alpaca.markets" #new url for crpto wss://stream.data.alpaca.markets/v1beta3/crypto/us
-agent_cwd = "FinRL_Meta/papertrading_crypto"  # folder containing actor.pth from training
+agent_cwd = "/home/souz_wsl/finrl_proj/FinRL_Meta/papertrading_crypto"  # folder containing actor.pth from training
 net_dimensions = [128,64]    # same as you used in training
 # typical state_dim for:  1 + 3*action_dim + len(INDICATORS)*action_dim
 # e.g. 1 + 3*3 + 4*3 = 1 + 9 + 12 = 22 (for 3 tickers, 4 indicators)
 # state_dimension = 22
 # action_dimension = len(CRYPTO_TICKER)
 
-crp_paper_ttarding = AlpacaPaperTradingCryptoLive(
-        ticker_list=CRYPTO_TICKER,
-        time_interval='5Min',
-        drl_lib='elegantrl',
-        agent='ppo',
-        cwd=agent_cwd,
-        net_dim=net_dimensions,
-        state_dim=state_dim,
-        action_dim=action_dim,
-        API_KEY=API_KEY,
-        API_SECRET=API_SECRET,
-        API_BASE_URL=API_BASE_URL,
-        tech_indicator_list=INDICATORS,
-        max_stock=100.0
-    )
-crp_paper_ttarding.run()
+################ uncomment to run the paper trading ################
+##################################################################
 
-###########################
-#  old paper training call
-###########################
-
-# paper_trading_erl = AlpacaPaperTrading(ticker_list = DOW_30_TICKER, 
-#                                     time_interval = '1Min', 
-#                                     drl_lib = 'elegantrl', 
-#                                     agent = 'ppo', 
-#                                     cwd = 'papertrading_erl', 
-#                                     net_dim = ERL_PARAMS['net_dimension'], 
-#                                     state_dim = state_dim, 
-#                                     action_dim= action_dim, 
-#                                     API_KEY = API_KEY, 
-#                                     API_SECRET = API_SECRET, 
-#                                     API_BASE_URL = API_BASE_URL, 
-#                                     tech_indicator_list = INDICATORS, 
-#                                     turbulence_thresh=30, 
-#                                     max_stock=1e2)
-# paper_trading_erl.run()
-
-
-
+# crp_paper_trading = AlpacaPaperTradingCryptoLive(
+#         ticker_list=CRYPTO_TICKER_PT,
+#         time_interval='5min',
+#         drl_lib='elegantrl',
+#         agent='ppo',
+#         cwd=agent_cwd,
+#         net_dim=net_dimensions,
+#         state_dim=state_dim,
+#         action_dim=action_dim,
+#         API_KEY=API_KEY,
+#         API_SECRET=API_SECRET,
+#         API_BASE_URL=API_BASE_URL,
+#         tech_indicator_list=INDICATORS,
+#         max_stock=100.0
+#     )
+# crp_paper_trading.run()
 
 
 
@@ -801,18 +771,18 @@ crp_paper_ttarding.run()
 # start training. function
 ##################################
 
-# train(start_date='2024-01-01',
-#     end_date='2025-01-24',
-#     ticker_list=CRYPTO_TICKER, 
-#     data_source='binance',
-#     time_interval='5m',
-#     technical_indicator_list=INDICATORS,
-#     drl_lib='elegantrl',
-#     env=CryptoTradingEnv,
-#     model_name='ppo',
-#     if_vix=False,   # for crypto, typically skip 
-#     erl_params=ERL_PARAMS,
-#     cwd='./papertrading_crypto',
-#     break_step=1e5,
-#     gpu_id=0   
-# )
+train(start_date='2024-01-01',
+    end_date='2025-01-24',
+    ticker_list=CRYPTO_TICKER_TR, 
+    data_source='binance',
+    time_interval='5m',
+    technical_indicator_list=INDICATORS,
+    drl_lib='elegantrl',
+    env=CryptoTradingEnv,
+    model_name='ppo',
+    if_vix=False,   # for crypto, typically skip 
+    erl_params=ERL_PARAMS,
+    cwd=agent_cwd,
+    break_step=1e5,
+    gpu_id=0   
+)
