@@ -332,6 +332,9 @@ Each piece plays a unique role in the structure of your RL pipeline.
 
 
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> bug fixes in tech_indicator function
 ################################## paper trading. #####################################
 
 1. Overall Flow
@@ -454,6 +457,7 @@ No formal “episode ends” in real time, so your code effectively trades indef
 
 
 
+<<<<<<< HEAD
 =======
 >>>>>>> Added readme with some concepts of setup
 =======
@@ -462,3 +466,5 @@ No formal “episode ends” in real time, so your code effectively trades indef
 
 
 >>>>>>> Added custom paper trading env
+=======
+>>>>>>> bug fixes in tech_indicator function
