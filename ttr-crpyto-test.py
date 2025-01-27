@@ -38,6 +38,8 @@ from finrl.config import ERL_PARAMS
 # from finrl.config_tickers import DOW_30_TICKER
 import matplotlib.pyplot as plt
 import plotly.express as px
+from dotenv import load_dotenv
+import os
 
 
 
@@ -853,8 +855,8 @@ ERL_PARAMS = {"learning_rate": 3e-6,"batch_size": 2048,"gamma":  0.985,
 CRYPTO_TICKER_PT = ["BTC/USD", "ETH/USD", "SOL/USD"]  # or any supported by Alpaca
 CRYPTO_TICKER_TR = ["BTCUSDT", "ETHUSDT", "SOLUSDT"] 
 INDICATORS = ["macd","rsi","cci","dx"]
-API_KEY = "PK0HYWTXV4JHULYVK2KY"
-API_SECRET = "11ErKPAJ8JdCy6LbSYRWPcEzdzZGse4iJgSzGl7g"
+API_KEY = os.getenv("API_KEY")
+API_SECRET = os.getenv("API_SECRET")
 API_BASE_URL = "https://paper-api.alpaca.markets" #new url for crpto wss://stream.data.alpaca.markets/v1beta3/crypto/us
 agent_cwd = "/home/souz_wsl/finrl_proj/FinRL_Meta/papertrading_crypto"  # folder containing actor.pth from training
 net_dimensions = [128,64]    # same as you used in training
@@ -890,19 +892,37 @@ net_dimensions = [128,64]    # same as you used in training
 # start training. function
 ##################################
 
-train(start_date='2024-01-01',
-    end_date='2025-01-24',
-    ticker_list=CRYPTO_TICKER_TR, 
-    data_source='binance',
-    time_interval='5m',
-    technical_indicator_list=INDICATORS,
-    drl_lib='elegantrl',
-    env=CryptoTradingEnv,
-    model_name='ppo',
-    if_vix=False,   # for crypto, typically skip 
-    erl_params=ERL_PARAMS,
-    cwd=agent_cwd,
-    break_step=1e7,
-    gpu_id=0,
-    initial_capital=100000 
-)
+# train(start_date='2024-01-01',
+#     end_date='2025-01-24',
+#     ticker_list=CRYPTO_TICKER_TR, 
+#     data_source='binance',
+#     time_interval='5m',
+#     technical_indicator_list=INDICATORS,
+#     drl_lib='elegantrl',
+#     env=CryptoTradingEnv,
+#     model_name='ppo',
+#     if_vix=False,   # for crypto, typically skip 
+#     erl_params=ERL_PARAMS,
+#     cwd=agent_cwd,
+#     break_step=1e7,
+#     gpu_id=0,
+#     initial_capital=100000 
+# )
+
+
+##########calling test function################
+###############################################
+episode_assets = test(
+        start_date="2025-01-25",
+        end_date="2025-01-27",
+        ticker_list=["BTCUSDT", "ETHUSDT", "SOLUSDT"],
+        data_source="binance",
+        time_interval="5m",
+        technical_indicator_list=["macd", "rsi", "cci", "dx"],
+        drl_lib="elegantrl",
+        env=CryptoTradingEnv,
+        model_name="ppo",
+        if_vix=False,
+        net_dimension=[128, 64],           # must match your training net_dims
+        cwd=agent_cwd   # folder that has 'actor.pth'
+    )
