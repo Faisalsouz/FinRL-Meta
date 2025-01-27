@@ -37,6 +37,7 @@ from finrl.config import ERL_PARAMS
 # from finrl.config import TEST_START_DATE
 # from finrl.config_tickers import DOW_30_TICKER
 import matplotlib.pyplot as plt
+import plotly.express as px
 
 
 
@@ -630,7 +631,6 @@ def train(
             model=model, cwd=cwd, total_timesteps=break_step
         )
         
-#TEst functin 
 def test(
     start_date,
     end_date,
@@ -641,39 +641,76 @@ def test(
     drl_lib,
     env,
     model_name,
-    if_vix=True,
+    if_vix=False,  # Typically False for crypto
     **kwargs,
 ):
+    """
+    Test the trained agent on new data (from start_date to end_date),
+    then produce a plot of the total asset value over time.
 
-    # import data processor
-    from finrl.meta.data_processor import DataProcessor
+    Parameters
+    ----------
+    start_date : str
+        Test data start date (e.g., "2024-01-01")
+    end_date : str
+        Test data end date (e.g., "2024-03-01")
+    ticker_list : list
+        List of asset tickers (e.g., ["BTCUSDT", "ETHUSDT"])
+    data_source : str
+        Name of the data source (e.g., "binance")
+    time_interval : str
+        The resolution of the data (e.g., "5m", "15m", "1D")
+    technical_indicator_list : list
+        List of technical indicators (e.g., ["macd", "rsi", "cci", "dx"])
+    drl_lib : str
+        DRL library name, e.g., "elegantrl"
+    env : class
+        Your environment class, e.g., CryptoTradingEnv
+    model_name : str
+        The model/agent identifier, e.g., "ppo"
+    if_vix : bool, optional
+        Whether to add a volatility index to the data (more for stocks).
+    kwargs : dict
+        Additional arguments, e.g.,
+          - net_dimension : list (your actor/critic network dims)
+          - cwd : str (path to the saved model)
+    
+    Returns
+    -------
+    episode_total_assets : list[float]
+        The total asset value at each time step during the test.
+    """
+    print("Received kwargs:", kwargs)
+    
+    # 1) Load & process new data with DataProcessor
+    dp = DataProcessor(
+        data_source=data_source,
+        start_date=start_date,
+        end_date=end_date,
+        time_interval=time_interval
+    )
+    # For Crypto, if_vix is typically False, so dp.run(...) won't add VIX/turbulence
+    price_array, tech_array, _ = dp.run(
+        ticker_list=ticker_list,
+        technical_indicator_list=technical_indicator_list,
+        if_vix=if_vix,        # or pass False
+        cache=True
+    )
 
-    # fetch data
-    dp = DataProcessor(data_source, **kwargs)
-    data = dp.download_data(ticker_list, start_date, end_date, time_interval)
-    data = dp.clean_data(data)
-    data = dp.add_technical_indicator(data, technical_indicator_list)
-
-    if if_vix:
-        data = dp.add_vix(data)
-    else:
-        data = dp.add_turbulence(data)
-    price_array, tech_array, turbulence_array = dp.df_to_array(data, if_vix)
-
+    # 2) Build the test environment with if_train=False
     env_config = {
         "price_array": price_array,
         "tech_array": tech_array,
-        "turbulence_array": turbulence_array,
-        "if_train": False,
+        "if_train": False,   # This tells your CryptoTradingEnv that it's for inference
     }
     env_instance = env(config=env_config)
 
-    # load elegantrl needs state dim, action dim and net dim
-    net_dimension = kwargs.get("net_dimension", 2**7)
-    cwd = kwargs.get("cwd", "./" + str(model_name))
-    print("price_array: ", len(price_array))
-
+    # 3) Load the trained policy
+    net_dimension = kwargs.get("net_dimension", [64, 32])  # Same as training
+    cwd = kwargs.get("cwd", f"./{model_name}")            # Folder with actor.pth
+    
     if drl_lib == "elegantrl":
+        # 4) Get the DRL agent’s predictions on the test data
         DRLAgent_erl = DRLAgent
         episode_total_assets = DRLAgent_erl.DRL_prediction(
             model_name=model_name,
@@ -681,7 +718,88 @@ def test(
             net_dimension=net_dimension,
             environment=env_instance,
         )
-        return episode_total_assets
+    else:
+        raise NotImplementedError("Currently only 'elegantrl' is integrated.")
+
+    # 5) Plot the results
+    # -- Option A: Plotly (interactive) --
+
+    fig = px.line(
+        x=range(len(episode_total_assets)),
+        y=episode_total_assets,
+        labels={'x': 'Time Step', 'y': 'Portfolio Value'},
+        title='Test Performance: Total Asset Value Over Time'
+    )
+    fig.show()
+
+    # -- Option B: Seaborn (if you prefer static plots) --
+    # import seaborn as sns
+    # import matplotlib.pyplot as plt
+    # sns.set_theme(style="whitegrid")
+    # plt.figure(figsize=(10, 6))
+    # sns.lineplot(x=range(len(episode_total_assets)), y=episode_total_assets)
+    # plt.title("Total Asset Value Over Time (Test)")
+    # plt.xlabel("Time Step")
+    # plt.ylabel("Portfolio Value")
+    # plt.show()
+
+    return episode_total_assets
+
+        
+####### Test functin old ##############
+#######################################
+
+# def test(
+#     start_date,
+#     end_date,
+#     ticker_list,
+#     data_source,
+#     time_interval,
+#     technical_indicator_list,
+#     drl_lib,
+#     env,
+#     model_name,
+#     if_vix=True,
+#     **kwargs,
+# ):
+
+#     # import data processor
+#     from finrl.meta.data_processor import DataProcessor
+
+#     # fetch data
+#     dp = DataProcessor(data_source, **kwargs)
+#     data = dp.download_data(ticker_list, start_date, end_date, time_interval)
+#     data = dp.clean_data(data)
+#     data = dp.add_technical_indicator(data, technical_indicator_list)
+
+#     if if_vix:
+#         data = dp.add_vix(data)
+#     else:
+#         data = dp.add_turbulence(data)
+#     price_array, tech_array, turbulence_array = dp.df_to_array(data, if_vix)
+
+#     env_config = {
+#         "price_array": price_array,
+#         "tech_array": tech_array,
+#         "turbulence_array": turbulence_array,
+#         "if_train": False,
+#     }
+#     env_instance = env(config=env_config)
+
+#     # load elegantrl needs state dim, action dim and net dim
+#     net_dimension = kwargs.get("net_dimension", 2**7)
+#     cwd = kwargs.get("cwd", "./" + str(model_name))
+#     print("price_array: ", len(price_array))
+
+#     if drl_lib == "elegantrl":
+#         DRLAgent_erl = DRLAgent
+#         episode_total_assets = DRLAgent_erl.DRL_prediction(
+#             model_name=model_name,
+#             cwd=cwd,
+#             net_dimension=net_dimension,
+#             environment=env_instance,
+#         )
+#         return episode_total_assets
     
     
     
@@ -732,7 +850,7 @@ ERL_PARAMS = {"learning_rate": 3e-6,"batch_size": 2048,"gamma":  0.985,
 
 # runing the paper trading:
 
-CRYPTO_TICKER_PT = ["BTC/USDT", "ETH/USDT", "SOL/USDT"]  # or any supported by Alpaca
+CRYPTO_TICKER_PT = ["BTC/USD", "ETH/USD", "SOL/USD"]  # or any supported by Alpaca
 CRYPTO_TICKER_TR = ["BTCUSDT", "ETHUSDT", "SOLUSDT"] 
 INDICATORS = ["macd","rsi","cci","dx"]
 API_KEY = "PK0HYWTXV4JHULYVK2KY"
@@ -761,7 +879,8 @@ net_dimensions = [128,64]    # same as you used in training
 #         API_SECRET=API_SECRET,
 #         API_BASE_URL=API_BASE_URL,
 #         tech_indicator_list=INDICATORS,
-#         max_stock=100.0
+       
+#         max_stock=12
 #     )
 # crp_paper_trading.run()
 
@@ -783,6 +902,7 @@ train(start_date='2024-01-01',
     if_vix=False,   # for crypto, typically skip 
     erl_params=ERL_PARAMS,
     cwd=agent_cwd,
-    break_step=1e5,
-    gpu_id=0   
+    break_step=1e7,
+    gpu_id=0,
+    initial_capital=100000 
 )
