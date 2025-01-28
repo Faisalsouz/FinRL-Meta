@@ -70,7 +70,8 @@ class CryptoTradingEnv(gym.Env):
         self.min_stock_rate = min_stock_rate
         self.buy_cost_pct = buy_cost_pct
         self.sell_cost_pct = sell_cost_pct
-        self.reward_scaling = reward_scaling
+        self.reward_scaling = 2**-8  # Increased from 2**-11
+        self.position_diversity_penalty_scale = 0.05  # Reduced penalty
         self.initial_capital = initial_account
 
         stock_dim = self.price_ary.shape[1]
@@ -88,10 +89,11 @@ class CryptoTradingEnv(gym.Env):
         self.total_asset = None
         self.gamma_reward = None
         self.initial_total_asset = None
-        self.max_position_pct = max_position_pct
-        self.min_trade_amount = min_trade_amount
+        self.max_position_pct = 0.8  # Increased from 0.5
+        self.min_trade_amount = 5.0  # Decreased from 10.0
         self.position_values = None
         self.position_ratios = None
+        self.debug_trades = True  # Add debug flag
 
         # --- Env Info ---
         self.env_name = "CryptoTradingEnv"
@@ -175,9 +177,25 @@ class CryptoTradingEnv(gym.Env):
         # Convert actions to target position changes
         position_changes = actions * self.max_position_pct * portfolio_value
         
+        # Debug prints for position changes
+        if self.debug_trades:
+            print(f"\nDay {self.day}:")
+            print(f"Portfolio value: ${portfolio_value:.2f}")
+            print(f"Actions received: {actions}")
+            print(f"Position changes: {position_changes}")
+        
         # Process sells first (to free up cash)
         for index in np.where(position_changes < 0)[0]:
             if current_price[index] > 0:  # Valid price check
+                if self.debug_trades:
+                    print(f"\nAttempting buy for asset {index}:")
+                    print(f"Available cash: ${self.amount:.2f}")
+                    print(f"Desired buy value: ${position_changes[index]:.2f}")
+                    print(f"Max position allowed: ${portfolio_value * self.max_position_pct:.2f}")
+                if self.debug_trades:
+                    print(f"\nAttempting sell for asset {index}:")
+                    print(f"Current position value: ${self.position_values[index]:.2f}")
+                    print(f"Desired sell value: ${abs(position_changes[index]):.2f}")
                 # Calculate maximum sell amount respecting minimum trade size
                 max_sell_value = abs(position_changes[index])
                 current_position_value = self.position_values[index]

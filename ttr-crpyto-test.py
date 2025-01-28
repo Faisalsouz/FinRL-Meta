@@ -696,12 +696,29 @@ def test(
         # Setup device and model
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         agent = MODELS[model_name](net_dimension, env_instance.state_dim, env_instance.action_dim)
-        agent.act.load_state_dict(torch.load(f"{cwd}/actor.pth", map_location=device))
+        
+        # Model verification
+        print("\nModel verification:")
+        print(f"Loading model from: {cwd}/actor.pth")
+        state_dict = torch.load(f"{cwd}/actor.pth", map_location=device)
+        print("Model parameters:", [name for name, _ in state_dict.items()])
+        
+        agent.act.load_state_dict(state_dict)
+        
+        # Verify model produces non-zero outputs
+        test_state = torch.zeros((1, env_instance.state_dim), device=device)
+        test_action = agent.act(test_state)
+        print(f"Test action output: {test_action.detach().cpu().numpy()}")
         
         with torch.no_grad():
             for i in range(env_instance.max_step):
                 s_tensor = torch.as_tensor((state,), device=device)
                 action = agent.act(s_tensor).detach().cpu().numpy()[0]
+                
+                # Debug prints
+                print(f"\nStep {i}:")
+                print(f"Action: {action}")
+                print(f"State: {state[:10]}...")  # First 10 elements
                 
                 # Store the action
                 actions_history.append(action)
