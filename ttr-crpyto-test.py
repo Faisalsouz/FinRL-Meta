@@ -823,8 +823,7 @@ def test(
         profit_steps = sum(1 for x in profits_per_step if x > 0)
         max_profit_trade = max(profits_per_step)
         max_loss_trade = min(profits_per_step)
-        profit_factor = abs(sum(x for x in profits_per_step if x > 0) / sum(x for x in profits_per_step if x < 0)) if sum(x for x in 
-profits_per_step if x < 0) != 0 else float('inf')
+        profit_factor = abs(sum(x for x in profits_per_step if x > 0) / sum(x for x in profits_per_step if x < 0)) if sum(x for x in profits_per_step if x < 0) != 0 else float('inf')
         
         print("\n=== Performance Summary ===")
         print(f"Initial Portfolio Value: ${initial_asset:,.2f}")
