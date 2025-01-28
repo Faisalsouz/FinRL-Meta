@@ -279,7 +279,7 @@ class CryptoTradingEnv(gym.Env):
             'portfolio_value': total_asset,
             'position_ratios': self.position_ratios,
             'cash_ratio': self.amount / total_asset,
-            'position_concentration': position_diversity_penalty
+            'position_concentration': self._calculate_concentration_penalty()
         }
 
         if done:
