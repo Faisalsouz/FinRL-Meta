@@ -1068,7 +1068,7 @@ action_dim = len(ticker_list) # for training
 print(ticker_list)
 print(len(ticker_list))
 print(INDICATORS)
-state_dim = 1 + 3 * action_dim + len(INDICATORS) * action_dim # for Traning.
+state_dim = 1 + 4 * action_dim + len(INDICATORS) * action_dim  # Added position_ratios dimension
 print(state_dim)
 ERL_PARAMS = {
     "learning_rate": 1e-4,

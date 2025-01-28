@@ -16,14 +16,16 @@ class CryptoTradingEnv(gym.Env):
     def __init__(
         self,
         config,
-        initial_account=1e6,
+        initial_account=10000,  # Changed default to 10K
         gamma=0.99,
-        min_stock_rate=0.1,
-        max_stock=1e2,
+        min_stock_rate=0.001,  # Reduced for fractional trading
+        max_stock=1.0,         # Changed to represent maximum position size as fraction of portfolio
         buy_cost_pct=1e-3,
         sell_cost_pct=1e-3,
         reward_scaling=2**-11,
         initial_stocks=None,
+        max_position_pct=0.5,  # New: maximum position size as % of portfolio
+        min_trade_amount=10.0, # New: minimum USD trade size
     ):
         """
         Parameters
@@ -86,6 +88,10 @@ class CryptoTradingEnv(gym.Env):
         self.total_asset = None
         self.gamma_reward = None
         self.initial_total_asset = None
+        self.max_position_pct = max_position_pct
+        self.min_trade_amount = min_trade_amount
+        self.position_values = None
+        self.position_ratios = None
 
         # --- Env Info ---
         self.env_name = "CryptoTradingEnv"
@@ -111,104 +117,149 @@ class CryptoTradingEnv(gym.Env):
             low=-1, high=1, shape=(self.action_dim,), dtype=np.float32
         )
 
-    def reset(
-        self,
-        *,
-        seed=None,
-        options=None,
-    ):
-        """Reset the environment to an initial state."""
+    def reset(self, *, seed=None, options=None):
+        """Enhanced reset with better initial state handling"""
         self.day = 0
         price = self.price_ary[self.day]
 
         if self.if_train:
-            # Randomize initial holdings
-            self.stocks = (
-                self.initial_stocks + rd.randint(0, 64, size=self.initial_stocks.shape)
-            ).astype(np.float32)
+            # Initialize with small random positions for training
+            self.stocks = (self.initial_stocks * rd.uniform(0, 0.1, size=self.initial_stocks.shape)).astype(np.float32)
             self.stocks_cool_down = np.zeros_like(self.stocks)
-            self.amount = (
-                self.initial_capital * rd.uniform(0.95, 1.05) 
-                - (self.stocks * price).sum()
-            )
+            self.amount = self.initial_capital * rd.uniform(0.95, 1.0)
         else:
-            # Fixed initial holdings for testing
-            self.stocks = self.initial_stocks.astype(np.float32)
+            # Start with cash for testing
+            self.stocks = np.zeros_like(self.initial_stocks, dtype=np.float32)
             self.stocks_cool_down = np.zeros_like(self.stocks)
             self.amount = self.initial_capital
 
-        self.total_asset = self.amount + (self.stocks * price).sum()
+        # Initialize position tracking
+        self.position_values = self.stocks * price
+        self.total_asset = self.amount + self.position_values.sum()
+        self.position_ratios = self.position_values / self.total_asset if self.total_asset > 0 else np.zeros_like(self.stocks)
+        
         self.initial_total_asset = self.total_asset
         self.gamma_reward = 0.0
+
         return self.get_state(price), {}
 
     def step(self, actions):
         """
+        Enhanced step function with better position sizing and fractional trading
         actions: np.ndarray of shape (stock_dim,)
-        Each action is in [-1, 1], scaled by self.max_stock to get #coins to buy/sell.
+        Each action in [-1, 1] represents target position changes as % of portfolio
         """
-        # Scale action
-        actions = (actions * self.max_stock).astype(int)
-
         self.day += 1
         if self.day >= self.max_step:
-            # If we exceed data length, treat it as done
             self.day = self.max_step
-        price = self.price_ary[self.day]
-        self.stocks_cool_down += 1
 
-        min_action = int(self.max_stock * self.min_stock_rate)
-        # ---- SELL ----
-        for index in np.where(actions < -min_action)[0]:
-            if price[index] > 0:  # Sell only if price > 0
-                sell_num_shares = min(self.stocks[index], -actions[index])
-                self.stocks[index] -= sell_num_shares
-                self.amount += price[index] * sell_num_shares * (1 - self.sell_cost_pct)
-                self.stocks_cool_down[index] = 0
+        current_price = self.price_ary[self.day]
+        
+        # Calculate current position values and ratios
+        self.position_values = self.stocks * current_price
+        portfolio_value = self.amount + self.position_values.sum()
+        self.position_ratios = self.position_values / portfolio_value
 
-        # ---- BUY ----
-        for index in np.where(actions > min_action)[0]:
-            if price[index] > 0:
-                buy_num_shares = min(self.amount // price[index], actions[index])
-                self.stocks[index] += buy_num_shares
-                self.amount -= price[index] * buy_num_shares * (1 + self.buy_cost_pct)
-                self.stocks_cool_down[index] = 0
+        # Convert actions to target position changes
+        position_changes = actions * self.max_position_pct * portfolio_value
+        
+        # Process sells first (to free up cash)
+        for index in np.where(position_changes < 0)[0]:
+            if current_price[index] > 0:  # Valid price check
+                # Calculate maximum sell amount respecting minimum trade size
+                max_sell_value = abs(position_changes[index])
+                current_position_value = self.position_values[index]
+                
+                if current_position_value > 0:
+                    # Determine sell size in asset units (supporting fractional)
+                    sell_value = min(max_sell_value, current_position_value)
+                    if sell_value >= self.min_trade_amount:
+                        sell_units = sell_value / current_price[index]
+                        self.stocks[index] -= sell_units
+                        self.amount += sell_value * (1 - self.sell_cost_pct)
+                        self.stocks_cool_down[index] = 0
 
-        # Next state
-        state = self.get_state(price)
-        total_asset = self.amount + (self.stocks * price).sum()
-        reward = (total_asset - self.total_asset) * self.reward_scaling
+        # Update portfolio value after sells
+        self.position_values = self.stocks * current_price
+        portfolio_value = self.amount + self.position_values.sum()
+
+        # Process buys
+        for index in np.where(position_changes > 0)[0]:
+            if current_price[index] > 0:  # Valid price check
+                # Calculate maximum buy amount respecting position limits
+                max_position_value = portfolio_value * self.max_position_pct
+                current_position_value = self.position_values[index]
+                available_position_value = max_position_value - current_position_value
+                
+                # Determine buy size
+                desired_buy_value = position_changes[index]
+                buy_value = min(
+                    desired_buy_value,
+                    available_position_value,
+                    self.amount / (1 + self.buy_cost_pct)
+                )
+                
+                if buy_value >= self.min_trade_amount:
+                    buy_units = buy_value / current_price[index]
+                    self.stocks[index] += buy_units
+                    self.amount -= buy_value * (1 + self.buy_cost_pct)
+                    self.stocks_cool_down[index] = 0
+
+        # Calculate reward with risk-adjusted components
+        next_position_values = self.stocks * current_price
+        total_asset = self.amount + next_position_values.sum()
+        
+        # Enhanced reward calculation
+        profit_loss = total_asset - self.total_asset
+        position_diversity_penalty = self._calculate_concentration_penalty()
+        
+        reward = (
+            profit_loss * self.reward_scaling 
+            - position_diversity_penalty * 0.1  # Penalize concentration
+        )
+        
         self.total_asset = total_asset
-
         self.gamma_reward = self.gamma_reward * self.gamma + reward
-        done = (self.day == self.max_step)
+
+        # State, done, and info
+        state = self.get_state(current_price)
+        done = self.day == self.max_step
+        
+        info = {
+            'portfolio_value': total_asset,
+            'position_ratios': self.position_ratios,
+            'cash_ratio': self.amount / total_asset,
+            'position_concentration': position_diversity_penalty
+        }
+
         if done:
-            # Use discounted reward as final reward
             reward = self.gamma_reward
             self.episode_return = total_asset / self.initial_total_asset
 
-        return state, reward, done, False, {}
+        return state, reward, done, False, info
+
+    def _calculate_concentration_penalty(self):
+        """Calculate penalty for concentrated positions"""
+        non_zero_positions = self.position_ratios[self.position_ratios > 0.01]
+        if len(non_zero_positions) == 0:
+            return 0
+        
+        # Herfindahl-Hirschman Index (HHI) for position concentration
+        hhi = np.sum(non_zero_positions ** 2)
+        return max(0, hhi - (1.0 / len(self.position_ratios)))  # Penalty increases with concentration
 
     def get_state(self, price):
-        """
-        Returns the current observation as a 1D float32 array of length:
-          1 + 3*stock_dim + tech_dim
-        Where:
-          [0]: scaled amount (cash)
-          [1:1+stock_dim]: scaled price
-          [1+stock_dim : 1+2*stock_dim]: scaled stocks
-          [1+2*stock_dim : 1+3*stock_dim]: stocks_cool_down
-          [1+3*stock_dim : end]: technical indicators
-        """
-        # Example scaling
+        """Enhanced state representation including position metrics"""
         amount_scaled = np.array(self.amount * 2**-12, dtype=np.float32)
         price_scaled = price * 2**-6
         stocks_scaled = self.stocks * 2**-6
+        position_ratios = self.position_values / self.total_asset if self.total_asset > 0 else np.zeros_like(self.stocks)
 
         return np.hstack((
             amount_scaled,
             price_scaled,
             stocks_scaled,
             self.stocks_cool_down,
+            position_ratios,  # Added position ratios to state
             self.tech_ary[self.day]
         )).astype(np.float32)
