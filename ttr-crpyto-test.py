@@ -56,7 +56,7 @@ import os
 # from finrl.meta.data_processors.processor_alpaca import AlpacaProcessor
 
 
-CRYPTO_TICKER = ["BTCUSDT", "ETHUSDT", "SOLUSDT"]  # Example
+CRYPTO_TICKER = ["BTCUSDT"]  # Single asset
 ticker_list = CRYPTO_TICKER
 INDICATORS = ['macd', 'rsi', 'cci', 'dx']
 
@@ -1070,9 +1070,16 @@ print(len(ticker_list))
 print(INDICATORS)
 state_dim = 1 + 3 * action_dim + len(INDICATORS) * action_dim # for Traning.
 print(state_dim)
-ERL_PARAMS = {"learning_rate": 3e-6,"batch_size": 2048,"gamma":  0.985,
-        "seed":312,"net_dimension":[128,64], "target_step":5000, "eval_gap":30,
-        "eval_times":1} # For training.
+ERL_PARAMS = {
+    "learning_rate": 1e-4,
+    "batch_size": 4096,
+    "gamma": 0.99,
+    "seed": 312,
+    "net_dimension": [256, 128, 64],
+    "target_step": 10000,
+    "eval_gap": 50,
+    "eval_times": 3
+} # For training with improved parameters
 #############################
 # end of the parameters
 #############################
@@ -1080,8 +1087,8 @@ ERL_PARAMS = {"learning_rate": 3e-6,"batch_size": 2048,"gamma":  0.985,
 
 # runing the paper trading:
 
-CRYPTO_TICKER_PT = ["BTC/USD", "ETH/USD", "SOL/USD"]  # or any supported by Alpaca
-CRYPTO_TICKER_TR = ["BTCUSDT", "ETHUSDT", "SOLUSDT"] 
+CRYPTO_TICKER_PT = ["BTC/USD"]  # For paper trading
+CRYPTO_TICKER_TR = ["BTCUSDT"]  # For training
 INDICATORS = ["macd","rsi","cci","dx"]
 API_KEY = os.getenv("API_KEY")
 API_SECRET = os.getenv("API_SECRET")
@@ -1134,7 +1141,7 @@ net_dimensions = [128,64]    # same as you used in training
 #     cwd=agent_cwd,
 #     break_step=1e7,
 #     gpu_id=0,
-#     initial_capital=100000 
+#     initial_capital=10000  # Set to 10K
 # )
 
 
@@ -1143,7 +1150,7 @@ net_dimensions = [128,64]    # same as you used in training
 episode_assets = test(
         start_date="2025-01-25",
         end_date="2025-01-27",
-        ticker_list=["BTCUSDT", "ETHUSDT", "SOLUSDT"],
+        ticker_list=["BTCUSDT"],  # Single asset
         data_source="binance",
         time_interval="5m",
         technical_indicator_list=["macd", "rsi", "cci", "dx"],
@@ -1151,6 +1158,7 @@ episode_assets = test(
         env=CryptoTradingEnv,
         model_name="ppo",
         if_vix=False,
-        net_dimension=[128, 64],           # must match your training net_dims
-        cwd=agent_cwd   # folder that has 'actor.pth'
+        net_dimension=[256, 128, 64],  # Updated net dimensions
+        cwd=agent_cwd,   # folder that has 'actor.pth'
+        initial_capital=10000  # Set to 10K
     )
