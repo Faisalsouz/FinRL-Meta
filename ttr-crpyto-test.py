@@ -38,6 +38,8 @@ from finrl.config import ERL_PARAMS
 # from finrl.config_tickers import DOW_30_TICKER
 import matplotlib.pyplot as plt
 import plotly.express as px
+   # Visualize results with Plotly
+import plotly.graph_objects as go
 from dotenv import load_dotenv
 import os
 
@@ -633,119 +635,281 @@ def train(
             model=model, cwd=cwd, total_timesteps=break_step
         )
         
-def test(
-    start_date,
-    end_date,
-    ticker_list,
-    data_source,
-    time_interval,
-    technical_indicator_list,
-    drl_lib,
-    env,
-    model_name,
-    if_vix=False,  # Typically False for crypto
-    **kwargs,
-):
-    """
-    Test the trained agent on new data (from start_date to end_date),
-    then produce a plot of the total asset value over time.
 
-    Parameters
-    ----------
-    start_date : str
-        Test data start date (e.g., "2024-01-01")
-    end_date : str
-        Test data end date (e.g., "2024-03-01")
-    ticker_list : list
-        List of asset tickers (e.g., ["BTCUSDT", "ETHUSDT"])
-    data_source : str
-        Name of the data source (e.g., "binance")
-    time_interval : str
-        The resolution of the data (e.g., "5m", "15m", "1D")
-    technical_indicator_list : list
-        List of technical indicators (e.g., ["macd", "rsi", "cci", "dx"])
-    drl_lib : str
-        DRL library name, e.g., "elegantrl"
-    env : class
-        Your environment class, e.g., CryptoTradingEnv
-    model_name : str
-        The model/agent identifier, e.g., "ppo"
-    if_vix : bool, optional
-        Whether to add a volatility index to the data (more for stocks).
-    kwargs : dict
-        Additional arguments, e.g.,
-          - net_dimension : list (your actor/critic network dims)
-          - cwd : str (path to the saved model)
+def test(                                                                                                                                  
+     start_date,                                                                                                                            
+     end_date,                                                                                                                              
+     ticker_list,                                                                                                                           
+     data_source,                                                                                                                           
+     time_interval,                                                                                                                         
+     technical_indicator_list,                                                                                                              
+     drl_lib,                                                                                                                               
+     env,                                                                                                                                   
+     model_name,                                                                                                                            
+     if_vix=False,                                                                                                                          
+     **kwargs,                                                                                                                              
+ ):                                                                                                                                         
+     """Enhanced test function with detailed visualizations"""                                                                              
+     print("Received kwargs:", kwargs)                                                                                                      
+                                                                                                                                            
+     # 1) Load & process new data with DataProcessor                                                                                        
+     dp = DataProcessor(                                                                                                                    
+         data_source=data_source,                                                                                                           
+         start_date=start_date,                                                                                                             
+         end_date=end_date,                                                                                                                 
+         time_interval=time_interval                                                                                                        
+     )                                                                                                                                      
+     price_array, tech_array, _ = dp.run(                                                                                                   
+         ticker_list=ticker_list,                                                                                                           
+         technical_indicator_list=technical_indicator_list,                                                                                 
+         if_vix=if_vix,                                                                                                                     
+         cache=True                                                                                                                         
+     )                                                                                                                                      
+                                                                                                                                            
+     # 2) Build the test environment                                                                                                        
+     env_config = {                                                                                                                         
+         "price_array": price_array,                                                                                                        
+         "tech_array": tech_array,                                                                                                          
+         "if_train": False,                                                                                                                 
+     }                                                                                                                                      
+     env_instance = env(config=env_config)                                                                                                  
+                                                                                                                                            
+     # 3) Load the trained policy                                                                                                           
+     net_dimension = kwargs.get("net_dimension", [64, 32])                                                                                  
+     cwd = kwargs.get("cwd", f"./{model_name}")                                                                                             
+                                                                                                                                            
+     if drl_lib == "elegantrl":                                                                                                             
+         DRLAgent_erl = DRLAgent                                                                                                            
+                                                                                                                                            
+         # Initialize tracking lists                                                                                                        
+         episode_total_assets = []                                                                                                          
+         actions_history = []                                                                                                               
+         portfolio_allocations = []                                                                                                         
+         profits_per_step = []                                                                                                              
+         prices_history = []                                                                                                                
+                                                                                                                                            
+         # Get initial state                                                                                                                
+         state, _ = env_instance.reset()                                                                                                    
+         initial_asset = env_instance.initial_total_asset                                                                                   
+                                                                                                                                            
+         # Setup device and model                                                                                                           
+         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")                                                              
+         agent = MODELS[model_name](net_dimension, env_instance.state_dim, env_instance.action_dim)                                         
+         agent.act.load_state_dict(torch.load(f"{cwd}/actor.pth", map_location=device))                                                     
+                                                                                                                                            
+         with torch.no_grad():                                                                                                              
+             for i in range(env_instance.max_step):                                                                                         
+                 s_tensor = torch.as_tensor((state,), device=device)                                                                        
+                 action = agent.act(s_tensor).detach().cpu().numpy()[0]                                                                     
+                                                                                                                                            
+                 # Store the action                                                                                                         
+                 actions_history.append(action)                                                                                             
+                                                                                                                                            
+                 # Take step in environment                                                                                                 
+                 next_state, reward, done, _, _ = env_instance.step(action)                                                                 
+                                                                                                                                            
+                 # Calculate total asset value                                                                                              
+                 total_asset = env_instance.amount + (env_instance.price_ary[env_instance.day] * env_instance.stocks).sum()                 
+                 episode_total_assets.append(total_asset)                                                                                   
+                                                                                                                                            
+                 # Calculate profit for this step                                                                                           
+                 profit = total_asset - (episode_total_assets[-2] if len(episode_total_assets) > 1 else initial_asset)                      
+                 profits_per_step.append(profit)                                                                                            
+                                                                                                                                            
+                 # Store portfolio allocation                                                                                               
+                 portfolio_allocations.append(env_instance.stocks / total_asset)                                                            
+                                                                                                                                            
+                 # Store prices                                                                                                             
+                 prices_history.append(env_instance.price_ary[env_instance.day])                                                            
+                                                                                                                                            
+                 state = next_state                                                                                                         
+                 if done:                                                                                                                   
+                     break                                                                                                                  
+                                                                                                                                            
+         # Create visualizations                                                                                                            
+                                                                                                                                            
+         # 1. Portfolio Value Over Time                                                                                                     
+         fig1 = px.line(                                                                                                                    
+             x=range(len(episode_total_assets)),                                                                                            
+             y=episode_total_assets,                                                                                                        
+             title='Portfolio Value Over Time',                                                                                             
+             labels={'x': 'Time Step', 'y': 'Total Asset Value'}                                                                            
+         )                                                                                                                                  
+         fig1.show()                                                                                                                        
+                                                                                                                                            
+         # 2. Profit/Loss per Step                                                                                                          
+         fig2 = px.bar(                                                                                                                     
+             x=range(len(profits_per_step)),                                                                                                
+             y=profits_per_step,                                                                                                            
+             title='Profit/Loss per Trading Step',                                                                                          
+             labels={'x': 'Time Step', 'y': 'Profit/Loss'}                                                                                  
+         )                                                                                                                                  
+         fig2.show()                                                                                                                        
+                                                                                                                                            
+         # 3. Asset Allocation Over Time                                                                                                    
+         portfolio_allocations = np.array(portfolio_allocations)                                                                            
+         fig3 = go.Figure()                                                                                                                 
+         for i, ticker in enumerate(ticker_list):                                                                                           
+             fig3.add_trace(go.Scatter(                                                                                                     
+                 x=range(len(portfolio_allocations)),                                                                                       
+                 y=portfolio_allocations[:, i],                                                                                             
+                 name=ticker,                                                                                                               
+                 stackgroup='one'                                                                                                           
+             ))                                                                                                                             
+         fig3.update_layout(title='Portfolio Allocation Over Time',                                                                         
+                           xaxis_title='Time Step',                                                                                         
+                           yaxis_title='Allocation Ratio')                                                                                  
+         fig3.show()                                                                                                                        
+                                                                                                                                            
+         # 4. Actions Heatmap                                                                                                               
+         actions_array = np.array(actions_history)                                                                                          
+         fig4 = px.imshow(                                                                                                                  
+             actions_array.T,                                                                                                               
+             labels=dict(x="Time Step", y="Asset", color="Action Value"),                                                                   
+             title="Agent Actions Heatmap",                                                                                                 
+             y=ticker_list                                                                                                                  
+         )                                                                                                                                  
+         fig4.show()                                                                                                                        
+                                                                                                                                            
+         # 5. Summary Statistics                                                                                                            
+         total_profit = episode_total_assets[-1] - initial_asset                                                                            
+         max_drawdown = np.min(episode_total_assets) - initial_asset                                                                        
+         profit_steps = sum(1 for x in profits_per_step if x > 0)                                                                           
+                                                                                                                                            
+         print("\n=== Performance Summary ===")                                                                                             
+         print(f"Total Profit: ${total_profit:,.2f}")                                                                                       
+         print(f"Return: {(total_profit/initial_asset)*100:.2f}%")                                                                          
+         print(f"Max Drawdown: ${max_drawdown:,.2f}")                                                                                       
+         print(f"Profitable Steps: {profit_steps}/{len(profits_per_step)} ({profit_steps/len(profits_per_step)*100:.2f}%)")                 
+                                                                                                                                            
+         return {                                                                                                                           
+             'episode_total_assets': episode_total_assets,                                                                                  
+             'profits_per_step': profits_per_step,                                                                                          
+             'portfolio_allocations': portfolio_allocations,                                                                                
+             'actions_history': actions_history,                                                                                            
+             'prices_history': prices_history                                                                                               
+         }                                                                                                                                  
+                                                                                                                                            
+     else:                                                                                                                                  
+         raise NotImplementedError("Currently only 'elegantrl' is integrated.")   
+
+
+#### old v1 Test function ############
+#######################################
+
+# def test(
+#     start_date,
+#     end_date,
+#     ticker_list,
+#     data_source,
+#     time_interval,
+#     technical_indicator_list,
+#     drl_lib,
+#     env,
+#     model_name,
+#     if_vix=False,  # Typically False for crypto
+#     **kwargs,
+# ):
+#     """
+#     Test the trained agent on new data (from start_date to end_date),
+#     then produce a plot of the total asset value over time.
+
+#     Parameters
+#     ----------
+#     start_date : str
+#         Test data start date (e.g., "2024-01-01")
+#     end_date : str
+#         Test data end date (e.g., "2024-03-01")
+#     ticker_list : list
+#         List of asset tickers (e.g., ["BTCUSDT", "ETHUSDT"])
+#     data_source : str
+#         Name of the data source (e.g., "binance")
+#     time_interval : str
+#         The resolution of the data (e.g., "5m", "15m", "1D")
+#     technical_indicator_list : list
+#         List of technical indicators (e.g., ["macd", "rsi", "cci", "dx"])
+#     drl_lib : str
+#         DRL library name, e.g., "elegantrl"
+#     env : class
+#         Your environment class, e.g., CryptoTradingEnv
+#     model_name : str
+#         The model/agent identifier, e.g., "ppo"
+#     if_vix : bool, optional
+#         Whether to add a volatility index to the data (more for stocks).
+#     kwargs : dict
+#         Additional arguments, e.g.,
+#           - net_dimension : list (your actor/critic network dims)
+#           - cwd : str (path to the saved model)
     
-    Returns
-    -------
-    episode_total_assets : list[float]
-        The total asset value at each time step during the test.
-    """
-    print("Received kwargs:", kwargs)
+#     Returns
+#     -------
+#     episode_total_assets : list[float]
+#         The total asset value at each time step during the test.
+#     """
+#     print("Received kwargs:", kwargs)
     
-    # 1) Load & process new data with DataProcessor
-    dp = DataProcessor(
-        data_source=data_source,
-        start_date=start_date,
-        end_date=end_date,
-        time_interval=time_interval
-    )
-    # For Crypto, if_vix is typically False, so dp.run(...) won't add VIX/turbulence
-    price_array, tech_array, _ = dp.run(
-        ticker_list=ticker_list,
-        technical_indicator_list=technical_indicator_list,
-        if_vix=if_vix,        # or pass False
-        cache=True
-    )
+#     # 1) Load & process new data with DataProcessor
+#     dp = DataProcessor(
+#         data_source=data_source,
+#         start_date=start_date,
+#         end_date=end_date,
+#         time_interval=time_interval
+#     )
+#     # For Crypto, if_vix is typically False, so dp.run(...) won't add VIX/turbulence
+#     price_array, tech_array, _ = dp.run(
+#         ticker_list=ticker_list,
+#         technical_indicator_list=technical_indicator_list,
+#         if_vix=if_vix,        # or pass False
+#         cache=True
+#     )
 
-    # 2) Build the test environment with if_train=False
-    env_config = {
-        "price_array": price_array,
-        "tech_array": tech_array,
-        "if_train": False,   # This tells your CryptoTradingEnv that it's for inference
-    }
-    env_instance = env(config=env_config)
+#     # 2) Build the test environment with if_train=False
+#     env_config = {
+#         "price_array": price_array,
+#         "tech_array": tech_array,
+#         "if_train": False,   # This tells your CryptoTradingEnv that it's for inference
+#     }
+#     env_instance = env(config=env_config)
 
-    # 3) Load the trained policy
-    net_dimension = kwargs.get("net_dimension", [64, 32])  # Same as training
-    cwd = kwargs.get("cwd", f"./{model_name}")            # Folder with actor.pth
+#     # 3) Load the trained policy
+#     net_dimension = kwargs.get("net_dimension", [64, 32])  # Same as training
+#     cwd = kwargs.get("cwd", f"./{model_name}")            # Folder with actor.pth
     
-    if drl_lib == "elegantrl":
-        # 4) Get the DRL agent’s predictions on the test data
-        DRLAgent_erl = DRLAgent
-        episode_total_assets = DRLAgent_erl.DRL_prediction(
-            model_name=model_name,
-            cwd=cwd,
-            net_dimension=net_dimension,
-            environment=env_instance,
-        )
-    else:
-        raise NotImplementedError("Currently only 'elegantrl' is integrated.")
+#     if drl_lib == "elegantrl":
+#         # 4) Get the DRL agent’s predictions on the test data
+#         DRLAgent_erl = DRLAgent
+#         episode_total_assets = DRLAgent_erl.DRL_prediction(
+#             model_name=model_name,
+#             cwd=cwd,
+#             net_dimension=net_dimension,
+#             environment=env_instance,
+#         )
+#     else:
+#         raise NotImplementedError("Currently only 'elegantrl' is integrated.")
 
-    # 5) Plot the results
-    # -- Option A: Plotly (interactive) --
+#     # 5) Plot the results
+#     # -- Option A: Plotly (interactive) --
 
-    fig = px.line(
-        x=range(len(episode_total_assets)),
-        y=episode_total_assets,
-        labels={'x': 'Time Step', 'y': 'Portfolio Value'},
-        title='Test Performance: Total Asset Value Over Time'
-    )
-    fig.show()
+#     fig = px.line(
+#         x=range(len(episode_total_assets)),
+#         y=episode_total_assets,
+#         labels={'x': 'Time Step', 'y': 'Portfolio Value'},
+#         title='Test Performance: Total Asset Value Over Time'
+#     )
+#     fig.show()
 
-    # -- Option B: Seaborn (if you prefer static plots) --
-    # import seaborn as sns
-    # import matplotlib.pyplot as plt
-    # sns.set_theme(style="whitegrid")
-    # plt.figure(figsize=(10, 6))
-    # sns.lineplot(x=range(len(episode_total_assets)), y=episode_total_assets)
-    # plt.title("Total Asset Value Over Time (Test)")
-    # plt.xlabel("Time Step")
-    # plt.ylabel("Portfolio Value")
-    # plt.show()
+#     # -- Option B: Seaborn (if you prefer static plots) --
+#     # import seaborn as sns
+#     # import matplotlib.pyplot as plt
+#     # sns.set_theme(style="whitegrid")
+#     # plt.figure(figsize=(10, 6))
+#     # sns.lineplot(x=range(len(episode_total_assets)), y=episode_total_assets)
+#     # plt.title("Total Asset Value Over Time (Test)")
+#     # plt.xlabel("Time Step")
+#     # plt.ylabel("Portfolio Value")
+#     # plt.show()
 
-    return episode_total_assets
+#     return episode_total_assets
 
         
 ####### Test functin old ##############
