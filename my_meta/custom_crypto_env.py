@@ -174,14 +174,18 @@ class CryptoTradingEnv(gym.Env):
         portfolio_value = self.amount + self.position_values.sum()
         self.position_ratios = self.position_values / portfolio_value
 
-        # Convert actions to target position changes
-        position_changes = actions * self.max_position_pct * portfolio_value
+        # Normalize actions and convert to target positions
+        actions = np.clip(actions, -1, 1)
+        current_positions_ratio = self.position_values / self.total_asset
+        target_positions_ratio = (actions + 1) / 2  # Convert [-1,1] to [0,1]
+        position_changes = (target_positions_ratio - current_positions_ratio) * self.total_asset
         
         # Debug prints for position changes
         if self.debug_trades:
             print(f"\nDay {self.day}:")
             print(f"Portfolio value: ${portfolio_value:.2f}")
-            print(f"Actions received: {actions}")
+            print(f"Current positions ratio: {current_positions_ratio}")
+            print(f"Target positions ratio: {target_positions_ratio}")
             print(f"Position changes: {position_changes}")
         
         # Process sells first (to free up cash)
@@ -200,14 +204,18 @@ class CryptoTradingEnv(gym.Env):
                 max_sell_value = abs(position_changes[index])
                 current_position_value = self.position_values[index]
                 
-                if current_position_value > 0:
+                if current_position_value >= self.min_trade_amount:
                     # Determine sell size in asset units (supporting fractional)
                     sell_value = min(max_sell_value, current_position_value)
-                    if sell_value >= self.min_trade_amount:
-                        sell_units = sell_value / current_price[index]
-                        self.stocks[index] -= sell_units
-                        self.amount += sell_value * (1 - self.sell_cost_pct)
-                        self.stocks_cool_down[index] = 0
+                    sell_units = sell_value / current_price[index]
+                    
+                    # Execute trade with logging
+                    if self.debug_trades:
+                        print(f"Executing sell: {sell_units:.6f} units at ${current_price[index]:.2f}")
+                    
+                    self.stocks[index] -= sell_units
+                    self.amount += sell_value * (1 - self.sell_cost_pct)
+                    self.stocks_cool_down[index] = 0
 
         # Update portfolio value after sells
         self.position_values = self.stocks * current_price
@@ -231,6 +239,11 @@ class CryptoTradingEnv(gym.Env):
                 
                 if buy_value >= self.min_trade_amount:
                     buy_units = buy_value / current_price[index]
+                    
+                    # Execute trade with logging
+                    if self.debug_trades:
+                        print(f"Executing buy: {buy_units:.6f} units at ${current_price[index]:.2f}")
+                    
                     self.stocks[index] += buy_units
                     self.amount -= buy_value * (1 + self.buy_cost_pct)
                     self.stocks_cool_down[index] = 0
@@ -239,13 +252,20 @@ class CryptoTradingEnv(gym.Env):
         next_position_values = self.stocks * current_price
         total_asset = self.amount + next_position_values.sum()
         
-        # Enhanced reward calculation
-        profit_loss = total_asset - self.total_asset
-        position_diversity_penalty = self._calculate_concentration_penalty()
+        # Calculate returns and trading activity
+        returns = (total_asset - self.total_asset) / self.total_asset
+        trade_value = abs(position_changes).sum()
+        trading_activity = min(trade_value / self.total_asset, 1.0)
         
+        # Add entropy bonus to encourage exploration
+        action_entropy = -np.sum(actions * np.log(np.abs(actions) + 1e-8))
+        
+        # Enhanced reward calculation
         reward = (
-            profit_loss * self.reward_scaling 
-            - position_diversity_penalty * 0.1  # Penalize concentration
+            returns * self.reward_scaling * 10  # Increased importance of returns
+            + trading_activity * 0.1  # Small bonus for reasonable trading
+            - self._calculate_concentration_penalty() * 0.05  # Reduced penalty
+            + 0.01 * action_entropy  # Small bonus for diverse actions
         )
         
         self.total_asset = total_asset
