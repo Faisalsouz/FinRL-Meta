@@ -1068,18 +1068,26 @@ action_dim = len(ticker_list) # for training
 print(ticker_list)
 print(len(ticker_list))
 print(INDICATORS)
-state_dim = 1 + 4 * action_dim + len(INDICATORS) * action_dim  # Added position_ratios dimension
-print(state_dim)
+# Calculate state dimension components:
+# 1 (amount) + 
+# action_dim (price_scaled) + 
+# action_dim (stocks_scaled) + 
+# action_dim (stocks_cool_down) +
+# action_dim (position_ratios) +
+# len(INDICATORS) * action_dim (technical indicators)
+state_dim = 1 + 4 * action_dim + len(INDICATORS) * action_dim
+print(f"Calculated state_dim: {state_dim}")
 ERL_PARAMS = {
     "learning_rate": 1e-4,
     "batch_size": 4096,
     "gamma": 0.99,
     "seed": 312,
-    "net_dimension": [256, 128, 64],
+    "net_dimension": [256, 128, 64],  # Adjusted for state dimension
     "target_step": 10000,
     "eval_gap": 50,
     "eval_times": 3
-} # For training with improved parameters
+} 
+print(f"Creating model with state_dim: {state_dim}, action_dim: {action_dim}")  # Debug print
 #############################
 # end of the parameters
 #############################

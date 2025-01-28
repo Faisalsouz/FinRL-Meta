@@ -101,8 +101,20 @@ class CryptoTradingEnv(gym.Env):
         #
         # Now: 1 + 3*stock_dim + tech_dim
         #     (amount) + (price, stock, cooldown)*stock_dim + tech_dim
-        self.state_dim = 1 + 3 * stock_dim + self.tech_ary.shape[1]
+        # Calculate state dimension components
+        tech_dim = self.tech_ary.shape[1]
+        self.state_dim = 1 + 4 * stock_dim + tech_dim  # Updated to include position_ratios
         self.action_dim = stock_dim
+        
+        # Debug prints
+        print(f"Environment state_dim: {self.state_dim}")
+        print(f"State components:")
+        print(f"- Amount: 1")
+        print(f"- Price scaled: {stock_dim}")
+        print(f"- Stocks scaled: {stock_dim}")
+        print(f"- Stocks cooldown: {stock_dim}")
+        print(f"- Position ratios: {stock_dim}")
+        print(f"- Technical indicators: {tech_dim}")
 
         self.max_step = self.price_ary.shape[0] - 1
         self.if_discrete = False
@@ -255,11 +267,17 @@ class CryptoTradingEnv(gym.Env):
         stocks_scaled = self.stocks * 2**-6
         position_ratios = self.position_values / self.total_asset if self.total_asset > 0 else np.zeros_like(self.stocks)
 
-        return np.hstack((
-            amount_scaled,
-            price_scaled,
-            stocks_scaled,
-            self.stocks_cool_down,
-            position_ratios,  # Added position ratios to state
-            self.tech_ary[self.day]
+        state = np.hstack((
+            amount_scaled,           # 1
+            price_scaled,           # action_dim
+            stocks_scaled,          # action_dim
+            self.stocks_cool_down,  # action_dim
+            position_ratios,        # action_dim
+            self.tech_ary[self.day] # tech_indicators * action_dim
         )).astype(np.float32)
+        
+        # Add dimension check
+        expected_dim = 1 + 4 * len(self.stocks) + self.tech_ary.shape[1]
+        assert len(state) == expected_dim, f"State dimension mismatch. Expected {expected_dim}, got {len(state)}"
+        
+        return state
