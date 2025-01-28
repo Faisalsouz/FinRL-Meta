@@ -747,13 +747,13 @@ def test(
         # 2. Profit/Loss per Step with cumulative line
         fig2 = go.Figure()
         fig2.add_trace(go.Bar(
-            x=x_axis,
+            x=list(x_axis) if isinstance(x_axis, range) else x_axis,
             y=profits_per_step,
             name='Step Profit/Loss'
         ))
         cumulative_profits = np.cumsum(profits_per_step)
         fig2.add_trace(go.Scatter(
-            x=x_axis,
+            x=list(x_axis) if isinstance(x_axis, range) else x_axis,
             y=cumulative_profits,
             name='Cumulative P/L',
             yaxis='y2'
@@ -771,7 +771,7 @@ def test(
         fig3 = go.Figure()
         for i, ticker in enumerate(ticker_list):
             fig3.add_trace(go.Scatter(
-                x=x_axis,
+                x=list(x_axis) if isinstance(x_axis, range) else x_axis,
                 y=portfolio_allocations[:, i],
                 name=f'{ticker} Allocation',
                 stackgroup='one',
@@ -804,7 +804,7 @@ def test(
         fig5 = go.Figure()
         for i, ticker in enumerate(ticker_list):
             fig5.add_trace(go.Scatter(
-                x=x_axis,
+                x=list(x_axis) if isinstance(x_axis, range) else x_axis,
                 y=prices_history[:, i],
                 name=f'{ticker} Price',
                 hovertemplate='$%{y:,.2f}<extra></extra>'
