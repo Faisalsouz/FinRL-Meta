@@ -369,21 +369,30 @@ def train_agent(args: Config):
     agent.states = new_env[np.newaxis, :]
 
     evaluator = Evaluator(eval_env=build_env(args.env_class, args.env_args),
-                          eval_per_step=args.eval_per_step,
-                          eval_times=args.eval_times,
-                          cwd=args.cwd)
-    torch.set_grad_enabled(False)
-    while True: # start training
-        buffer_items = agent.explore_env(env, args.horizon_len)
+                         eval_per_step=args.eval_per_step,
+                         eval_times=args.eval_times,
+                         cwd=args.cwd)
 
-        torch.set_grad_enabled(True)
-        logging_tuple = agent.update_net(buffer_items)
+    try:
         torch.set_grad_enabled(False)
+        while True:
+            buffer_items = agent.explore_env(env, args.horizon_len)
 
-        evaluator.evaluate_and_save(agent.act, args.horizon_len, logging_tuple)
-        if (evaluator.total_step > args.break_step) or os.path.exists(f"{args.cwd}/stop"):
-            torch.save(agent.act.state_dict(), args.cwd + '/actor.pth')
-            break  # stop training when reach `break_step` or `mkdir cwd/stop`
+            torch.set_grad_enabled(True)
+            logging_tuple = agent.update_net(buffer_items)
+            torch.set_grad_enabled(False)
+
+            evaluator.evaluate_and_save(agent.act, args.horizon_len, logging_tuple)
+            if (evaluator.total_step > args.break_step) or os.path.exists(f"{args.cwd}/stop"):
+                # Save final model
+                torch.save(agent.act.state_dict(), args.cwd + '/actor.pth')
+                break
+
+    except KeyboardInterrupt:
+        print("\nTraining interrupted! Saving current model...")
+        # Save interrupted model
+        torch.save(agent.act.state_dict(), args.cwd + '/interrupted_actor.pth')
+        print(f"Model saved to {args.cwd}/interrupted_actor.pth")
 
 
 def render_agent(env_class, env_args: dict, net_dims: [int], agent_class, actor_path: str, render_times: int = 8):
@@ -411,6 +420,12 @@ class Evaluator:
         self.eval_times = eval_times  # number of times that get episodic cumulative return
         self.eval_per_step = eval_per_step  # evaluate the agent per training steps
 
+        # Add new tracking variables
+        self.best_reward = -np.inf
+        self.save_counter = 0
+        self.checkpoint_interval = 50  # Save every 50 evaluations
+        self.min_eval_steps = 100  # Minimum steps before considering "best"
+
         self.recorder = []
         print(f"\n| `step`: Number of samples, or total training steps, or running times of `env.step()`."
               f"\n| `time`: Time spent from the start of training to this moment."
@@ -435,7 +450,26 @@ class Evaluator:
 
         used_time = time.time() - self.start_time
         self.recorder.append((self.total_step, used_time, avg_r))
-        
+
+        # Save checkpoint periodically
+        self.save_counter += 1
+        if self.save_counter % self.checkpoint_interval == 0:
+            checkpoint_path = f"{self.cwd}/checkpoint_{self.total_step}.pth"
+            torch.save(actor.state_dict(), checkpoint_path)
+            print(f"\nSaved periodic checkpoint to {checkpoint_path}")
+
+        # Save best model if performance improves
+        if self.total_step > self.min_eval_steps and avg_r > self.best_reward:
+            self.best_reward = avg_r
+            best_path = f"{self.cwd}/best_actor.pth"
+            torch.save(actor.state_dict(), best_path)
+            print(f"\nNew best model! Saved to {best_path}")
+            print(f"New best reward: {self.best_reward:.2f}")
+
+        # Always save latest model
+        latest_path = f"{self.cwd}/latest_actor.pth"
+        torch.save(actor.state_dict(), latest_path)
+
         print(f"| {self.total_step:8.2e}  {used_time:8.0f}  "
               f"| {avg_r:8.2f}  {std_r:6.2f}  {avg_s:6.0f}  "
               f"| {logging_tuple[0]:8.2f}  {logging_tuple[1]:8.2f}")
