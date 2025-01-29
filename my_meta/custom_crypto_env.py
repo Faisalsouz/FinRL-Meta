@@ -93,7 +93,8 @@ class CryptoTradingEnv(gym.Env):
         self.min_trade_amount = 5.0  # Decreased from 10.0
         self.position_values = None
         self.position_ratios = None
-        self.debug_trades = True  # Add debug flag
+        self.debug_mode = False  # Debug mode disabled by default
+        self.debug_step_interval = 1000  # Only print debug info every 1000 steps
 
         # --- Env Info ---
         self.env_name = "CryptoTradingEnv"
@@ -180,26 +181,24 @@ class CryptoTradingEnv(gym.Env):
         target_positions_ratio = (actions + 1) / 2  # Convert [-1,1] to [0,1]
         position_changes = (target_positions_ratio - current_positions_ratio) * self.total_asset
         
-        # Debug prints for position changes
-        if self.debug_trades:
-            print(f"\nDay {self.day}:")
+        # Controlled debug printing
+        if self.debug_mode and (self.day % self.debug_step_interval == 0):
+            print(f"\n=== Debug Info for Step {self.day} ===")
             print(f"Portfolio value: ${portfolio_value:.2f}")
             print(f"Current positions ratio: {current_positions_ratio}")
             print(f"Target positions ratio: {target_positions_ratio}")
             print(f"Position changes: {position_changes}")
+            print("=" * 40)
         
         # Process sells first (to free up cash)
         for index in np.where(position_changes < 0)[0]:
             if current_price[index] > 0:  # Valid price check
-                if self.debug_trades:
-                    print(f"\nAttempting buy for asset {index}:")
-                    print(f"Available cash: ${self.amount:.2f}")
-                    print(f"Desired buy value: ${position_changes[index]:.2f}")
-                    print(f"Max position allowed: ${portfolio_value * self.max_position_pct:.2f}")
-                if self.debug_trades:
-                    print(f"\nAttempting sell for asset {index}:")
-                    print(f"Current position value: ${self.position_values[index]:.2f}")
-                    print(f"Desired sell value: ${abs(position_changes[index]):.2f}")
+                if self.debug_mode and (self.day % self.debug_step_interval == 0):
+                    print(f"Asset {index} - Buy attempt:")
+                    print(f"  Cash: ${self.amount:.2f}")
+                    print(f"  Desired: ${position_changes[index]:.2f}")
+                    print(f"  Max allowed: ${portfolio_value * self.max_position_pct:.2f}")
+                    print(f"  Current value: ${self.position_values[index]:.2f}")
                 # Calculate maximum sell amount respecting minimum trade size
                 max_sell_value = abs(position_changes[index])
                 current_position_value = self.position_values[index]
@@ -210,8 +209,8 @@ class CryptoTradingEnv(gym.Env):
                     sell_units = sell_value / current_price[index]
                     
                     # Execute trade with logging
-                    if self.debug_trades:
-                        print(f"Executing sell: {sell_units:.6f} units at ${current_price[index]:.2f}")
+                    if self.debug_mode and (self.day % self.debug_step_interval == 0):
+                        print(f"  Executing sell: {sell_units:.6f} units at ${current_price[index]:.2f}")
                     
                     self.stocks[index] -= sell_units
                     self.amount += sell_value * (1 - self.sell_cost_pct)
@@ -241,8 +240,8 @@ class CryptoTradingEnv(gym.Env):
                     buy_units = buy_value / current_price[index]
                     
                     # Execute trade with logging
-                    if self.debug_trades:
-                        print(f"Executing buy: {buy_units:.6f} units at ${current_price[index]:.2f}")
+                    if self.debug_mode and (self.day % self.debug_step_interval == 0):
+                        print(f"  Executing buy: {buy_units:.6f} units at ${current_price[index]:.2f}")
                     
                     self.stocks[index] += buy_units
                     self.amount -= buy_value * (1 + self.buy_cost_pct)
