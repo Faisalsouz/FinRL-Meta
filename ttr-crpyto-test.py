@@ -69,18 +69,19 @@ class ActorPPO(nn.Module):
     def __init__(self, dims: [int], state_dim: int, action_dim: int):
         super().__init__()
         self.net = build_mlp(dims=[state_dim, *dims, action_dim])
-        self.action_std_log = nn.Parameter(torch.zeros((1, action_dim)), requires_grad=True)  # trainable parameter
+        self.action_std_log = nn.Parameter(torch.zeros((1, action_dim)) - 0.5, requires_grad=True)  # Higher initial std
 
     def forward(self, state: Tensor) -> Tensor:
         return self.net(state).tanh()  # action.tanh()
 
     def get_action(self, state: Tensor) -> (Tensor, Tensor):  # for exploration
         action_avg = self.net(state)
-        action_std = self.action_std_log.exp()
-
+        action_std = self.action_std_log.exp().clamp(1e-4, 1.0)  # Prevent too small std
+        
         dist = Normal(action_avg, action_std)
         action = dist.sample()
-        logprob = dist.log_prob(action).sum(1)
+        # Add entropy bonus to encourage exploration
+        logprob = dist.log_prob(action).sum(1) - 0.01 * dist.entropy().sum(1)
         return action, logprob
 
     def get_logprob_entropy(self, state: Tensor, action: Tensor) -> (Tensor, Tensor):
@@ -1129,14 +1130,14 @@ print(INDICATORS)
 state_dim = 1 + 4 * action_dim + len(INDICATORS) * action_dim
 print(f"Calculated state_dim: {state_dim}")
 ERL_PARAMS = {
-    "learning_rate": 3e-4,        # Increased for faster learning
-    "batch_size": 2048,           # Reduced for more frequent updates
+    "learning_rate": 5e-4,        # Increased further
+    "batch_size": 1024,           # Smaller batches
     "gamma": 0.99,
     "seed": 312,
-    "net_dimension": [512, 256, 128],  # Deeper network
-    "target_step": 5000,          # Reduced for more frequent updates
-    "eval_gap": 25,               # More frequent evaluation
-    "eval_times": 5               # More evaluation episodes
+    "net_dimension": [512, 256, 128],
+    "target_step": 2048,          # Shorter steps for quicker updates
+    "eval_gap": 20,               # More frequent evaluation
+    "eval_times": 8               # More evaluation episodes
 }
 print(f"Creating model with state_dim: {state_dim}, action_dim: {action_dim}")  # Debug print
 #############################

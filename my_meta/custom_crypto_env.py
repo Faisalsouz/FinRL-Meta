@@ -170,16 +170,15 @@ class CryptoTradingEnv(gym.Env):
 
         current_price = self.price_ary[self.day]
         
-        # Calculate current position values and ratios
-        self.position_values = self.stocks * current_price
-        portfolio_value = self.amount + self.position_values.sum()
-        self.position_ratios = self.position_values / portfolio_value
-
-        # Normalize actions and convert to target positions
+        # Simplify position changes calculation
         actions = np.clip(actions, -1, 1)
-        current_positions_ratio = self.position_values / self.total_asset
-        target_positions_ratio = (actions + 1) / 2  # Convert [-1,1] to [0,1]
-        position_changes = (target_positions_ratio - current_positions_ratio) * self.total_asset
+        desired_position_values = (actions + 1) * 0.5 * self.total_asset  # Convert to [0,1] range
+        current_position_values = self.stocks * current_price
+        position_changes = desired_position_values - current_position_values
+        
+        # Track trades for reward calculation
+        trades_executed = 0
+        total_trade_value = 0
         
         # Controlled debug printing
         if self.debug_mode and (self.day % self.debug_step_interval == 0):
@@ -247,24 +246,20 @@ class CryptoTradingEnv(gym.Env):
                     self.amount -= buy_value * (1 + self.buy_cost_pct)
                     self.stocks_cool_down[index] = 0
 
-        # Calculate reward with risk-adjusted components
-        next_position_values = self.stocks * current_price
-        total_asset = self.amount + next_position_values.sum()
-        
-        # Calculate returns and trading activity
-        returns = (total_asset - self.total_asset) / self.total_asset
-        trade_value = abs(position_changes).sum()
-        trading_activity = min(trade_value / self.total_asset, 1.0)
-        
-        # Add entropy bonus to encourage exploration
-        action_entropy = -np.sum(actions * np.log(np.abs(actions) + 1e-8))
+        # Calculate returns and reward
+        self.position_values = self.stocks * current_price
+        new_total_asset = self.amount + sum(self.position_values)
         
         # Enhanced reward calculation
+        returns = (new_total_asset - self.total_asset) / self.total_asset
+        trade_intensity = total_trade_value / self.total_asset if self.total_asset > 0 else 0
+        position_diversity = len([p for p in self.position_values if p > 0]) / len(self.position_values)
+        
         reward = (
-            returns * self.reward_scaling * 10  # Increased importance of returns
-            + trading_activity * 0.1  # Small bonus for reasonable trading
-            - self._calculate_concentration_penalty() * 0.05  # Reduced penalty
-            + 0.01 * action_entropy  # Small bonus for diverse actions
+            returns * self.reward_scaling * 10.0 +  # Main return component
+            trade_intensity * 0.001 +              # Small bonus for trading
+            position_diversity * 0.001 -           # Encourage diverse positions
+            abs(sum(actions)) * 0.0001            # Small penalty for extreme actions
         )
         
         self.total_asset = total_asset
