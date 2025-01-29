@@ -89,8 +89,8 @@ class CryptoTradingEnv(gym.Env):
         self.total_asset = None
         self.gamma_reward = None
         self.initial_total_asset = None
-        self.max_position_pct = 0.8  # Increased from 0.5
-        self.min_trade_amount = 5.0  # Decreased from 10.0
+        self.max_position_pct = 0.9  # Further increased for more flexibility
+        self.min_trade_amount = 2.0  # Further decreased to allow smaller trades
         self.position_values = None
         self.position_ratios = None
         self.debug_mode = False  # Debug mode disabled by default
