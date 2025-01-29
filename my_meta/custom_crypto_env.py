@@ -180,12 +180,15 @@ class CryptoTradingEnv(gym.Env):
         trades_executed = 0
         total_trade_value = 0
         
+        # Calculate current portfolio value
+        portfolio_value = self.amount + self.position_values.sum()
+        
         # Controlled debug printing
         if self.debug_mode and (self.day % self.debug_step_interval == 0):
             print(f"\n=== Debug Info for Step {self.day} ===")
             print(f"Portfolio value: ${portfolio_value:.2f}")
-            print(f"Current positions ratio: {current_positions_ratio}")
-            print(f"Target positions ratio: {target_positions_ratio}")
+            print(f"Current positions: {self.position_values / portfolio_value}")
+            print(f"Desired positions: {desired_position_values / portfolio_value}")
             print(f"Position changes: {position_changes}")
             print("=" * 40)
         
@@ -262,7 +265,7 @@ class CryptoTradingEnv(gym.Env):
             abs(sum(actions)) * 0.0001            # Small penalty for extreme actions
         )
         
-        self.total_asset = total_asset
+        self.total_asset = new_total_asset
         self.gamma_reward = self.gamma_reward * self.gamma + reward
 
         # State, done, and info
@@ -270,15 +273,15 @@ class CryptoTradingEnv(gym.Env):
         done = self.day == self.max_step
         
         info = {
-            'portfolio_value': total_asset,
+            'portfolio_value': new_total_asset,
             'position_ratios': self.position_ratios,
-            'cash_ratio': self.amount / total_asset,
+            'cash_ratio': self.amount / new_total_asset,
             'position_concentration': self._calculate_concentration_penalty()
         }
 
         if done:
             reward = self.gamma_reward
-            self.episode_return = total_asset / self.initial_total_asset
+            self.episode_return = new_total_asset / self.initial_total_asset
 
         return state, reward, done, False, info
 
