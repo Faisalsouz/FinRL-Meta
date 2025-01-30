@@ -1219,38 +1219,38 @@ net_dimensions = [128,64]    # same as you used in training
 # start training. function
 ##################################
 
-train(start_date='2024-01-01',
-    end_date='2025-01-24',
-    ticker_list=CRYPTO_TICKER_TR, 
-    data_source='binance',
-    time_interval='30m',
-    technical_indicator_list=INDICATORS,
-    drl_lib='elegantrl',
-    env=CryptoTradingEnv,
-    model_name='ppo',
-    if_vix=False,   # for crypto, typically skip 
-    erl_params=ERL_PARAMS,
-    cwd=agent_cwd,
-    break_step=1.5e5,
-    gpu_id=0,
-    initial_capital=10000  # Set to 10K
-)
+# train(start_date='2024-01-01',
+#     end_date='2025-01-24',
+#     ticker_list=CRYPTO_TICKER_TR, 
+#     data_source='binance',
+#     time_interval='30m',
+#     technical_indicator_list=INDICATORS,
+#     drl_lib='elegantrl',
+#     env=CryptoTradingEnv,
+#     model_name='ppo',
+#     if_vix=False,   # for crypto, typically skip 
+#     erl_params=ERL_PARAMS,
+#     cwd=agent_cwd,
+#     break_step=1.5e5,
+#     gpu_id=0,
+#     initial_capital=10000  # Set to 10K
+# )
 
 
 ##########calling test function################
 ###############################################
-# episode_assets = test(
-#         start_date="2025-01-25",
-#         end_date="2025-01-27",
-#         ticker_list=CRYPTO_TICKER_TR,  # Single asset
-#         data_source="binance",
-#         time_interval="5m",
-#         technical_indicator_list=["macd", "rsi", "cci", "dx"],
-#         drl_lib="elegantrl",
-#         env=CryptoTradingEnv,
-#         model_name="ppo",
-#         if_vix=False,
-#         net_dimension=[512, 256, 128],  # Updated net dimensions
-#         cwd=agent_cwd,   # folder that has 'actor.pth'
-#         initial_capital=10000  # Set to 10K
-#     )
+episode_assets = test(
+        start_date="2025-01-25",
+        end_date="2025-01-27",
+        ticker_list=CRYPTO_TICKER_TR,  # Single asset
+        data_source="binance",
+        time_interval="5m",
+        technical_indicator_list=["macd", "rsi", "cci", "dx"],
+        drl_lib="elegantrl",
+        env=CryptoTradingEnv,
+        model_name="ppo",
+        if_vix=False,
+        net_dimension=[512, 256, 128],  # Updated net dimensions
+        cwd=agent_cwd,   # folder that has 'actor.pth'
+        initial_capital=10000  # Set to 10K
+    )
