@@ -725,6 +725,7 @@ def test(
         profits_per_step = []
         prices_history = []
         trade_dates = []  # New: Track actual dates
+        all_trades = []  # Track all trades
         
         # Get initial state
         state, _ = env_instance.reset()
@@ -780,6 +781,10 @@ def test(
                     trade_dates.append(env_instance.current_time)
                 else:
                     trade_dates.append(i)  # fallback to step number
+                
+                # Store trades from info dict
+                if 'trades' in info:
+                    all_trades.extend(info['trades'])
                 
                 state = next_state
                 if done:
