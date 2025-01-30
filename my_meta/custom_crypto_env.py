@@ -263,8 +263,8 @@ class CryptoTradingEnv(gym.Env):
         trade_value = total_trade_value / self.total_asset if self.total_asset > 0 else 0
         
         reward = (
-            returns * self.reward_scaling * 10.0 +  # Main return component
-            trade_value * 0.001                     # Small bonus for trading activity
+            returns * self.reward_scaling * 100.0 +  # Increased reward scaling for returns
+            trade_value * 0.01                      # Increased bonus for trading activity
         )
         
         self.total_asset = new_total_asset
