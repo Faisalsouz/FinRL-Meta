@@ -1250,7 +1250,7 @@ episode_assets = test(
         env=CryptoTradingEnv,
         model_name="ppo",
         if_vix=False,
-        net_dimension=[512, 256, 128],  # Updated net dimensions
+        net_dimension=[256, 128],  # Updated net dimensions
         cwd=agent_cwd,   # folder that has 'actor.pth'
         initial_capital=10000  # Set to 10K
     )

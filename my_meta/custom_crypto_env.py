@@ -267,8 +267,7 @@ class CryptoTradingEnv(gym.Env):
         info = {
             'portfolio_value': new_total_asset,
             'position_ratios': self.position_ratios,
-            'cash_ratio': self.amount / new_total_asset,
-            'position_concentration': self._calculate_concentration_penalty()
+            'cash_ratio': self.amount / new_total_asset
         }
 
         if done:
