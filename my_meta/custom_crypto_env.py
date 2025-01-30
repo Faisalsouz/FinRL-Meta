@@ -197,6 +197,11 @@ class CryptoTradingEnv(gym.Env):
         # Calculate current portfolio value
         portfolio_value = self.amount + self.position_values.sum()
         
+        # Calculate position metrics for debug printing
+        total_position_value = (self.stocks * current_price).sum()
+        position_utilization = total_position_value / portfolio_value if portfolio_value > 0 else 0
+        cash_ratio = self.amount / portfolio_value if portfolio_value > 0 else 1.0
+        
         # Controlled debug printing
         if self.debug_mode and (self.day % self.debug_step_interval == 0):
             print(f"\n=== Position Utilization at Step {self.day} ===")
