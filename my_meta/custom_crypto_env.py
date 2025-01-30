@@ -176,10 +176,6 @@ class CryptoTradingEnv(gym.Env):
         current_position_values = self.stocks * current_price
         position_changes = desired_position_values - current_position_values
         
-        # Track trades for reward calculation
-        trades_executed = 0
-        total_trade_value = 0
-        
         # Calculate current portfolio value
         portfolio_value = self.amount + self.position_values.sum()
         
@@ -257,14 +253,9 @@ class CryptoTradingEnv(gym.Env):
         self.position_values = self.stocks * current_price
         new_total_asset = self.amount + sum(self.position_values)
         
-        # Simplified reward calculation with just returns and trading bonus
+        # Simple returns-based reward without any bonus
         returns = (new_total_asset - self.total_asset) / self.total_asset
-        trade_value = total_trade_value / self.total_asset if self.total_asset > 0 else 0
-        
-        reward = (
-            returns * self.reward_scaling * 100.0 +  # Increased reward scaling for returns
-            trade_value * 0.01                      # Increased bonus for trading activity
-        )
+        reward = returns * self.reward_scaling * 100.0  # Just scaled returns
         
         self.total_asset = new_total_asset
         self.gamma_reward = self.gamma_reward * self.gamma + reward
