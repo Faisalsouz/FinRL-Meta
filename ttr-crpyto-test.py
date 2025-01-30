@@ -38,10 +38,12 @@ from finrl.config import ERL_PARAMS
 # from finrl.config_tickers import DOW_30_TICKER
 import matplotlib.pyplot as plt
 import plotly.express as px
-   # Visualize results with Plotly
 import plotly.graph_objects as go
+import plotly.io as pio
 from dotenv import load_dotenv
 import os
+import matplotlib.pyplot as plt
+pio.renderers.default = "browser"  # or "notebook" for Jupyter
 
 
 
@@ -816,7 +818,7 @@ def test(
             yaxis2=dict(title='Cumulative P/L ($)', overlaying='y', side='right'),
             hovermode='x unified'
         )
-        fig2.show()
+        fig2.write_html(f"{cwd}/profit_loss.html")
         
         # 3. Asset Allocation Over Time (enhanced)
         portfolio_allocations = np.array(portfolio_allocations)
@@ -836,7 +838,7 @@ def test(
             hovermode='x unified',
             showlegend=True
         )
-        fig3.show()
+        fig3.write_html(f"{cwd}/asset_allocation.html")
         
         # 4. Actions Heatmap with enhanced tooltips
         actions_array = np.array(actions_history)
@@ -849,7 +851,7 @@ def test(
             aspect='auto'
         )
         fig4.update_traces(hoverongaps=False)
-        fig4.show()
+        fig4.write_html(f"{cwd}/actions_heatmap.html")
         
         # 5. Asset Prices Over Time
         prices_history = np.array(prices_history)
@@ -867,7 +869,37 @@ def test(
             yaxis_title='Price ($)',
             hovermode='x unified'
         )
-        fig5.show()
+        fig5.write_html(f"{cwd}/asset_prices.html")
+        
+        print(f"\nPlotly plots have been saved to {cwd}/")
+        
+        # Also create static matplotlib plots as backup
+        plt.figure(figsize=(12, 6))
+        plt.plot(episode_total_assets)
+        plt.title('Portfolio Value Over Time')
+        plt.xlabel('Time Step')
+        plt.ylabel('Total Asset Value ($)')
+        plt.savefig(f"{cwd}/portfolio_value.png")
+        plt.close()
+        
+        plt.figure(figsize=(12, 6))
+        plt.bar(range(len(profits_per_step)), profits_per_step)
+        plt.title('Profit/Loss per Step')
+        plt.xlabel('Time Step')
+        plt.ylabel('Profit/Loss ($)')
+        plt.savefig(f"{cwd}/profit_loss.png")
+        plt.close()
+        
+        plt.figure(figsize=(12, 6))
+        plt.imshow(np.array(actions_history).T, aspect='auto', cmap='RdYlBu')
+        plt.colorbar(label='Action Value')
+        plt.title('Agent Actions Over Time')
+        plt.xlabel('Time Step')
+        plt.ylabel('Asset')
+        plt.savefig(f"{cwd}/actions.png")
+        plt.close()
+        
+        print(f"Static plots have been saved to {cwd}/")
         
         # 6. Enhanced Summary Statistics
         total_profit = episode_total_assets[-1] - initial_asset
