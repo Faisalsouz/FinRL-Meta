@@ -89,8 +89,9 @@ class CryptoTradingEnv(gym.Env):
         self.total_asset = None
         self.gamma_reward = None
         self.initial_total_asset = None
-        self.max_position_pct = 0.9  # Further increased for more flexibility
-        self.min_trade_amount = 2.0  # Further decreased to allow smaller trades
+        # Position and trade limits
+        self.max_position_pct = 0.80  # Maximum 80% of portfolio per asset
+        self.min_trade_amount = 100.0  # Minimum trade size $100
         self.position_values = None
         self.position_ratios = None
         self.debug_mode = False  # Debug mode disabled by default
@@ -201,13 +202,16 @@ class CryptoTradingEnv(gym.Env):
                     print(f"  Desired: ${position_changes[index]:.2f}")
                     print(f"  Max allowed: ${portfolio_value * self.max_position_pct:.2f}")
                     print(f"  Current value: ${self.position_values[index]:.2f}")
-                # Calculate maximum sell amount respecting minimum trade size
-                max_sell_value = abs(position_changes[index])
+                # Enhanced sell execution with better position management
                 current_position_value = self.position_values[index]
+                desired_sell_value = abs(position_changes[index])
                 
                 if current_position_value >= self.min_trade_amount:
-                    # Determine sell size in asset units (supporting fractional)
-                    sell_value = min(max_sell_value, current_position_value)
+                    # Determine sell size respecting minimum trade size
+                    sell_value = min(
+                        desired_sell_value,  # What agent wants to sell
+                        current_position_value  # What we actually have
+                    )
                     sell_units = sell_value / current_price[index]
                     
                     # Execute trade with logging
@@ -225,17 +229,18 @@ class CryptoTradingEnv(gym.Env):
         # Process buys
         for index in np.where(position_changes > 0)[0]:
             if current_price[index] > 0:  # Valid price check
-                # Calculate maximum buy amount respecting position limits
+                # Enhanced buy execution with strict position limits
                 max_position_value = portfolio_value * self.max_position_pct
                 current_position_value = self.position_values[index]
                 available_position_value = max_position_value - current_position_value
+                available_cash = self.amount / (1 + self.buy_cost_pct)
                 
-                # Determine buy size
+                # Determine buy size with all constraints
                 desired_buy_value = position_changes[index]
                 buy_value = min(
-                    desired_buy_value,
-                    available_position_value,
-                    self.amount / (1 + self.buy_cost_pct)
+                    desired_buy_value,  # What agent wants to buy
+                    available_position_value,  # Maximum allowed increase
+                    available_cash  # Available cash with fees
                 )
                 
                 if buy_value >= self.min_trade_amount:
