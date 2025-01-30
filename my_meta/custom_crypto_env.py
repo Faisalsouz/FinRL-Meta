@@ -258,16 +258,13 @@ class CryptoTradingEnv(gym.Env):
         self.position_values = self.stocks * current_price
         new_total_asset = self.amount + sum(self.position_values)
         
-        # Enhanced reward calculation
+        # Simplified reward calculation with just returns and trading bonus
         returns = (new_total_asset - self.total_asset) / self.total_asset
-        trade_intensity = total_trade_value / self.total_asset if self.total_asset > 0 else 0
-        position_diversity = len([p for p in self.position_values if p > 0]) / len(self.position_values)
+        trade_value = total_trade_value / self.total_asset if self.total_asset > 0 else 0
         
         reward = (
             returns * self.reward_scaling * 10.0 +  # Main return component
-            trade_intensity * 0.001 +              # Small bonus for trading
-            position_diversity * 0.001 -           # Encourage diverse positions
-            abs(sum(actions)) * 0.0001            # Small penalty for extreme actions
+            trade_value * 0.001                     # Small bonus for trading activity
         )
         
         self.total_asset = new_total_asset
