@@ -1237,14 +1237,14 @@ net_dimensions = [128,64]    # same as you used in training
 # )
 
 
-##########calling test function################
+#########calling test function################
 ###############################################
 episode_assets = test(
         start_date="2025-01-25",
         end_date="2025-01-27",
         ticker_list=CRYPTO_TICKER_TR,  # Single asset
         data_source="binance",
-        time_interval="5m",
+        time_interval="30m",
         technical_indicator_list=["macd", "rsi", "cci", "dx"],
         drl_lib="elegantrl",
         env=CryptoTradingEnv,
