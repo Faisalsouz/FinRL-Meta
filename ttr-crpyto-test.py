@@ -840,18 +840,106 @@ def test(
         )
         fig3.write_html(f"{cwd}/asset_allocation.html")
         
-        # 4. Actions Heatmap with enhanced tooltips
-        actions_array = np.array(actions_history)
-        fig4 = px.imshow(
-            actions_array.T,
-            labels=dict(x="Time Step", y="Asset", color="Action Value"),
-            title="Agent Actions Heatmap",
-            y=ticker_list,
-            color_continuous_scale='RdYlBu',
-            aspect='auto'
-        )
-        fig4.update_traces(hoverongaps=False)
-        fig4.write_html(f"{cwd}/actions_heatmap.html")
+        # Create helper functions for visualization
+        def create_position_changes_plot(trades_log, ticker_list):
+            positions_df = pd.DataFrame(columns=ticker_list)
+            positions_df.index.name = 'step'
+            
+            current_positions = {ticker: 0 for ticker in ticker_list}
+            
+            for trade in trades_log:
+                step = trade['step']
+                asset_index = trade['asset_index']
+                ticker = ticker_list[asset_index]
+                
+                if trade['type'] == 'BUY':
+                    current_positions[ticker] += trade['units']
+                else:  # SELL
+                    current_positions[ticker] -= trade['units']
+                    
+                positions_df.loc[step, ticker] = current_positions[ticker]
+            
+            positions_df = positions_df.fillna(method='ffill')
+            
+            fig = go.Figure()
+            
+            for ticker in ticker_list:
+                fig.add_trace(go.Scatter(
+                    x=positions_df.index,
+                    y=positions_df[ticker],
+                    name=f'{ticker} Position',
+                    mode='lines',
+                    hovertemplate='Step: %{x}<br>' +
+                                 'Position: %{y:.6f} units<br>' +
+                                 f'Asset: {ticker}<extra></extra>'
+                ))
+            
+            fig.update_layout(
+                title='Asset Positions Over Time',
+                xaxis_title='Step',
+                yaxis_title='Position Size (Units)',
+                hovermode='x unified',
+                showlegend=True
+            )
+            
+            return fig
+
+        def create_trade_sizes_plot(trades_log, ticker_list):
+            fig = go.Figure()
+            
+            for i, ticker in enumerate(ticker_list):
+                asset_trades = [t for t in trades_log if t['asset_index'] == i]
+                
+                buy_trades = [t for t in asset_trades if t['type'] == 'BUY']
+                if buy_trades:
+                    fig.add_trace(go.Scatter(
+                        x=[t['step'] for t in buy_trades],
+                        y=[t['value'] for t in buy_trades],
+                        name=f'{ticker} Buys',
+                        mode='markers',
+                        marker=dict(
+                            size=10,
+                            symbol='triangle-up',
+                            color='green'
+                        ),
+                        hovertemplate='Step: %{x}<br>' +
+                                     'Value: $%{y:.2f}<br>' +
+                                     f'Asset: {ticker}<extra></extra>'
+                    ))
+                
+                sell_trades = [t for t in asset_trades if t['type'] == 'SELL']
+                if sell_trades:
+                    fig.add_trace(go.Scatter(
+                        x=[t['step'] for t in sell_trades],
+                        y=[-t['value'] for t in sell_trades],
+                        name=f'{ticker} Sells',
+                        mode='markers',
+                        marker=dict(
+                            size=10,
+                            symbol='triangle-down',
+                            color='red'
+                        ),
+                        hovertemplate='Step: %{x}<br>' +
+                                     'Value: -$%{y:.2f}<br>' +
+                                     f'Asset: {ticker}<extra></extra>'
+                    ))
+            
+            fig.update_layout(
+                title='Trade Sizes Over Time',
+                xaxis_title='Step',
+                yaxis_title='Trade Value ($)',
+                hovermode='x unified',
+                showlegend=True
+            )
+            
+            return fig
+
+        # Create and save the new visualizations
+        fig4 = create_position_changes_plot(all_trades, ticker_list)
+        fig4.write_html(f"{cwd}/position_changes.html")
+        
+        fig5 = create_trade_sizes_plot(all_trades, ticker_list)
+        fig5.write_html(f"{cwd}/trade_sizes.html")
         
         # 5. Asset Prices Over Time
         prices_history = np.array(prices_history)

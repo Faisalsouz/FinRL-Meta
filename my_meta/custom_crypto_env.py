@@ -159,24 +159,11 @@ class CryptoTradingEnv(gym.Env):
         return self.get_state(price), {}
 
     def calculate_reward(self, old_total_asset, new_total_asset):
-        """
-        Calculate reward based on portfolio growth
-        
-        Reward is positive when:
-        - Portfolio value increases (new_total_asset > old_total_asset)
-        
-        Reward is negative when:
-        - Portfolio value decreases (new_total_asset < old_total_asset)
-        
-        The magnitude of reward is proportional to the percentage change
-        """
+        """Calculate reward based on portfolio growth with appropriate scaling"""
         returns = (new_total_asset - old_total_asset) / old_total_asset
         
-        # Scale returns to make rewards more meaningful
-        # reward_scaling = 100.0 means:
-        # - 1% return = reward of 1.0
-        # - -1% return = reward of -1.0
-        reward = returns * self.reward_scaling * 100.0
+        # Scale returns back to smaller values for better learning
+        reward = returns * self.reward_scaling  # Remove the *100.0 multiplier
         
         return reward, {
             'returns_pct': returns * 100,
