@@ -24,8 +24,8 @@ class CryptoTradingEnv(gym.Env):
         sell_cost_pct=1e-3,
         reward_scaling=2**-11,
         initial_stocks=None,
-        max_position_pct=0.5,  # New: maximum position size as % of portfolio
-        min_trade_amount=10.0, # New: minimum USD trade size
+        max_position_pct=0.98,  # Allow up to 98% of portfolio in a single asset
+        min_trade_amount=20.0,  # Lower minimum trade size for more frequent trading
     ):
         """
         Parameters
@@ -183,9 +183,14 @@ class CryptoTradingEnv(gym.Env):
 
         current_price = self.price_ary[self.day]
         
-        # Simplify position changes calculation
+        # More aggressive position calculation
         actions = np.clip(actions, -1, 1)
-        desired_position_values = (actions + 1) * 0.5 * self.total_asset  # Convert to [0,1] range
+        # Convert actions to target portfolio percentages (0 to 0.98)
+        target_position_pcts = (actions + 1) * 0.5 * self.max_position_pct
+        
+        # Calculate desired position values using total portfolio value
+        portfolio_value = self.amount + (self.stocks * current_price).sum()
+        desired_position_values = target_position_pcts * portfolio_value
         current_position_values = self.stocks * current_price
         position_changes = desired_position_values - current_position_values
         
@@ -194,8 +199,12 @@ class CryptoTradingEnv(gym.Env):
         
         # Controlled debug printing
         if self.debug_mode and (self.day % self.debug_step_interval == 0):
-            print(f"\n=== Debug Info for Step {self.day} ===")
-            print(f"Portfolio value: ${portfolio_value:.2f}")
+            print(f"\n=== Position Utilization at Step {self.day} ===")
+            print(f"Total Portfolio: ${self.total_asset:.2f}")
+            print(f"Total Positions: ${total_position_value:.2f}")
+            print(f"Cash: ${self.amount:.2f}")
+            print(f"Position Utilization: {position_utilization*100:.1f}%")
+            print(f"Cash Ratio: {cash_ratio*100:.1f}%")
             print(f"Current positions: {self.position_values / portfolio_value}")
             print(f"Desired positions: {desired_position_values / portfolio_value}")
             print(f"Position changes: {position_changes}")
@@ -236,15 +245,13 @@ class CryptoTradingEnv(gym.Env):
         # Process buys
         for index in np.where(position_changes > 0)[0]:
             if current_price[index] > 0:  # Valid price check
-                max_position_value = portfolio_value * self.max_position_pct
-                current_position_value = self.position_values[index]
-                available_position_value = max_position_value - current_position_value
-                available_cash = self.amount / (1 + self.buy_cost_pct)
+                available_cash = self.amount * 0.98  # Use up to 98% of available cash
+                desired_buy_value = position_changes[index]
                 
+                # More aggressive buying
                 buy_value = min(
-                    position_changes[index],
-                    available_position_value,
-                    available_cash
+                    desired_buy_value,
+                    available_cash / (1 + self.buy_cost_pct)
                 )
                 
                 if buy_value >= self.min_trade_amount:
@@ -279,10 +286,16 @@ class CryptoTradingEnv(gym.Env):
         state = self.get_state(current_price)
         done = self.day == self.max_step
         
+        # Track position utilization
+        total_position_value = (self.stocks * current_price).sum()
+        cash_ratio = self.amount / self.total_asset
+        position_utilization = total_position_value / self.total_asset
+        
         info = {
             'portfolio_value': new_total_asset,
             'position_ratios': self.position_ratios,
-            'cash_ratio': self.amount / new_total_asset,
+            'cash_ratio': cash_ratio,
+            'position_utilization': position_utilization,
             'trades': trades_log,
             'reward_info': reward_info
         }
