@@ -158,6 +158,32 @@ class CryptoTradingEnv(gym.Env):
 
         return self.get_state(price), {}
 
+    def calculate_reward(self, old_total_asset, new_total_asset):
+        """
+        Calculate reward based on portfolio growth
+        
+        Reward is positive when:
+        - Portfolio value increases (new_total_asset > old_total_asset)
+        
+        Reward is negative when:
+        - Portfolio value decreases (new_total_asset < old_total_asset)
+        
+        The magnitude of reward is proportional to the percentage change
+        """
+        returns = (new_total_asset - old_total_asset) / old_total_asset
+        
+        # Scale returns to make rewards more meaningful
+        # reward_scaling = 100.0 means:
+        # - 1% return = reward of 1.0
+        # - -1% return = reward of -1.0
+        reward = returns * self.reward_scaling * 100.0
+        
+        return reward, {
+            'returns_pct': returns * 100,
+            'reward': reward,
+            'portfolio_value': new_total_asset
+        }
+
     def step(self, actions):
         """
         Enhanced step function with better position sizing and fractional trading
@@ -188,34 +214,33 @@ class CryptoTradingEnv(gym.Env):
             print(f"Position changes: {position_changes}")
             print("=" * 40)
         
+        # Add trade logging
+        trades_log = []
+        
         # Process sells first (to free up cash)
         for index in np.where(position_changes < 0)[0]:
             if current_price[index] > 0:  # Valid price check
-                if self.debug_mode and (self.day % self.debug_step_interval == 0):
-                    print(f"Asset {index} - Buy attempt:")
-                    print(f"  Cash: ${self.amount:.2f}")
-                    print(f"  Desired: ${position_changes[index]:.2f}")
-                    print(f"  Max allowed: ${portfolio_value * self.max_position_pct:.2f}")
-                    print(f"  Current value: ${self.position_values[index]:.2f}")
-                # Enhanced sell execution with better position management
                 current_position_value = self.position_values[index]
                 desired_sell_value = abs(position_changes[index])
                 
                 if current_position_value >= self.min_trade_amount:
-                    # Determine sell size respecting minimum trade size
-                    sell_value = min(
-                        desired_sell_value,  # What agent wants to sell
-                        current_position_value  # What we actually have
-                    )
+                    sell_value = min(desired_sell_value, current_position_value)
                     sell_units = sell_value / current_price[index]
-                    
-                    # Execute trade with logging
-                    if self.debug_mode and (self.day % self.debug_step_interval == 0):
-                        print(f"  Executing sell: {sell_units:.6f} units at ${current_price[index]:.2f}")
                     
                     self.stocks[index] -= sell_units
                     self.amount += sell_value * (1 - self.sell_cost_pct)
-                    self.stocks_cool_down[index] = 0
+                    
+                    trades_log.append({
+                        'step': self.day,
+                        'asset_index': index,
+                        'type': 'SELL',
+                        'units': sell_units,
+                        'price': current_price[index],
+                        'value': sell_value,
+                        'fees': sell_value * self.sell_cost_pct,
+                        'portfolio_value_before': portfolio_value,
+                        'portfolio_value_after': self.amount + (self.stocks * current_price).sum()
+                    })
 
         # Update portfolio value after sells
         self.position_values = self.stocks * current_price
@@ -224,38 +249,41 @@ class CryptoTradingEnv(gym.Env):
         # Process buys
         for index in np.where(position_changes > 0)[0]:
             if current_price[index] > 0:  # Valid price check
-                # Enhanced buy execution with strict position limits
                 max_position_value = portfolio_value * self.max_position_pct
                 current_position_value = self.position_values[index]
                 available_position_value = max_position_value - current_position_value
                 available_cash = self.amount / (1 + self.buy_cost_pct)
                 
-                # Determine buy size with all constraints
-                desired_buy_value = position_changes[index]
                 buy_value = min(
-                    desired_buy_value,  # What agent wants to buy
-                    available_position_value,  # Maximum allowed increase
-                    available_cash  # Available cash with fees
+                    position_changes[index],
+                    available_position_value,
+                    available_cash
                 )
                 
                 if buy_value >= self.min_trade_amount:
                     buy_units = buy_value / current_price[index]
                     
-                    # Execute trade with logging
-                    if self.debug_mode and (self.day % self.debug_step_interval == 0):
-                        print(f"  Executing buy: {buy_units:.6f} units at ${current_price[index]:.2f}")
-                    
                     self.stocks[index] += buy_units
                     self.amount -= buy_value * (1 + self.buy_cost_pct)
-                    self.stocks_cool_down[index] = 0
+                    
+                    trades_log.append({
+                        'step': self.day,
+                        'asset_index': index,
+                        'type': 'BUY',
+                        'units': buy_units,
+                        'price': current_price[index],
+                        'value': buy_value,
+                        'fees': buy_value * self.buy_cost_pct,
+                        'portfolio_value_before': portfolio_value,
+                        'portfolio_value_after': self.amount + (self.stocks * current_price).sum()
+                    })
 
         # Calculate returns and reward
         self.position_values = self.stocks * current_price
         new_total_asset = self.amount + sum(self.position_values)
         
-        # Simple returns-based reward without any bonus
-        returns = (new_total_asset - self.total_asset) / self.total_asset
-        reward = returns * self.reward_scaling * 100.0  # Just scaled returns
+        # Calculate reward using dedicated method
+        reward, reward_info = self.calculate_reward(self.total_asset, new_total_asset)
         
         self.total_asset = new_total_asset
         self.gamma_reward = self.gamma_reward * self.gamma + reward
@@ -267,7 +295,9 @@ class CryptoTradingEnv(gym.Env):
         info = {
             'portfolio_value': new_total_asset,
             'position_ratios': self.position_ratios,
-            'cash_ratio': self.amount / new_total_asset
+            'cash_ratio': self.amount / new_total_asset,
+            'trades': trades_log,
+            'reward_info': reward_info
         }
 
         if done:
