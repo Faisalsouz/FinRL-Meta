@@ -796,7 +796,7 @@ def test(
             labels={'x': 'Time', 'y': 'Total Asset Value ($)'}
         )
         fig1.update_layout(hovermode='x unified')
-        fig1.show()
+        fig1.write_html(f"{cwd}/portfolio_value.html")
         
         # 2. Profit/Loss per Step with cumulative line
         fig2 = go.Figure()
