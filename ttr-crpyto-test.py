@@ -734,8 +734,8 @@ def test(
         
         # Model verification
         print("\nModel verification:")
-        print(f"Loading model from: {cwd}/actor.pth")
-        state_dict = torch.load(f"{cwd}/actor.pth", map_location=device)
+        print(f"Loading model from: {cwd}/best_actor.pth")
+        state_dict = torch.load(f"{cwd}/best_actor.pth", map_location=device)
         print("Model parameters:", [name for name, _ in state_dict.items()])
         
         agent.act.load_state_dict(state_dict)
@@ -1135,7 +1135,7 @@ ERL_PARAMS = {
     "gamma": 0.99,
     "seed": 312,
     "net_dimension": [512, 256, 128],
-    "target_step": 2048,          # Shorter steps for quicker updates
+    "target_step": 5000,          # Shorter steps for quicker updates
     "eval_gap": 20,               # More frequent evaluation
     "eval_times": 8               # More evaluation episodes
 }
@@ -1148,7 +1148,7 @@ print(f"Creating model with state_dim: {state_dim}, action_dim: {action_dim}")  
 # runing the paper trading:
 
 CRYPTO_TICKER_PT = ["BTC/USD"]  # For paper trading
-CRYPTO_TICKER_TR = ["BTCUSDT"]  # For training
+CRYPTO_TICKER_TR = ["BTCUSDT",'SOLUSDT','ETHUSDT']  # For training
 INDICATORS = ["macd","rsi","cci","dx"]
 API_KEY = os.getenv("API_KEY")
 API_SECRET = os.getenv("API_SECRET")
@@ -1187,38 +1187,38 @@ net_dimensions = [128,64]    # same as you used in training
 # start training. function
 ##################################
 
-# train(start_date='2024-01-01',
-#     end_date='2025-01-24',
-#     ticker_list=CRYPTO_TICKER_TR, 
-#     data_source='binance',
-#     time_interval='5m',
-#     technical_indicator_list=INDICATORS,
-#     drl_lib='elegantrl',
-#     env=CryptoTradingEnv,
-#     model_name='ppo',
-#     if_vix=False,   # for crypto, typically skip 
-#     erl_params=ERL_PARAMS,
-#     cwd=agent_cwd,
-#     break_step=1e6,
-#     gpu_id=0,
-#     initial_capital=10000  # Set to 10K
-# )
+train(start_date='2024-01-01',
+    end_date='2025-01-24',
+    ticker_list=CRYPTO_TICKER_TR, 
+    data_source='binance',
+    time_interval='30m',
+    technical_indicator_list=INDICATORS,
+    drl_lib='elegantrl',
+    env=CryptoTradingEnv,
+    model_name='ppo',
+    if_vix=False,   # for crypto, typically skip 
+    erl_params=ERL_PARAMS,
+    cwd=agent_cwd,
+    break_step=1.5e5,
+    gpu_id=0,
+    initial_capital=10000  # Set to 10K
+)
 
 
 ##########calling test function################
 ###############################################
-episode_assets = test(
-        start_date="2025-01-25",
-        end_date="2025-01-27",
-        ticker_list=["BTCUSDT"],  # Single asset
-        data_source="binance",
-        time_interval="5m",
-        technical_indicator_list=["macd", "rsi", "cci", "dx"],
-        drl_lib="elegantrl",
-        env=CryptoTradingEnv,
-        model_name="ppo",
-        if_vix=False,
-        net_dimension=[512, 256, 128],  # Updated net dimensions
-        cwd=agent_cwd,   # folder that has 'actor.pth'
-        initial_capital=10000  # Set to 10K
-    )
+# episode_assets = test(
+#         start_date="2025-01-25",
+#         end_date="2025-01-27",
+#         ticker_list=CRYPTO_TICKER_TR,  # Single asset
+#         data_source="binance",
+#         time_interval="5m",
+#         technical_indicator_list=["macd", "rsi", "cci", "dx"],
+#         drl_lib="elegantrl",
+#         env=CryptoTradingEnv,
+#         model_name="ppo",
+#         if_vix=False,
+#         net_dimension=[512, 256, 128],  # Updated net dimensions
+#         cwd=agent_cwd,   # folder that has 'actor.pth'
+#         initial_capital=10000  # Set to 10K
+#     )
