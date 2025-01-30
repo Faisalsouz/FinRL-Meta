@@ -762,7 +762,7 @@ def test(
                 actions_history.append(action)
                 
                 # Take step in environment
-                next_state, reward, done, _, _ = env_instance.step(action)
+                next_state, reward, done, _, info = env_instance.step(action)
                 
                 # Calculate total asset value
                 total_asset = env_instance.amount + (env_instance.price_ary[env_instance.day] * env_instance.stocks).sum()
