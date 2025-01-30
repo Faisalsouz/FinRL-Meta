@@ -70,8 +70,7 @@ class CryptoTradingEnv(gym.Env):
         self.min_stock_rate = min_stock_rate
         self.buy_cost_pct = buy_cost_pct
         self.sell_cost_pct = sell_cost_pct
-        self.reward_scaling = 2**-8  # Increased from 2**-11
-        self.position_diversity_penalty_scale = 0.05  # Reduced penalty
+        self.reward_scaling = 1.0  # Remove scaling initially for debugging
         self.initial_capital = initial_account
 
         stock_dim = self.price_ary.shape[1]
@@ -90,8 +89,8 @@ class CryptoTradingEnv(gym.Env):
         self.gamma_reward = None
         self.initial_total_asset = None
         # Position and trade limits
-        self.max_position_pct = 0.90  # Maximum 80% of portfolio per asset
-        self.min_trade_amount = 200.0  # Minimum trade size $100
+        self.max_position_pct = 0.95  # Allow larger positions
+        self.min_trade_amount = 50.0  # Lower minimum trade size
         self.position_values = None
         self.position_ratios = None
         self.debug_mode = False  # Debug mode disabled by default
@@ -287,29 +286,37 @@ class CryptoTradingEnv(gym.Env):
 
         return state, reward, done, False, info
 
-    def _calculate_concentration_penalty(self):
-        """Calculate penalty for concentrated positions"""
-        non_zero_positions = self.position_ratios[self.position_ratios > 0.01]
-        if len(non_zero_positions) == 0:
-            return 0
+    def _calculate_volatility(self):
+        """Calculate rolling volatility for each asset"""
+        if self.day < 10:  # Need some history
+            return np.zeros(self.action_dim)
         
-        # Herfindahl-Hirschman Index (HHI) for position concentration
-        hhi = np.sum(non_zero_positions ** 2)
-        return max(0, hhi - (1.0 / len(self.position_ratios)))  # Penalty increases with concentration
+        lookback = 10
+        price_window = self.price_ary[self.day-lookback:self.day+1]
+        returns = np.diff(price_window, axis=0) / price_window[:-1]
+        volatility = np.std(returns, axis=0)
+        return volatility
 
     def get_state(self, price):
-        """Enhanced state representation including position metrics"""
-        amount_scaled = np.array(self.amount * 2**-12, dtype=np.float32)
-        price_scaled = price * 2**-6
-        stocks_scaled = self.stocks * 2**-6
-        position_ratios = self.position_values / self.total_asset if self.total_asset > 0 else np.zeros_like(self.stocks)
+        """Enhanced state representation with better normalization"""
+        amount_scaled = np.array(self.amount / self.initial_capital, dtype=np.float32)
+        price_scaled = price / self.price_ary[0]  # Normalize to initial price
+        stocks_scaled = self.stocks * price / self.total_asset  # Position sizes as ratios
+        
+        # Add price changes
+        price_change = np.zeros_like(price)
+        if self.day > 0:
+            price_change = (price - self.price_ary[self.day-1]) / self.price_ary[self.day-1]
+            
+        # Calculate volatility
+        volatility = self._calculate_volatility()
 
         state = np.hstack((
             amount_scaled,           # 1
             price_scaled,           # action_dim
             stocks_scaled,          # action_dim
-            self.stocks_cool_down,  # action_dim
-            position_ratios,        # action_dim
+            price_change,           # action_dim
+            volatility,             # action_dim
             self.tech_ary[self.day] # tech_indicators * action_dim
         )).astype(np.float32)
         

@@ -1162,14 +1162,14 @@ print(INDICATORS)
 state_dim = 1 + 4 * action_dim + len(INDICATORS) * action_dim
 print(f"Calculated state_dim: {state_dim}")
 ERL_PARAMS = {
-    "learning_rate": 5e-4,        # Increased further
-    "batch_size": 1024,           # Smaller batches
+    "learning_rate": 1e-3,        # Increased for faster learning
+    "batch_size": 512,            # Smaller batches
     "gamma": 0.99,
     "seed": 312,
-    "net_dimension": [512, 256, 128],
-    "target_step": 5000,          # Shorter steps for quicker updates
-    "eval_gap": 20,               # More frequent evaluation
-    "eval_times": 8               # More evaluation episodes
+    "net_dimension": [256, 128],  # Simpler network
+    "target_step": 2048,          # More frequent updates
+    "eval_gap": 20,
+    "eval_times": 3
 }
 print(f"Creating model with state_dim: {state_dim}, action_dim: {action_dim}")  # Debug print
 #############################
