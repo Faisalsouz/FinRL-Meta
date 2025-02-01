@@ -1035,181 +1035,8 @@ def test(
     else:
         raise NotImplementedError("Currently only 'elegantrl' is integrated.")
 
-#### old v1 Test function ############
-#######################################
 
-# def test(
-#     start_date,
-#     end_date,
-#     ticker_list,
-#     data_source,
-#     time_interval,
-#     technical_indicator_list,
-#     drl_lib,
-#     env,
-#     model_name,
-#     if_vix=False,  # Typically False for crypto
-#     **kwargs,
-# ):
-#     """
-#     Test the trained agent on new data (from start_date to end_date),
-#     then produce a plot of the total asset value over time.
 
-#     Parameters
-#     ----------
-#     start_date : str
-#         Test data start date (e.g., "2024-01-01")
-#     end_date : str
-#         Test data end date (e.g., "2024-03-01")
-#     ticker_list : list
-#         List of asset tickers (e.g., ["BTCUSDT", "ETHUSDT"])
-#     data_source : str
-#         Name of the data source (e.g., "binance")
-#     time_interval : str
-#         The resolution of the data (e.g., "5m", "15m", "1D")
-#     technical_indicator_list : list
-#         List of technical indicators (e.g., ["macd", "rsi", "cci", "dx"])
-#     drl_lib : str
-#         DRL library name, e.g., "elegantrl"
-#     env : class
-#         Your environment class, e.g., CryptoTradingEnv
-#     model_name : str
-#         The model/agent identifier, e.g., "ppo"
-#     if_vix : bool, optional
-#         Whether to add a volatility index to the data (more for stocks).
-#     kwargs : dict
-#         Additional arguments, e.g.,
-#           - net_dimension : list (your actor/critic network dims)
-#           - cwd : str (path to the saved model)
-    
-#     Returns
-#     -------
-#     episode_total_assets : list[float]
-#         The total asset value at each time step during the test.
-#     """
-#     print("Received kwargs:", kwargs)
-    
-#     # 1) Load & process new data with DataProcessor
-#     dp = DataProcessor(
-#         data_source=data_source,
-#         start_date=start_date,
-#         end_date=end_date,
-#         time_interval=time_interval
-#     )
-#     # For Crypto, if_vix is typically False, so dp.run(...) won't add VIX/turbulence
-#     price_array, tech_array, _ = dp.run(
-#         ticker_list=ticker_list,
-#         technical_indicator_list=technical_indicator_list,
-#         if_vix=if_vix,        # or pass False
-#         cache=True
-#     )
-
-#     # 2) Build the test environment with if_train=False
-#     env_config = {
-#         "price_array": price_array,
-#         "tech_array": tech_array,
-#         "if_train": False,   # This tells your CryptoTradingEnv that it's for inference
-#     }
-#     env_instance = env(config=env_config)
-
-#     # 3) Load the trained policy
-#     net_dimension = kwargs.get("net_dimension", [64, 32])  # Same as training
-#     cwd = kwargs.get("cwd", f"./{model_name}")            # Folder with actor.pth
-    
-#     if drl_lib == "elegantrl":
-#         # 4) Get the DRL agent’s predictions on the test data
-#         DRLAgent_erl = DRLAgent
-#         episode_total_assets = DRLAgent_erl.DRL_prediction(
-#             model_name=model_name,
-#             cwd=cwd,
-#             net_dimension=net_dimension,
-#             environment=env_instance,
-#         )
-#     else:
-#         raise NotImplementedError("Currently only 'elegantrl' is integrated.")
-
-#     # 5) Plot the results
-#     # -- Option A: Plotly (interactive) --
-
-#     fig = px.line(
-#         x=range(len(episode_total_assets)),
-#         y=episode_total_assets,
-#         labels={'x': 'Time Step', 'y': 'Portfolio Value'},
-#         title='Test Performance: Total Asset Value Over Time'
-#     )
-#     fig.show()
-
-#     # -- Option B: Seaborn (if you prefer static plots) --
-#     # import seaborn as sns
-#     # import matplotlib.pyplot as plt
-#     # sns.set_theme(style="whitegrid")
-#     # plt.figure(figsize=(10, 6))
-#     # sns.lineplot(x=range(len(episode_total_assets)), y=episode_total_assets)
-#     # plt.title("Total Asset Value Over Time (Test)")
-#     # plt.xlabel("Time Step")
-#     # plt.ylabel("Portfolio Value")
-#     # plt.show()
-
-#     return episode_total_assets
-
-        
-####### Test functin old ##############
-#######################################
-
-# def test(
-#     start_date,
-#     end_date,
-#     ticker_list,
-#     data_source,
-#     time_interval,
-#     technical_indicator_list,
-#     drl_lib,
-#     env,
-#     model_name,
-#     if_vix=True,
-#     **kwargs,
-# ):
-
-#     # import data processor
-#     from finrl.meta.data_processor import DataProcessor
-
-#     # fetch data
-#     dp = DataProcessor(data_source, **kwargs)
-#     data = dp.download_data(ticker_list, start_date, end_date, time_interval)
-#     data = dp.clean_data(data)
-#     data = dp.add_technical_indicator(data, technical_indicator_list)
-
-#     if if_vix:
-#         data = dp.add_vix(data)
-#     else:
-#         data = dp.add_turbulence(data)
-#     price_array, tech_array, turbulence_array = dp.df_to_array(data, if_vix)
-
-#     env_config = {
-#         "price_array": price_array,
-#         "tech_array": tech_array,
-#         "turbulence_array": turbulence_array,
-#         "if_train": False,
-#     }
-#     env_instance = env(config=env_config)
-
-#     # load elegantrl needs state dim, action dim and net dim
-#     net_dimension = kwargs.get("net_dimension", 2**7)
-#     cwd = kwargs.get("cwd", "./" + str(model_name))
-#     print("price_array: ", len(price_array))
-
-#     if drl_lib == "elegantrl":
-#         DRLAgent_erl = DRLAgent
-#         episode_total_assets = DRLAgent_erl.DRL_prediction(
-#             model_name=model_name,
-#             cwd=cwd,
-#             net_dimension=net_dimension,
-#             environment=env_instance,
-#         )
-#         return episode_total_assets
-    
-    
-    
 ####################################################
 ####################################################
 
@@ -1255,16 +1082,19 @@ print(INDICATORS)
 state_dim = 1 + 4 * action_dim + len(INDICATORS) * action_dim
 print(f"Calculated state_dim: {state_dim}")
 ERL_PARAMS = {
-    "learning_rate": 1e-3,        # Increased for faster learning
-    "batch_size": 512,            # Smaller batches
-    "gamma": 0.99,
+    "learning_rate": 3e-4,         # Increased learning rate for faster convergence
+    "batch_size": 512,             # Batch size remains the same (adjust as needed)
+    "gamma": 0.99,                 # Use same discount as in the environment
     "seed": 312,
-    "net_dimension": [256, 128],  # Simpler network
-    "target_step": 2048,          # More frequent updates
-    "eval_gap": 20,
-    "eval_times": 3
+    "net_dimension": [512, 256, 128],  # You can experiment with these sizes
+    "target_step": 5000,           # More frequent updates might help
+    "eval_gap": 30,
+    "eval_times": 1,
+    "ratio_clip": 0.25,            # PPO clipping parameter (unchanged)
+    "lambda_gae_adv": 0.95,        # GAE lambda remains the same
+    "lambda_entropy": 0.01         # Entropy bonus to encourage exploration
 }
-print(f"Creating model with state_dim: {state_dim}, action_dim: {action_dim}")  # Debug print
+# print(f"Creating model with state_dim: {state_dim}, action_dim: {action_dim}")  # Debug print
 #############################
 # end of the parameters
 #############################
@@ -1273,7 +1103,7 @@ print(f"Creating model with state_dim: {state_dim}, action_dim: {action_dim}")  
 # runing the paper trading:
 
 CRYPTO_TICKER_PT = ["BTC/USD"]  # For paper trading
-CRYPTO_TICKER_TR = ["BTCUSDT",'SOLUSDT','ETHUSDT']  # For training
+CRYPTO_TICKER_TR = ['SOLUSDT']  # For training
 INDICATORS = ["macd","rsi","cci","dx"]
 API_KEY = os.getenv("API_KEY")
 API_SECRET = os.getenv("API_SECRET")
@@ -1343,7 +1173,7 @@ episode_assets = test(
         env=CryptoTradingEnv,
         model_name="ppo",
         if_vix=False,
-        net_dimension=[256, 128],  # Updated net dimensions
+        net_dimension=ERL_PARAMS['net_dimension'],  # Updated net dimensions
         cwd=agent_cwd,   # folder that has 'actor.pth'
         initial_capital=10000  # Set to 10K
     )
