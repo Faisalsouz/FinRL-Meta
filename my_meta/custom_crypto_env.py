@@ -1,290 +1,167 @@
 import gymnasium as gym
 import numpy as np
-from numpy import random as rd
 
 class CryptoTradingEnv(gym.Env):
     """
-    A refactored crypto trading environment that uses technical indicators and a momentum signal
-    (derived from historical price patterns) to drive the target allocation. It also uses log returns
-    as rewards and optionally includes the momentum signal in the state.
+    A revised crypto trading environment with the following behavior:
+      - The state vector consists of:
+           • Scaled price (current price / initial price)
+           • Standardized technical indicators (via z-score normalization)
+           • Previous step’s percentage change in price
+           • In-trade flag (1 if a trade is open, else 0)
+      - The reward is defined as:
+           • If no trade is open: the natural percentage change from the previous bar.
+           • If a trade is open: the current percentage change relative to the entry price.
+      - The network’s action (a scalar) is interpreted as a target percentage change signal.
+          For example, an output of +0.02 means “expect a +2% move.”
+      - If action > 0 and no trade is open, a trade is initiated:
+             1. A market order is executed to buy (using available cash).
+             2. A target exit price and a stop-loss price are set.
+      - Once a trade is open, at each new bar the environment:
+             • Computes the current return relative to the entry price as the reward.
+             • Checks whether the current price has reached the target or stop loss:
+                  - If so, the trade is closed.
+                  - Otherwise, the trade remains open (reward is the intermediate return).
     """
 
-    def __init__(
-        self,
-        config,
-        initial_account=10000,       # Starting capital
-        gamma=0.99,
-        buy_cost_pct=1e-3,
-        sell_cost_pct=1e-3,
-        reward_scaling=1.0,          # Use 1.0 so that rewards (now log returns) are not squashed
-        initial_stocks=None,
-        max_position_pct=0.98,       # Maximum fraction of portfolio per asset
-        min_trade_amount=20.0,       # Minimum trade value (in $) to trigger a trade
-        momentum_window=5,           # Window length (in days) to compute moving averages
-        include_momentum_in_state=True  # Optionally include the momentum signal in the state vector
-    ):
-        """
-        Parameters:
-          config: dict with keys:
-            - "price_array": np.ndarray of shape (timesteps, number_of_assets)
-            - "tech_array": np.ndarray of shape (timesteps, tech_feature_dim)
-            - "if_train": bool, whether in training mode
-        """
-        price_ary = config["price_array"]
-        tech_ary = config["tech_array"]
+    def __init__(self, config, initial_account=10000, stop_loss_ratio=2.5):
+        # Price array: shape (T, 1) (assumes one asset)
+        self.price_ary = config["price_array"].astype(np.float32)
+        # Technical indicators: shape (T, tech_features)
+        self.tech_ary = config["tech_array"].astype(np.float32)
         self.if_train = config["if_train"]
-
-        self.price_ary = price_ary.astype(np.float32)
-        self.tech_ary = tech_ary.astype(np.float32)
-        # (Optional) scale technical indicators
-        self.tech_ary = self.tech_ary * 2**-7
-
-        self.gamma = gamma
-        self.buy_cost_pct = buy_cost_pct
-        self.sell_cost_pct = sell_cost_pct
-        self.reward_scaling = reward_scaling  # With log returns, scaling=1.0 is reasonable
         self.initial_capital = initial_account
-        self.max_position_pct = max_position_pct
-        self.momentum_window = momentum_window
-        self.include_momentum_in_state = include_momentum_in_state
+        self.stop_loss_ratio = stop_loss_ratio
 
-        stock_dim = self.price_ary.shape[1]  # number of assets; typically 1 for a single coin
-        self.initial_stocks = (
-            np.zeros(stock_dim, dtype=np.float32)
-            if initial_stocks is None
-            else initial_stocks
-        )
+        # ***** Standardize Technical Indicators using z-score *****
+        self.tech_mean = np.mean(self.tech_ary, axis=0)
+        self.tech_std = np.std(self.tech_ary, axis=0)
+        self.tech_ary = (self.tech_ary - self.tech_mean) / (self.tech_std + 1e-8)
+        # ************************************************************
 
-        # --- Internal State ---
-        self.day = None
-        self.amount = None
-        self.stocks = None
-        self.total_asset = None
-        self.gamma_reward = None
-        self.initial_total_asset = None
-        self.min_trade_amount = min_trade_amount
-
-        # Track current position values and ratios
-        self.position_values = None
-        self.position_ratios = None
-
+        self.timestep = self.price_ary.shape[0]
+        self.current_step = 0
         self.env_name = "CryptoTradingEnv"
 
-        # --- State Dimension ---
-        # We include:
-        #   1) Cash ratio (scaled amount)
-        #   2) Current price (normalized)
-        #   3) Stocks scaled (as current position value / portfolio)
-        #   4) Position ratios (allocation per asset)
-        #   5) Technical indicators from tech_ary at the current day
-        #   6) Optionally, the momentum signal (1 extra feature)
+        # State vector: [scaled_price, tech_features, last_pct_change, in_trade_flag]
         tech_dim = self.tech_ary.shape[1]
-        base_dim = 1 + 3 * stock_dim + tech_dim
-        if self.include_momentum_in_state:
-            base_dim += 1
-        self.state_dim = base_dim
-        self.action_dim = stock_dim
+        self.state_dim = 1 + tech_dim + 1 + 1
+        self.action_dim = 1  # single scalar output
 
-        print(f"Environment state_dim: {self.state_dim}")
-        print("State components:")
-        print("- Cash ratio (scaled amount): 1")
-        print("- Price scaled: ", stock_dim)
-        print("- Stocks scaled: ", stock_dim)
-        print("- Position ratios: ", stock_dim)
-        print("- Technical indicators: ", tech_dim)
-        if self.include_momentum_in_state:
-            print("- Momentum signal: 1")
+        self.initial_price = self.price_ary[0, 0]
+        self.last_pct_change = 0.0
 
-        self.max_step = self.price_ary.shape[0] - 1
-        self.if_discrete = False
-        self.target_return = 10.0
-        self.episode_return = 0.0
+        # Trade-related variables.
+        self.in_position = False
+        self.entry_price = None
+        self.target_price = None
+        self.stop_loss_price = None
 
         self.observation_space = gym.spaces.Box(
-            low=-np.inf, high=np.inf, shape=(self.state_dim,), dtype=np.float32
-        )
+            low=-np.inf, high=np.inf, shape=(self.state_dim,), dtype=np.float32)
         self.action_space = gym.spaces.Box(
-            low=-1, high=1, shape=(self.action_dim,), dtype=np.float32
-        )
+            low=-1, high=1, shape=(self.action_dim,), dtype=np.float32)
+        self.reset()
 
     def reset(self, *, seed=None, options=None):
-        """Reset the environment with proper initialization."""
-        self.day = 0
-        price = self.price_ary[self.day]
+        self.current_step = 0
+        self.last_pct_change = 0.0
+        self.in_position = False
+        self.entry_price = None
+        self.target_price = None
+        self.stop_loss_price = None
+        return self._get_state(), {}
 
-        if self.if_train:
-            # For training, start with a small random position
-            self.stocks = (self.initial_stocks * rd.uniform(0, 0.1, size=self.initial_stocks.shape)).astype(np.float32)
-            self.amount = self.initial_capital * rd.uniform(0.95, 1.0)
+    def _get_state(self):
+        """Construct the state vector."""
+        current_price = self.price_ary[self.current_step, 0]
+        scaled_price = current_price / self.initial_price
+        tech_features = np.array(self.tech_ary[self.current_step], dtype=np.float32).flatten()
+        pct_change = np.array([self.last_pct_change], dtype=np.float32).flatten()
+        in_trade_flag = np.array([1.0], dtype=np.float32) if self.in_position else np.array([0.0], dtype=np.float32)
+        return np.hstack([np.array([scaled_price], dtype=np.float32).flatten(),
+                          tech_features,
+                          pct_change,
+                          in_trade_flag]).astype(np.float32)
+
+    def step(self, action):
+        """
+        Process one time step.
+        - If no trade is open and action > 0, initiate a trade.
+        - If no trade is open and action <= 0, simply move to the next bar (reward = natural price change).
+        - If a trade is open, at each new bar:
+             • Compute reward = (current price - entry_price) / entry_price.
+             • If current price >= target_price: close trade (target hit).
+             • If current price <= stop_loss_price: close trade (stop loss hit).
+             • Otherwise, leave the trade open (reward = intermediate return).
+        """
+        done = False
+        info = {}
+        reward = 0.0
+
+        current_price = self.price_ary[self.current_step, 0]
+
+        if not self.in_position:
+            # Not in a trade.
+            signal = action[0]
+            if signal > 0:
+                # Initiate trade.
+                self.in_position = True
+                self.entry_price = current_price
+                self.target_price = current_price * (1 + signal)
+                self.stop_loss_price = current_price * (1 - signal * self.stop_loss_ratio)
+                info["trade"] = f"Trade initiated at {float(current_price):.2f}: target {float(self.target_price):.2f}, stop {float(self.stop_loss_price):.2f}"
+                reward = 0.0
+                self.last_pct_change = 0.0
+            else:
+                # No trade signal: move to next bar.
+                if self.current_step < self.timestep - 1:
+                    prev_price = current_price
+                    self.current_step += 1
+                    new_price = self.price_ary[self.current_step, 0]
+                    reward = (new_price - prev_price) / prev_price
+                    self.last_pct_change = reward
+                else:
+                    done = True
         else:
-            # For testing, start fully in cash
-            self.stocks = np.zeros_like(self.initial_stocks, dtype=np.float32)
-            self.amount = self.initial_capital
+            # Trade is open.
+            self.current_step += 1
+            if self.current_step >= self.timestep:
+                done = True
+                exit_price = self.price_ary[-1, 0]
+            else:
+                exit_price = self.price_ary[self.current_step, 0]
 
-        self.position_values = self.stocks * price
-        self.total_asset = self.amount + self.position_values.sum()
-        self.position_ratios = (self.position_values / self.total_asset) if self.total_asset > 0 else np.zeros_like(self.stocks)
-        self.initial_total_asset = self.total_asset
-        self.gamma_reward = 0.0
+            # Calculate the current trade return relative to entry.
+            current_trade_return = (exit_price - self.entry_price) / self.entry_price
 
-        return self.get_state(price), {}
+            # Check exit conditions:
+            if exit_price >= self.target_price:
+                # Target reached: trade closed.
+                reward = (self.target_price - self.entry_price) / self.entry_price
+                info["trade_result"] = f"Target hit: exit at {float(self.target_price):.2f}, reward {float(reward):.4f}"
+                self.in_position = False
+                self.entry_price = None
+                self.target_price = None
+                self.stop_loss_price = None
+                self.last_pct_change = reward
+            elif exit_price <= self.stop_loss_price:
+                # Stop loss reached: trade closed.
+                reward = (self.stop_loss_price - self.entry_price) / self.entry_price
+                info["trade_result"] = f"Stop loss hit: exit at {float(self.stop_loss_price):.2f}, reward {float(reward):.4f}"
+                self.in_position = False
+                self.entry_price = None
+                self.target_price = None
+                self.stop_loss_price = None
+                self.last_pct_change = reward
+            else:
+                # Trade remains open: reward is the current trade return.
+                reward = current_trade_return
+                info["trade_status"] = f"Trade open: current return {float(reward):.4f}"
+                self.last_pct_change = reward
 
-    def _compute_momentum(self):
-        """Compute a simple momentum signal based on moving averages.
-           Returns a value in [-1, 1]. If there isn’t enough history, return 0."""
-        if self.day < self.momentum_window:
-            return 0.0
-        # Use the last 'momentum_window' days for short-term average
-        short_ma = np.mean(self.price_ary[self.day - self.momentum_window + 1 : self.day + 1])
-        # Use a longer window for long-term average (e.g., 2 * momentum_window)
-        long_window = min(2 * self.momentum_window, self.day + 1)
-        long_ma = np.mean(self.price_ary[self.day - long_window + 1 : self.day + 1])
-        # Normalize the difference and squash with tanh
-        momentum = np.tanh((short_ma - long_ma) / long_ma)
-        return momentum
+        if self.current_step >= self.timestep - 1:
+            done = True
 
-    def calculate_reward(self, old_total_asset, new_total_asset):
-        """Calculate reward as a (scaled) log-return."""
-        # Use log returns to emphasize percentage changes even if small
-        log_return = np.log(new_total_asset / old_total_asset)
-        reward = log_return * self.reward_scaling
-        return reward, {
-            'log_return': log_return,
-            'portfolio_value': new_total_asset
-        }
-
-    def step(self, actions):
-        """
-        Execute one time step.
-        :param actions: np.ndarray of shape (asset_dim,) with values in [-1,1]
-                        representing the network’s output.
-        """
-        self.day += 1
-        if self.day >= self.max_step:
-            self.day = self.max_step
-
-        current_price = self.price_ary[self.day]
-        actions = np.clip(actions, -1, 1)
-
-        # Compute a momentum signal from historical prices:
-        momentum_signal = self._compute_momentum()
-
-        # Combine the network action with the momentum signal.
-        # For example, add the momentum signal (possibly with a weight) so that strong trends modify the action.
-        weight = 0.5  # Adjust this weight as needed.
-        combined_action = np.clip(actions + weight * momentum_signal, -1, 1)
-
-        # Map the (combined) action to a target portfolio percentage in [0, max_position_pct]
-        target_position_pcts = (combined_action + 1) * 0.5 * self.max_position_pct
-
-        # Compute current portfolio value
-        portfolio_value = self.amount + (self.stocks * current_price).sum()
-        # Compute desired position values (in dollars)
-        desired_position_values = target_position_pcts * portfolio_value
-        current_position_values = self.stocks * current_price
-        # The difference tells us how much value to trade for each asset
-        position_changes = desired_position_values - current_position_values
-
-        trades_log = []
-
-        # Process SELL orders first (freeing up cash)
-        for index in np.where(position_changes < 0)[0]:
-            if current_price[index] > 0:
-                current_value = current_position_values[index]
-                desired_sell_value = abs(position_changes[index])
-                if current_value >= self.min_trade_amount:
-                    sell_value = min(desired_sell_value, current_value)
-                    sell_units = sell_value / current_price[index]
-                    self.stocks[index] -= sell_units
-                    self.amount += sell_value * (1 - self.sell_cost_pct)
-                    trades_log.append({
-                        'step': self.day,
-                        'asset_index': index,
-                        'type': 'SELL',
-                        'units': sell_units,
-                        'price': current_price[index],
-                        'value': sell_value,
-                        'fees': sell_value * self.sell_cost_pct,
-                        'portfolio_value_before': portfolio_value,
-                        'portfolio_value_after': self.amount + (self.stocks * current_price).sum()
-                    })
-
-        # Update portfolio value after sells
-        current_position_values = self.stocks * current_price
-        portfolio_value = self.amount + current_position_values.sum()
-
-        # Process BUY orders
-        for index in np.where(position_changes > 0)[0]:
-            if current_price[index] > 0:
-                available_cash = self.amount * 0.98  # Use most of available cash
-                desired_buy_value = position_changes[index]
-                buy_value = min(desired_buy_value, available_cash / (1 + self.buy_cost_pct))
-                if buy_value >= self.min_trade_amount:
-                    buy_units = buy_value / current_price[index]
-                    self.stocks[index] += buy_units
-                    self.amount -= buy_value * (1 + self.buy_cost_pct)
-                    trades_log.append({
-                        'step': self.day,
-                        'asset_index': index,
-                        'type': 'BUY',
-                        'units': buy_units,
-                        'price': current_price[index],
-                        'value': buy_value,
-                        'fees': buy_value * self.buy_cost_pct,
-                        'portfolio_value_before': portfolio_value,
-                        'portfolio_value_after': self.amount + (self.stocks * current_price).sum()
-                    })
-
-        # Recompute portfolio values and update position ratios
-        self.position_values = self.stocks * current_price
-        new_total_asset = self.amount + self.position_values.sum()
-        self.position_ratios = (self.position_values / new_total_asset) if new_total_asset > 0 else np.zeros_like(self.stocks)
-
-        # Calculate reward using log-return
-        reward, reward_info = self.calculate_reward(self.total_asset, new_total_asset)
-        self.total_asset = new_total_asset
-        self.gamma_reward = self.gamma_reward * self.gamma + reward
-
-        state = self.get_state(current_price, momentum_signal)
-        done = self.day == self.max_step
-
-        info = {
-            'portfolio_value': new_total_asset,
-            'position_ratios': self.position_ratios,
-            'trades': trades_log,
-            'reward_info': reward_info
-        }
-
-        if done:
-            reward = self.gamma_reward
-            self.episode_return = new_total_asset / self.initial_total_asset
-
-        return state, reward, done, False, info
-
-    def get_state(self, price, momentum_signal=0.0):
-        """
-        Build the state vector.
-          - Cash ratio: self.amount / initial_capital
-          - Price scaled: current price normalized by initial price
-          - Stocks scaled: (stocks * current_price) / total_asset
-          - Position ratios: current allocation per asset
-          - Technical indicators: from tech_ary at the current day
-          - (Optional) Momentum signal: computed from historical prices
-        """
-        amount_scaled = np.array(self.amount / self.initial_capital, dtype=np.float32)
-        price_scaled = price / self.price_ary[0]
-        stocks_scaled = (self.stocks * price) / self.total_asset if self.total_asset > 0 else np.zeros_like(self.stocks)
-        pos_ratios = self.position_ratios
-        tech_features = self.tech_ary[self.day]
-
-        state_components = [amount_scaled, price_scaled, stocks_scaled, pos_ratios, tech_features]
-        if self.include_momentum_in_state:
-            state_components.append(np.array([momentum_signal], dtype=np.float32))
-        state = np.hstack(state_components).astype(np.float32)
-
-        # Check the dimension
-        expected_dim = 1 + 3 * len(self.stocks) + self.tech_ary.shape[1]
-        if self.include_momentum_in_state:
-            expected_dim += 1
-        assert len(state) == expected_dim, f"State dimension mismatch. Expected {expected_dim}, got {len(state)}"
-        return state
+        next_state = self._get_state()
+        return next_state, reward, done, False, info

@@ -74,7 +74,7 @@ class ActorPPO(nn.Module):
         self.action_std_log = nn.Parameter(torch.zeros((1, action_dim)) - 0.5, requires_grad=True)  # Higher initial std
 
     def forward(self, state: Tensor) -> Tensor:
-        return self.net(state).tanh()  # action.tanh()
+        return self.net(state) .tanh()  # action.tanh()
 
     def get_action(self, state: Tensor) -> (Tensor, Tensor):  # for exploration
         action_avg = self.net(state)
@@ -97,7 +97,8 @@ class ActorPPO(nn.Module):
 
     @staticmethod
     def convert_action_for_env(action: Tensor) -> Tensor:
-        return action.tanh()
+    
+        return action .tanh()
 
 
 class CriticPPO(nn.Module):
@@ -244,20 +245,25 @@ class AgentPPO(AgentBase):
         self.lambda_entropy = torch.tensor(self.lambda_entropy, dtype=torch.float32, device=self.device)
 
     def explore_env(self, env, horizon_len: int) -> [Tensor]:
+        """
+        Collects a batch of transitions by exploring the environment for a given horizon length.
+        The method converts the rewards to tensors on the proper device.
+        """
         states = torch.zeros((horizon_len, self.state_dim), dtype=torch.float32).to(self.device)
         actions = torch.zeros((horizon_len, self.action_dim), dtype=torch.float32).to(self.device)
         logprobs = torch.zeros(horizon_len, dtype=torch.float32).to(self.device)
         rewards = torch.zeros(horizon_len, dtype=torch.float32).to(self.device)
         dones = torch.zeros(horizon_len, dtype=torch.bool).to(self.device)
 
+        # Use the current stored state.
         ary_state = self.states[0]
 
         get_action = self.act.get_action
         convert = self.act.convert_action_for_env
         for i in range(horizon_len):
+            # Convert state to tensor on proper device.
             state = torch.as_tensor(ary_state, dtype=torch.float32, device=self.device)
             action, logprob = [t.squeeze(0) for t in get_action(state.unsqueeze(0))[:2]]
-
             ary_action = convert(action).detach().cpu().numpy()
             ary_state, reward, done, _, _ = env.step(ary_action)
             if done:
@@ -266,7 +272,8 @@ class AgentPPO(AgentBase):
             states[i] = state
             actions[i] = action
             logprobs[i] = logprob
-            rewards[i] = reward
+            # Convert the reward (a NumPy scalar) into a tensor.
+            rewards[i] = torch.tensor(reward, dtype=torch.float32, device=self.device)
             dones[i] = done
 
         self.states[0] = ary_state
@@ -686,354 +693,237 @@ def test(
     if_vix=False,
     **kwargs,
 ):
-    """Enhanced test function with detailed visualizations"""
+    """
+    Enhanced test function for the new signal-based crypto environment.
+    
+    This function:
+      - Loads data using DataProcessor.
+      - Builds the environment.
+      - Loads the trained policy.
+      - Runs a test episode while recording per-step details:
+            • Price,
+            • Predicted Signal,
+            • Step Return,
+            • Trade Status.
+      - Additionally, records complete trade events (entry step, exit step, predicted signal at entry, trade return, trade type).
+      - Saves two CSV files:
+            1. "trade_details.csv" for complete trade events.
+            2. "step_by_step_details.csv" for per-step info.
+      - Generates three graphs:
+            1. A grouped bar chart comparing predicted signal vs. realized trade return for each trade.
+            2. A detailed time-series chart showing Price, Predicted Signal, and Step Return (with vertical lines marking trade events).
+            3. A new, filtered scatter plot showing only steps with trade events (i.e. where "Trade Status" ≠ "No trade"), with markers color-coded by trade status and hover details showing Predicted Signal and Step Return.
+    """
     print("Received kwargs:", kwargs)
     
-    # 1) Load & process new data with DataProcessor
-    dp = DataProcessor(
-        data_source=data_source,
-        start_date=start_date,
-        end_date=end_date,
-        time_interval=time_interval
-    )
+    # 1) Load & process data using DataProcessor.
+    from meta.data_processor import DataProcessor
+    dp = DataProcessor(data_source, start_date, end_date, time_interval)
     price_array, tech_array, _ = dp.run(
         ticker_list=ticker_list,
         technical_indicator_list=technical_indicator_list,
         if_vix=if_vix,
         cache=True
     )
-
-    # 2) Build the test environment
+    
+    # 2) Build the test environment.
     env_config = {
         "price_array": price_array,
         "tech_array": tech_array,
         "if_train": False,
     }
     env_instance = env(config=env_config)
-
-    # 3) Load the trained policy
+    
+    # 3) Load the trained policy.
     net_dimension = kwargs.get("net_dimension", [64, 32])
     cwd = kwargs.get("cwd", f"./{model_name}")
     
     if drl_lib == "elegantrl":
-        DRLAgent_erl = DRLAgent
-        
-        # Initialize tracking lists
-        episode_total_assets = []
-        actions_history = []
-        portfolio_allocations = []
-        profits_per_step = []
-        prices_history = []
-        trade_dates = []  # New: Track actual dates
-        all_trades = []  # Track all trades
-        
-        # Get initial state
-        state, _ = env_instance.reset()
-        initial_asset = env_instance.initial_total_asset
-        
-        # Setup device and model
+        import torch
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        agent = MODELS[model_name](net_dimension, env_instance.state_dim, env_instance.action_dim)
+        # Adjust the import below to match your project structure.
+   
+        agent = AgentPPO(net_dimension, env_instance.state_dim, env_instance.action_dim, gpu_id=0)
         
-        # Model verification
         print("\nModel verification:")
-        print(f"Loading model from: {cwd}/best_actor.pth")
-        state_dict = torch.load(f"{cwd}/best_actor.pth", map_location=device)
-        print("Model parameters:", [name for name, _ in state_dict.items()])
-        
+        print(f"Loading model from: {cwd}/latest_actor.pth")
+        state_dict = torch.load(f"{cwd}/latest_actor.pth", map_location=device)
         agent.act.load_state_dict(state_dict)
-        
-        # Verify model produces non-zero outputs
         test_state = torch.zeros((1, env_instance.state_dim), device=device)
         test_action = agent.act(test_state)
         print(f"Test action output: {test_action.detach().cpu().numpy()}")
         
-        with torch.no_grad():
-            for i in range(env_instance.max_step):
-                s_tensor = torch.as_tensor((state,), device=device)
-                action = agent.act(s_tensor).detach().cpu().numpy()[0]
-                
-                # Debug prints
-                print(f"\nStep {i}:")
-                print(f"Action: {action}")
-                print(f"State: {state[:10]}...")  # First 10 elements
-                
-                # Store the action
-                actions_history.append(action)
-                
-                # Take step in environment
-                next_state, reward, done, _, info = env_instance.step(action)
-                
-                # Calculate total asset value
-                total_asset = env_instance.amount + (env_instance.price_ary[env_instance.day] * env_instance.stocks).sum()
-                episode_total_assets.append(total_asset)
-                
-                # Calculate profit for this step
-                profit = total_asset - (episode_total_assets[-2] if len(episode_total_assets) > 1 else initial_asset)
-                profits_per_step.append(profit)
-                
-                # Store portfolio allocation and current prices
-                portfolio_allocations.append(env_instance.stocks / total_asset)
-                prices_history.append(env_instance.price_ary[env_instance.day])
-                
-                # Store current date/time (assuming your env tracks this)
-                if hasattr(env_instance, 'current_time'):
-                    trade_dates.append(env_instance.current_time)
+        # 4) Initialize tracking lists.
+        prices = []             # Price at each step.
+        signals = []            # Predicted signal at each step.
+        rewards = []            # Step reward.
+        step_status = []        # Status message per step (e.g., "No trade", "Trade initiated", etc.)
+        
+        # For complete trade events.
+        trade_entry_steps = []
+        trade_exit_steps = []
+        trade_pred_signals = []
+        trade_returns = []
+        trade_types = []
+        
+        state, _ = env_instance.reset()
+        step_idx = 0
+        
+        while True:
+            s_tensor = torch.as_tensor((state,), device=device)
+            action = agent.act(s_tensor).detach().cpu().numpy()  # Expected shape: (1,) or (1,1)
+            predicted_signal = action[0]
+            signals.append(predicted_signal)
+            
+            current_price = env_instance.price_ary[env_instance.current_step, 0]
+            prices.append(current_price)
+            
+            # Default status.
+            current_status = "No trade"
+            if env_instance.in_position:
+                current_status = "Trade open"
+            
+            next_state, reward, done, _, info = env_instance.step(action)
+            rewards.append(reward)
+            
+            # Check for trade events.
+            if "trade" in info:
+                trade_entry_steps.append(step_idx)
+                trade_pred_signals.append(predicted_signal)
+                current_status = "Trade initiated"
+            if "trade_result" in info:
+                trade_exit_steps.append(step_idx)
+                res_str = info["trade_result"]
+                if "Target hit" in res_str:
+                    trade_types.append("Target hit")
+                elif "Stop loss hit" in res_str:
+                    trade_types.append("Stop loss hit")
                 else:
-                    trade_dates.append(i)  # fallback to step number
-                
-                # Store trades from info dict
-                if 'trades' in info:
-                    all_trades.extend(info['trades'])
-                
-                state = next_state
-                if done:
-                    break
+                    trade_types.append("Closed")
+                trade_returns.append(reward)
+                current_status = "Trade closed"
+            
+            step_status.append(current_status)
+            state = next_state
+            step_idx += 1
+            if done:
+                break
         
-        # Create enhanced visualizations
+        # 5) Save CSV files.
+        import pandas as pd
         
-        # 1. Portfolio Value Over Time with dates
-        x_axis = trade_dates if isinstance(trade_dates[0], str) else range(len(episode_total_assets))
-        fig1 = px.line(
-            x=x_axis,
-            y=episode_total_assets,
-            title='Portfolio Value Over Time',
-            labels={'x': 'Time', 'y': 'Total Asset Value ($)'}
+        # Create trade details CSV (only complete trades).
+        min_length = min(
+            len(trade_entry_steps),
+            len(trade_exit_steps),
+            len(trade_pred_signals),
+            len(trade_returns),
+            len(trade_types)
         )
-        fig1.update_layout(hovermode='x unified')
-        fig1.write_html(f"{cwd}/portfolio_value.html")
+        if not (len(trade_entry_steps) == len(trade_exit_steps) ==
+                len(trade_pred_signals) == len(trade_returns) == len(trade_types)):
+            print("Warning: Some trade events were incomplete. Only complete trade pairs will be recorded.")
+        trade_df = pd.DataFrame({
+            "Entry Step": trade_entry_steps[:min_length],
+            "Exit Step": trade_exit_steps[:min_length],
+            "Predicted Signal": trade_pred_signals[:min_length],
+            "Trade Return": trade_returns[:min_length],
+            "Trade Type": trade_types[:min_length]
+        })
+        trade_df.to_csv(f"{cwd}/trade_details.csv", index=False)
         
-        # 2. Profit/Loss per Step with cumulative line
-        fig2 = go.Figure()
-        fig2.add_trace(go.Bar(
-            x=list(x_axis) if isinstance(x_axis, range) else x_axis,
-            y=profits_per_step,
-            name='Step Profit/Loss'
-        ))
-        cumulative_profits = np.cumsum(profits_per_step)
-        fig2.add_trace(go.Scatter(
-            x=list(x_axis) if isinstance(x_axis, range) else x_axis,
-            y=cumulative_profits,
-            name='Cumulative P/L',
-            yaxis='y2'
-        ))
-        fig2.update_layout(
-            title='Profit/Loss Analysis',
-            yaxis=dict(title='Step P/L ($)'),
-            yaxis2=dict(title='Cumulative P/L ($)', overlaying='y', side='right'),
-            hovermode='x unified'
-        )
-        fig2.write_html(f"{cwd}/profit_loss.html")
+        # Create per-step details CSV (all steps).
+        x_axis = list(range(len(prices)))
+        step_df = pd.DataFrame({
+            "Step": x_axis,
+            "Price": prices,
+            "Predicted Signal": signals,
+            "Step Return": rewards,
+            "Trade Status": step_status
+        })
+        step_df.to_csv(f"{cwd}/step_by_step_details.csv", index=False)
         
-        # 3. Asset Allocation Over Time (enhanced)
-        portfolio_allocations = np.array(portfolio_allocations)
-        fig3 = go.Figure()
-        for i, ticker in enumerate(ticker_list):
-            fig3.add_trace(go.Scatter(
-                x=list(x_axis) if isinstance(x_axis, range) else x_axis,
-                y=portfolio_allocations[:, i],
-                name=f'{ticker} Allocation',
-                stackgroup='one',
-                hovertemplate='%{y:.1%}<extra></extra>'
-            ))
-        fig3.update_layout(
-            title='Portfolio Allocation Over Time',
-            xaxis_title='Time',
-            yaxis_title='Allocation Ratio',
-            hovermode='x unified',
-            showlegend=True
-        )
-        fig3.write_html(f"{cwd}/asset_allocation.html")
+        # 6) Create Graphs.
+        import plotly.graph_objects as go
+        from plotly.subplots import make_subplots
         
-        # Create helper functions for visualization
-        def create_position_changes_plot(trades_log, ticker_list):
-            positions_df = pd.DataFrame(columns=ticker_list)
-            positions_df.index.name = 'step'
-            
-            current_positions = {ticker: 0 for ticker in ticker_list}
-            
-            for trade in trades_log:
-                step = trade['step']
-                asset_index = trade['asset_index']
-                ticker = ticker_list[asset_index]
-                
-                if trade['type'] == 'BUY':
-                    current_positions[ticker] += trade['units']
-                else:  # SELL
-                    current_positions[ticker] -= trade['units']
-                    
-                positions_df.loc[step, ticker] = current_positions[ticker]
-            
-            positions_df = positions_df.fillna(method='ffill')
-            
-            fig = go.Figure()
-            
-            for ticker in ticker_list:
-                fig.add_trace(go.Scatter(
-                    x=positions_df.index,
-                    y=positions_df[ticker],
-                    name=f'{ticker} Position',
-                    mode='lines',
-                    hovertemplate='Step: %{x}<br>' +
-                                 'Position: %{y:.6f} units<br>' +
-                                 f'Asset: {ticker}<extra></extra>'
-                ))
-            
-            fig.update_layout(
-                title='Asset Positions Over Time',
-                xaxis_title='Step',
-                yaxis_title='Position Size (Units)',
-                hovermode='x unified',
-                showlegend=True
+        # Graph 1: Grouped Bar Chart for Trade Events.
+        trade_idx = list(range(min_length))
+        fig_trade = go.Figure(data=[
+            go.Bar(
+                x=trade_idx,
+                y=[float(x) for x in trade_pred_signals[:min_length]],
+                name="Predicted Signal",
+                marker_color="blue"
+            ),
+            go.Bar(
+                x=trade_idx,
+                y=[float(x) for x in trade_returns[:min_length]],
+                name="Trade Return",
+                marker_color=["green" if t == "Target hit" else "red" for t in trade_types[:min_length]]
             )
-            
-            return fig
-
-        def create_trade_sizes_plot(trades_log, ticker_list):
-            fig = go.Figure()
-            
-            for i, ticker in enumerate(ticker_list):
-                asset_trades = [t for t in trades_log if t['asset_index'] == i]
-                
-                buy_trades = [t for t in asset_trades if t['type'] == 'BUY']
-                if buy_trades:
-                    fig.add_trace(go.Scatter(
-                        x=[t['step'] for t in buy_trades],
-                        y=[t['value'] for t in buy_trades],
-                        name=f'{ticker} Buys',
-                        mode='markers',
-                        marker=dict(
-                            size=10,
-                            symbol='triangle-up',
-                            color='green'
-                        ),
-                        hovertemplate='Step: %{x}<br>' +
-                                     'Value: $%{y:.2f}<br>' +
-                                     f'Asset: {ticker}<extra></extra>'
-                    ))
-                
-                sell_trades = [t for t in asset_trades if t['type'] == 'SELL']
-                if sell_trades:
-                    fig.add_trace(go.Scatter(
-                        x=[t['step'] for t in sell_trades],
-                        y=[-t['value'] for t in sell_trades],
-                        name=f'{ticker} Sells',
-                        mode='markers',
-                        marker=dict(
-                            size=10,
-                            symbol='triangle-down',
-                            color='red'
-                        ),
-                        hovertemplate='Step: %{x}<br>' +
-                                     'Value: -$%{y:.2f}<br>' +
-                                     f'Asset: {ticker}<extra></extra>'
-                    ))
-            
-            fig.update_layout(
-                title='Trade Sizes Over Time',
-                xaxis_title='Step',
-                yaxis_title='Trade Value ($)',
-                hovermode='x unified',
-                showlegend=True
-            )
-            
-            return fig
-
-        # Create and save the new visualizations
-        fig4 = create_position_changes_plot(all_trades, ticker_list)
-        fig4.write_html(f"{cwd}/position_changes.html")
-        
-        fig5 = create_trade_sizes_plot(all_trades, ticker_list)
-        fig5.write_html(f"{cwd}/trade_sizes.html")
-        
-        # 5. Asset Prices Over Time
-        prices_history = np.array(prices_history)
-        fig5 = go.Figure()
-        for i, ticker in enumerate(ticker_list):
-            fig5.add_trace(go.Scatter(
-                x=list(x_axis) if isinstance(x_axis, range) else x_axis,
-                y=prices_history[:, i],
-                name=f'{ticker} Price',
-                hovertemplate='$%{y:,.2f}<extra></extra>'
-            ))
-        fig5.update_layout(
-            title='Asset Prices Over Time',
-            xaxis_title='Time',
-            yaxis_title='Price ($)',
-            hovermode='x unified'
+        ])
+        fig_trade.update_layout(
+            title="Trade Events: Predicted Signal vs. Realized Trade Return",
+            xaxis_title="Trade Event Index",
+            yaxis_title="Return (fraction)",
+            barmode="group"
         )
-        fig5.write_html(f"{cwd}/asset_prices.html")
+        fig_trade.write_html(f"{cwd}/trade_events_comparison.html")
         
-        print(f"\nPlotly plots have been saved to {cwd}/")
+        # Graph 2: Detailed Step-by-Step Plot (Filtered to Trade Events).
+        # Filter step_df to only rows where Trade Status is not "No trade".
+        trade_steps_df = step_df[step_df["Trade Status"] != "No trade"]
+        # Create a scatter plot using Plotly Express.
+        import plotly.express as px
+        fig_filtered = px.scatter(trade_steps_df,
+                                  x="Step",
+                                  y="Price",
+                                  color="Trade Status",
+                                  hover_data=["Predicted Signal", "Step Return"],
+                                  title="Filtered Trade Events: Price with Predicted Signal and Step Return")
+        fig_filtered.update_traces(marker=dict(size=10))
+        fig_filtered.write_html(f"{cwd}/filtered_trade_details.html")
         
-        # Also create static matplotlib plots as backup
-        plt.figure(figsize=(12, 6))
-        plt.plot(episode_total_assets)
-        plt.title('Portfolio Value Over Time')
-        plt.xlabel('Time Step')
-        plt.ylabel('Total Asset Value ($)')
-        plt.savefig(f"{cwd}/portfolio_value.png")
-        plt.close()
+        # (Optionally, you can also create a multi-axis chart with all step details, but if the filtered chart gives clear insights, that may be sufficient.)
         
-        plt.figure(figsize=(12, 6))
-        plt.bar(range(len(profits_per_step)), profits_per_step)
-        plt.title('Profit/Loss per Step')
-        plt.xlabel('Time Step')
-        plt.ylabel('Profit/Loss ($)')
-        plt.savefig(f"{cwd}/profit_loss.png")
-        plt.close()
+        # 7) Compute cumulative trade return (multiplicative, from complete trades).
+        import numpy as np
+        if len(trade_returns) > 0:
+            cumulative_trade_return = np.prod(1 + np.array(trade_returns)) - 1
+        else:
+            cumulative_trade_return = 0.0
         
-        plt.figure(figsize=(12, 6))
-        plt.imshow(np.array(actions_history).T, aspect='auto', cmap='RdYlBu')
-        plt.colorbar(label='Action Value')
-        plt.title('Agent Actions Over Time')
-        plt.xlabel('Time Step')
-        plt.ylabel('Asset')
-        plt.savefig(f"{cwd}/actions.png")
-        plt.close()
-        
-        print(f"Static plots have been saved to {cwd}/")
-        
-        # 6. Enhanced Summary Statistics
-        total_profit = episode_total_assets[-1] - initial_asset
-        max_drawdown = np.min(episode_total_assets) - initial_asset
-        profit_steps = sum(1 for x in profits_per_step if x > 0)
-        max_profit_trade = max(profits_per_step)
-        max_loss_trade = min(profits_per_step)
-        profit_factor = abs(sum(x for x in profits_per_step if x > 0) / sum(x for x in profits_per_step if x < 0)) if sum(x for x in profits_per_step if x < 0) != 0 else float('inf')
-        
+        print(f"\nTest completed. Plots and CSV files saved to {cwd}/")
         print("\n=== Performance Summary ===")
-        print(f"Initial Portfolio Value: ${initial_asset:,.2f}")
-        print(f"Final Portfolio Value: ${episode_total_assets[-1]:,.2f}")
-        print(f"Total Profit: ${total_profit:,.2f}")
-        print(f"Return: {(total_profit/initial_asset)*100:.2f}%")
-        print(f"Max Drawdown: ${max_drawdown:,.2f}")
-        print(f"Profitable Steps: {profit_steps}/{len(profits_per_step)} ({profit_steps/len(profits_per_step)*100:.2f}%)")
-        print(f"Largest Winning Trade: ${max_profit_trade:,.2f}")
-        print(f"Largest Losing Trade: ${max_loss_trade:,.2f}")
-        print(f"Profit Factor: {profit_factor:.2f}")
+        print(f"Cumulative Trade Return (complete trades): {float(cumulative_trade_return)*100:.2f}%")
+        total_trades = len(trade_returns)
+        correct_trades = sum(1 for r in trade_returns if r > 0)
+        print(f"Number of Trades: {total_trades}")
+        if total_trades > 0:
+            print(f"Correct Trades: {correct_trades} ({(correct_trades/total_trades*100):.2f}%)")
+        else:
+            print("No trades executed.")
         
         return {
-            'episode_total_assets': episode_total_assets,
-            'profits_per_step': profits_per_step,
-            'portfolio_allocations': portfolio_allocations,
-            'actions_history': actions_history,
-            'prices_history': prices_history,
-            'trade_dates': trade_dates,
-            'summary_stats': {
-                'total_profit': total_profit,
-                'return_pct': (total_profit/initial_asset)*100,
-                'max_drawdown': max_drawdown,
-                'profit_steps': profit_steps,
-                'total_steps': len(profits_per_step),
-                'max_profit_trade': max_profit_trade,
-                'max_loss_trade': max_loss_trade,
-                'profit_factor': profit_factor
+            'prices': prices,
+            'signals': signals,
+            'rewards': rewards,
+            'trade_details': trade_df,
+            'step_details': step_df,
+            'summary': {
+                'cumulative_trade_return': cumulative_trade_return,
+                'total_trades': total_trades,
+                'correct_trades': correct_trades,
+                'correct_trade_pct': (correct_trades/total_trades*100) if total_trades > 0 else 0
             }
         }
-    
     else:
         raise NotImplementedError("Currently only 'elegantrl' is integrated.")
+
+
+
+
 
 
 
@@ -1079,11 +969,10 @@ print(INDICATORS)
 # action_dim (stocks_cool_down) +
 # action_dim (position_ratios) +
 # len(INDICATORS) * action_dim (technical indicators)
-state_dim = 1 + 4 * action_dim + len(INDICATORS) * action_dim
-print(f"Calculated state_dim: {state_dim}")
+
 ERL_PARAMS = {
-    "learning_rate": 3e-4,         # Increased learning rate for faster convergence
-    "batch_size": 512,             # Batch size remains the same (adjust as needed)
+    "learning_rate": 3e-6,         # Increased learning rate for faster convergence
+    "batch_size": 1024,             # Batch size remains the same (adjust as needed)
     "gamma": 0.99,                 # Use same discount as in the environment
     "seed": 312,
     "net_dimension": [512, 256, 128],  # You can experiment with these sizes
@@ -1103,7 +992,7 @@ ERL_PARAMS = {
 # runing the paper trading:
 
 CRYPTO_TICKER_PT = ["BTC/USD"]  # For paper trading
-CRYPTO_TICKER_TR = ['SOLUSDT']  # For training
+CRYPTO_TICKER_TR = ['BTCUSDT']  # For training
 INDICATORS = ["macd","rsi","cci","dx"]
 API_KEY = os.getenv("API_KEY")
 API_SECRET = os.getenv("API_SECRET")
@@ -1142,38 +1031,38 @@ net_dimensions = [128,64]    # same as you used in training
 # start training. function
 ##################################
 
-# train(start_date='2024-01-01',
-#     end_date='2025-01-24',
-#     ticker_list=CRYPTO_TICKER_TR, 
-#     data_source='binance',
-#     time_interval='30m',
-#     technical_indicator_list=INDICATORS,
-#     drl_lib='elegantrl',
-#     env=CryptoTradingEnv,
-#     model_name='ppo',
-#     if_vix=False,   # for crypto, typically skip 
-#     erl_params=ERL_PARAMS,
-#     cwd=agent_cwd,
-#     break_step=1.5e5,
-#     gpu_id=0,
-#     initial_capital=10000  # Set to 10K
-# )
+train(start_date='2024-01-01',
+    end_date='2024-10-24',
+    ticker_list=CRYPTO_TICKER_TR, 
+    data_source='binance',
+    time_interval='30m',
+    technical_indicator_list=INDICATORS,
+    drl_lib='elegantrl',
+    env=CryptoTradingEnv,
+    model_name='ppo',
+
+    erl_params=ERL_PARAMS,
+    cwd=agent_cwd,
+    break_step=3e5,
+    gpu_id=0,
+    initial_capital=10000  # Set to 10K
+)
+
 
 
 #########calling test function################
 ###############################################
-episode_assets = test(
-        start_date="2025-01-25",
-        end_date="2025-01-27",
-        ticker_list=CRYPTO_TICKER_TR,  # Single asset
-        data_source="binance",
-        time_interval="30m",
-        technical_indicator_list=["macd", "rsi", "cci", "dx"],
-        drl_lib="elegantrl",
-        env=CryptoTradingEnv,
-        model_name="ppo",
-        if_vix=False,
-        net_dimension=ERL_PARAMS['net_dimension'],  # Updated net dimensions
-        cwd=agent_cwd,   # folder that has 'actor.pth'
-        initial_capital=10000  # Set to 10K
-    )
+# episode_assets = test(
+#         start_date="2024-10-25",
+#         end_date="2025-02-02",
+#         ticker_list=CRYPTO_TICKER_TR,  # Single asset
+#         data_source="binance",
+#         time_interval="30m",
+#         technical_indicator_list=["macd", "rsi", "cci", "dx"],
+#         drl_lib="elegantrl",
+#         env=CryptoTradingEnv,
+#         model_name="ppo",
+#         net_dimension=ERL_PARAMS['net_dimension'],  # Updated net dimensions
+#         cwd=agent_cwd,   # folder that has 'actor.pth'
+#         initial_capital=10000  # Set to 10K
+#     )
