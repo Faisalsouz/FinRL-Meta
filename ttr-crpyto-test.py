@@ -694,29 +694,20 @@ def test(
     **kwargs,
 ):
     """
-    Enhanced test function for the new signal-based crypto environment.
+    Enhanced test function for the new signal-based crypto environment with trade timeout.
     
     This function:
-      - Loads data using DataProcessor.
-      - Builds the environment.
+      - Loads data via DataProcessor.
+      - Builds the environment (which now includes a max_trade_duration parameter).
       - Loads the trained policy.
-      - Runs a test episode while recording per-step details:
-            • Price,
-            • Predicted Signal,
-            • Step Return,
-            • Trade Status.
-      - Additionally, records complete trade events (entry step, exit step, predicted signal at entry, trade return, trade type).
-      - Saves two CSV files:
-            1. "trade_details.csv" for complete trade events.
-            2. "step_by_step_details.csv" for per-step info.
-      - Generates three graphs:
-            1. A grouped bar chart comparing predicted signal vs. realized trade return for each trade.
-            2. A detailed time-series chart showing Price, Predicted Signal, and Step Return (with vertical lines marking trade events).
-            3. A new, filtered scatter plot showing only steps with trade events (i.e. where "Trade Status" ≠ "No trade"), with markers color-coded by trade status and hover details showing Predicted Signal and Step Return.
+      - Runs a test episode while recording per-step details and complete trade events.
+      - Saves two CSV files: one with complete trade events and one with step-by-step details.
+      - Generates graphs:
+            • A grouped bar chart comparing predicted signal and realized trade return for each trade.
+            • A filtered scatter plot showing only steps where trade events occurred.
     """
     print("Received kwargs:", kwargs)
     
-    # 1) Load & process data using DataProcessor.
     from meta.data_processor import DataProcessor
     dp = DataProcessor(data_source, start_date, end_date, time_interval)
     price_array, tech_array, _ = dp.run(
@@ -726,40 +717,36 @@ def test(
         cache=True
     )
     
-    # 2) Build the test environment.
     env_config = {
         "price_array": price_array,
         "tech_array": tech_array,
         "if_train": False,
+        # Optionally, you can pass "max_trade_duration": 20 (or desired value) here.
     }
     env_instance = env(config=env_config)
     
-    # 3) Load the trained policy.
     net_dimension = kwargs.get("net_dimension", [64, 32])
     cwd = kwargs.get("cwd", f"./{model_name}")
     
     if drl_lib == "elegantrl":
         import torch
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        # Adjust the import below to match your project structure.
    
         agent = AgentPPO(net_dimension, env_instance.state_dim, env_instance.action_dim, gpu_id=0)
         
         print("\nModel verification:")
-        print(f"Loading model from: {cwd}/latest_actor.pth")
-        state_dict = torch.load(f"{cwd}/latest_actor.pth", map_location=device)
+        print(f"Loading model from: {cwd}/best_actor.pth")
+        state_dict = torch.load(f"{cwd}/best_actor.pth", map_location=device)
         agent.act.load_state_dict(state_dict)
         test_state = torch.zeros((1, env_instance.state_dim), device=device)
         test_action = agent.act(test_state)
         print(f"Test action output: {test_action.detach().cpu().numpy()}")
         
-        # 4) Initialize tracking lists.
-        prices = []             # Price at each step.
-        signals = []            # Predicted signal at each step.
-        rewards = []            # Step reward.
-        step_status = []        # Status message per step (e.g., "No trade", "Trade initiated", etc.)
+        prices = []
+        signals = []
+        rewards = []
+        step_status = []
         
-        # For complete trade events.
         trade_entry_steps = []
         trade_exit_steps = []
         trade_pred_signals = []
@@ -771,14 +758,13 @@ def test(
         
         while True:
             s_tensor = torch.as_tensor((state,), device=device)
-            action = agent.act(s_tensor).detach().cpu().numpy()  # Expected shape: (1,) or (1,1)
+            action = agent.act(s_tensor).detach().cpu().numpy()
             predicted_signal = action[0]
             signals.append(predicted_signal)
             
             current_price = env_instance.price_ary[env_instance.current_step, 0]
             prices.append(current_price)
             
-            # Default status.
             current_status = "No trade"
             if env_instance.in_position:
                 current_status = "Trade open"
@@ -786,7 +772,6 @@ def test(
             next_state, reward, done, _, info = env_instance.step(action)
             rewards.append(reward)
             
-            # Check for trade events.
             if "trade" in info:
                 trade_entry_steps.append(step_idx)
                 trade_pred_signals.append(predicted_signal)
@@ -798,6 +783,8 @@ def test(
                     trade_types.append("Target hit")
                 elif "Stop loss hit" in res_str:
                     trade_types.append("Stop loss hit")
+                elif "Forced exit" in res_str:
+                    trade_types.append("Timeout exit")
                 else:
                     trade_types.append("Closed")
                 trade_returns.append(reward)
@@ -809,17 +796,8 @@ def test(
             if done:
                 break
         
-        # 5) Save CSV files.
         import pandas as pd
-        
-        # Create trade details CSV (only complete trades).
-        min_length = min(
-            len(trade_entry_steps),
-            len(trade_exit_steps),
-            len(trade_pred_signals),
-            len(trade_returns),
-            len(trade_types)
-        )
+        min_length = min(len(trade_entry_steps), len(trade_exit_steps), len(trade_pred_signals), len(trade_returns), len(trade_types))
         if not (len(trade_entry_steps) == len(trade_exit_steps) ==
                 len(trade_pred_signals) == len(trade_returns) == len(trade_types)):
             print("Warning: Some trade events were incomplete. Only complete trade pairs will be recorded.")
@@ -832,7 +810,6 @@ def test(
         })
         trade_df.to_csv(f"{cwd}/trade_details.csv", index=False)
         
-        # Create per-step details CSV (all steps).
         x_axis = list(range(len(prices)))
         step_df = pd.DataFrame({
             "Step": x_axis,
@@ -843,24 +820,21 @@ def test(
         })
         step_df.to_csv(f"{cwd}/step_by_step_details.csv", index=False)
         
-        # 6) Create Graphs.
-        import plotly.graph_objects as go
-        from plotly.subplots import make_subplots
-        
         # Graph 1: Grouped Bar Chart for Trade Events.
+        from plotly.graph_objects import Figure, Bar
         trade_idx = list(range(min_length))
-        fig_trade = go.Figure(data=[
-            go.Bar(
+        fig_trade = Figure(data=[
+            Bar(
                 x=trade_idx,
                 y=[float(x) for x in trade_pred_signals[:min_length]],
                 name="Predicted Signal",
                 marker_color="blue"
             ),
-            go.Bar(
+            Bar(
                 x=trade_idx,
                 y=[float(x) for x in trade_returns[:min_length]],
                 name="Trade Return",
-                marker_color=["green" if t == "Target hit" else "red" for t in trade_types[:min_length]]
+                marker_color=["green" if t == "Target hit" else "red" if t == "Stop loss hit" else "orange" for t in trade_types[:min_length]]
             )
         ])
         fig_trade.update_layout(
@@ -871,10 +845,9 @@ def test(
         )
         fig_trade.write_html(f"{cwd}/trade_events_comparison.html")
         
-        # Graph 2: Detailed Step-by-Step Plot (Filtered to Trade Events).
-        # Filter step_df to only rows where Trade Status is not "No trade".
+        # Graph 2: Filtered Scatter Plot for Trade Events.
+        # Filter steps with trade events.
         trade_steps_df = step_df[step_df["Trade Status"] != "No trade"]
-        # Create a scatter plot using Plotly Express.
         import plotly.express as px
         fig_filtered = px.scatter(trade_steps_df,
                                   x="Step",
@@ -885,17 +858,13 @@ def test(
         fig_filtered.update_traces(marker=dict(size=10))
         fig_filtered.write_html(f"{cwd}/filtered_trade_details.html")
         
-        # (Optionally, you can also create a multi-axis chart with all step details, but if the filtered chart gives clear insights, that may be sufficient.)
-        
-        # 7) Compute cumulative trade return (multiplicative, from complete trades).
-        import numpy as np
-        if len(trade_returns) > 0:
-            cumulative_trade_return = np.prod(1 + np.array(trade_returns)) - 1
-        else:
-            cumulative_trade_return = 0.0
-        
         print(f"\nTest completed. Plots and CSV files saved to {cwd}/")
         print("\n=== Performance Summary ===")
+        if len(trade_returns) > 0:
+            cumulative_trade_return = np.prod(1 + np.array([float(r) for r in trade_returns])) - 1
+
+        else:
+            cumulative_trade_return = 0.0
         print(f"Cumulative Trade Return (complete trades): {float(cumulative_trade_return)*100:.2f}%")
         total_trades = len(trade_returns)
         correct_trades = sum(1 for r in trade_returns if r > 0)
@@ -920,6 +889,7 @@ def test(
         }
     else:
         raise NotImplementedError("Currently only 'elegantrl' is integrated.")
+
 
 
 
@@ -971,7 +941,7 @@ print(INDICATORS)
 # len(INDICATORS) * action_dim (technical indicators)
 
 ERL_PARAMS = {
-    "learning_rate": 3e-6,         # Increased learning rate for faster convergence
+    "learning_rate": 3e-7,         # Increased learning rate for faster convergence
     "batch_size": 1024,             # Batch size remains the same (adjust as needed)
     "gamma": 0.99,                 # Use same discount as in the environment
     "seed": 312,
@@ -979,7 +949,7 @@ ERL_PARAMS = {
     "target_step": 5000,           # More frequent updates might help
     "eval_gap": 30,
     "eval_times": 1,
-    "ratio_clip": 0.25,            # PPO clipping parameter (unchanged)
+    "ratio_clip": 0.5,            # PPO clipping parameter (unchanged)
     "lambda_gae_adv": 0.95,        # GAE lambda remains the same
     "lambda_entropy": 0.01         # Entropy bonus to encourage exploration
 }
@@ -1031,38 +1001,38 @@ net_dimensions = [128,64]    # same as you used in training
 # start training. function
 ##################################
 
-train(start_date='2024-01-01',
-    end_date='2024-10-24',
-    ticker_list=CRYPTO_TICKER_TR, 
-    data_source='binance',
-    time_interval='30m',
-    technical_indicator_list=INDICATORS,
-    drl_lib='elegantrl',
-    env=CryptoTradingEnv,
-    model_name='ppo',
+# train(start_date='2024-01-01',
+#     end_date='2024-10-24',
+#     ticker_list=CRYPTO_TICKER_TR, 
+#     data_source='binance',
+#     time_interval='30m',
+#     technical_indicator_list=INDICATORS,
+#     drl_lib='elegantrl',
+#     env=CryptoTradingEnv,
+#     model_name='ppo',
 
-    erl_params=ERL_PARAMS,
-    cwd=agent_cwd,
-    break_step=3e5,
-    gpu_id=0,
-    initial_capital=10000  # Set to 10K
-)
+#     erl_params=ERL_PARAMS,
+#     cwd=agent_cwd,
+#     break_step=3e5,
+#     gpu_id=0,
+#     initial_capital=10000  # Set to 10K
+# )
 
 
 
 #########calling test function################
 ###############################################
-# episode_assets = test(
-#         start_date="2024-10-25",
-#         end_date="2025-02-02",
-#         ticker_list=CRYPTO_TICKER_TR,  # Single asset
-#         data_source="binance",
-#         time_interval="30m",
-#         technical_indicator_list=["macd", "rsi", "cci", "dx"],
-#         drl_lib="elegantrl",
-#         env=CryptoTradingEnv,
-#         model_name="ppo",
-#         net_dimension=ERL_PARAMS['net_dimension'],  # Updated net dimensions
-#         cwd=agent_cwd,   # folder that has 'actor.pth'
-#         initial_capital=10000  # Set to 10K
-#     )
+episode_assets = test(
+        start_date="2024-10-25",
+        end_date="2025-02-02",
+        ticker_list=CRYPTO_TICKER_TR,  # Single asset
+        data_source="binance",
+        time_interval="30m",
+        technical_indicator_list=["macd", "rsi", "cci", "dx"],
+        drl_lib="elegantrl",
+        env=CryptoTradingEnv,
+        model_name="ppo",
+        net_dimension=ERL_PARAMS['net_dimension'],  # Updated net dimensions
+        cwd=agent_cwd,   # folder that has 'actor.pth'
+        initial_capital=10000  # Set to 10K
+    )

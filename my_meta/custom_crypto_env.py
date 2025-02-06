@@ -8,45 +8,53 @@ class CryptoTradingEnv(gym.Env):
            • Scaled price (current price / initial price)
            • Standardized technical indicators (via z-score normalization)
            • Previous step’s percentage change in price
-           • In-trade flag (1 if a trade is open, else 0)
-      - The reward is defined as:
-           • If no trade is open: the natural percentage change from the previous bar.
-           • If a trade is open: the current percentage change relative to the entry price.
+           • In-trade flag (1 if a trade is open, 0 otherwise)
+      - The reward is defined as the percentage change in price (expressed as a fraction).
       - The network’s action (a scalar) is interpreted as a target percentage change signal.
-          For example, an output of +0.02 means “expect a +2% move.”
+          For example, an output of 0.02 means “expect a +2% move.”
       - If action > 0 and no trade is open, a trade is initiated:
-             1. A market order is executed to buy (using available cash).
+             1. A market order is executed (using available cash).
              2. A target exit price and a stop-loss price are set.
-      - Once a trade is open, at each new bar the environment:
-             • Computes the current return relative to the entry price as the reward.
-             • Checks whether the current price has reached the target or stop loss:
-                  - If so, the trade is closed.
-                  - Otherwise, the trade remains open (reward is the intermediate return).
+      - Once a trade is open, at each new bar:
+             • The reward is calculated as the current return relative to the entry price.
+             • If the price reaches the target or stop loss, the trade is closed.
+             • Otherwise, if the trade remains open and the number of bars since entry exceeds a
+               maximum trade duration, the trade is forced to exit (a "timeout" exit).
     """
 
-    def __init__(self, config, initial_account=10000, stop_loss_ratio=2.5):
-        # Price array: shape (T, 1) (assumes one asset)
+    def __init__(self, config, initial_account=10000, stop_loss_ratio=0.5):
+        """
+        Parameters:
+          config: dict with keys:
+             - "price_array": np.ndarray of shape (timesteps, 1)
+             - "tech_array": np.ndarray of shape (timesteps, tech_features)
+             - "if_train": bool
+             - Optionally, "max_trade_duration": int (max number of bars an open trade is allowed to remain open)
+          initial_account: starting cash in dollars.
+          stop_loss_ratio: For example, with a target of +2% and a ratio of 0.5, the stop loss is -1%.
+        """
+        # Load data.
         self.price_ary = config["price_array"].astype(np.float32)
-        # Technical indicators: shape (T, tech_features)
         self.tech_ary = config["tech_array"].astype(np.float32)
         self.if_train = config["if_train"]
         self.initial_capital = initial_account
         self.stop_loss_ratio = stop_loss_ratio
 
-        # ***** Standardize Technical Indicators using z-score *****
+        # Standardize technical indicators using z-score normalization.
         self.tech_mean = np.mean(self.tech_ary, axis=0)
         self.tech_std = np.std(self.tech_ary, axis=0)
         self.tech_ary = (self.tech_ary - self.tech_mean) / (self.tech_std + 1e-8)
-        # ************************************************************
 
         self.timestep = self.price_ary.shape[0]
         self.current_step = 0
         self.env_name = "CryptoTradingEnv"
+        # Allow user to set a maximum trade duration (in number of candles). Default: 20.
+        self.max_trade_duration = config.get("max_trade_duration", 20)
 
-        # State vector: [scaled_price, tech_features, last_pct_change, in_trade_flag]
+        # State vector: [scaled price, tech_features, last_pct_change, in_trade_flag]
         tech_dim = self.tech_ary.shape[1]
         self.state_dim = 1 + tech_dim + 1 + 1
-        self.action_dim = 1  # single scalar output
+        self.action_dim = 1  # network outputs a single scalar signal
 
         self.initial_price = self.price_ary[0, 0]
         self.last_pct_change = 0.0
@@ -56,6 +64,7 @@ class CryptoTradingEnv(gym.Env):
         self.entry_price = None
         self.target_price = None
         self.stop_loss_price = None
+        self.trade_entry_step = None  # New: record the step when trade is initiated
 
         self.observation_space = gym.spaces.Box(
             low=-np.inf, high=np.inf, shape=(self.state_dim,), dtype=np.float32)
@@ -70,6 +79,7 @@ class CryptoTradingEnv(gym.Env):
         self.entry_price = None
         self.target_price = None
         self.stop_loss_price = None
+        self.trade_entry_step = None
         return self._get_state(), {}
 
     def _get_state(self):
@@ -79,21 +89,23 @@ class CryptoTradingEnv(gym.Env):
         tech_features = np.array(self.tech_ary[self.current_step], dtype=np.float32).flatten()
         pct_change = np.array([self.last_pct_change], dtype=np.float32).flatten()
         in_trade_flag = np.array([1.0], dtype=np.float32) if self.in_position else np.array([0.0], dtype=np.float32)
-        return np.hstack([np.array([scaled_price], dtype=np.float32).flatten(),
-                          tech_features,
-                          pct_change,
-                          in_trade_flag]).astype(np.float32)
+        return np.hstack([
+            np.array([scaled_price], dtype=np.float32).flatten(),
+            tech_features,
+            pct_change,
+            in_trade_flag
+        ]).astype(np.float32)
 
     def step(self, action):
         """
         Process one time step.
         - If no trade is open and action > 0, initiate a trade.
-        - If no trade is open and action <= 0, simply move to the next bar (reward = natural price change).
+        - If no trade is open and action <= 0, move to next bar (reward = natural price change).
         - If a trade is open, at each new bar:
-             • Compute reward = (current price - entry_price) / entry_price.
-             • If current price >= target_price: close trade (target hit).
-             • If current price <= stop_loss_price: close trade (stop loss hit).
-             • Otherwise, leave the trade open (reward = intermediate return).
+             • Compute reward = (current price - entry price) / entry price.
+             • If target or stop loss is hit, exit the trade.
+             • Otherwise, if the trade has been open for >= max_trade_duration candles,
+               force exit (timeout).
         """
         done = False
         info = {}
@@ -102,7 +114,7 @@ class CryptoTradingEnv(gym.Env):
         current_price = self.price_ary[self.current_step, 0]
 
         if not self.in_position:
-            # Not in a trade.
+            # Not in trade.
             signal = action[0]
             if signal > 0:
                 # Initiate trade.
@@ -110,11 +122,11 @@ class CryptoTradingEnv(gym.Env):
                 self.entry_price = current_price
                 self.target_price = current_price * (1 + signal)
                 self.stop_loss_price = current_price * (1 - signal * self.stop_loss_ratio)
+                self.trade_entry_step = self.current_step  # record trade entry step
                 info["trade"] = f"Trade initiated at {float(current_price):.2f}: target {float(self.target_price):.2f}, stop {float(self.stop_loss_price):.2f}"
                 reward = 0.0
                 self.last_pct_change = 0.0
             else:
-                # No trade signal: move to next bar.
                 if self.current_step < self.timestep - 1:
                     prev_price = current_price
                     self.current_step += 1
@@ -132,33 +144,43 @@ class CryptoTradingEnv(gym.Env):
             else:
                 exit_price = self.price_ary[self.current_step, 0]
 
-            # Calculate the current trade return relative to entry.
             current_trade_return = (exit_price - self.entry_price) / self.entry_price
 
-            # Check exit conditions:
-            if exit_price >= self.target_price:
-                # Target reached: trade closed.
-                reward = (self.target_price - self.entry_price) / self.entry_price
-                info["trade_result"] = f"Target hit: exit at {float(self.target_price):.2f}, reward {float(reward):.4f}"
+            # Check if trade has been open longer than max_trade_duration.
+            if self.trade_entry_step is not None and (self.current_step - self.trade_entry_step) >= self.max_trade_duration:
+                # Force exit.
+                reward = current_trade_return
+                info["trade_result"] = f"Forced exit (timeout at step {self.current_step}): exit at {float(exit_price):.2f}, reward {float(reward):.4f}"
                 self.in_position = False
                 self.entry_price = None
                 self.target_price = None
                 self.stop_loss_price = None
-                self.last_pct_change = reward
-            elif exit_price <= self.stop_loss_price:
-                # Stop loss reached: trade closed.
-                reward = (self.stop_loss_price - self.entry_price) / self.entry_price
-                info["trade_result"] = f"Stop loss hit: exit at {float(self.stop_loss_price):.2f}, reward {float(reward):.4f}"
-                self.in_position = False
-                self.entry_price = None
-                self.target_price = None
-                self.stop_loss_price = None
+                self.trade_entry_step = None
                 self.last_pct_change = reward
             else:
-                # Trade remains open: reward is the current trade return.
-                reward = current_trade_return
-                info["trade_status"] = f"Trade open: current return {float(reward):.4f}"
-                self.last_pct_change = reward
+                # Otherwise, check normal exit conditions.
+                if exit_price >= self.target_price:
+                    reward = (self.target_price - self.entry_price) / self.entry_price
+                    info["trade_result"] = f"Target hit: exit at {float(self.target_price):.2f}, reward {float(reward):.4f}"
+                    self.in_position = False
+                    self.entry_price = None
+                    self.target_price = None
+                    self.stop_loss_price = None
+                    self.trade_entry_step = None
+                    self.last_pct_change = reward
+                elif exit_price <= self.stop_loss_price:
+                    reward = (self.stop_loss_price - self.entry_price) / self.entry_price
+                    info["trade_result"] = f"Stop loss hit: exit at {float(self.stop_loss_price):.2f}, reward {float(reward):.4f}"
+                    self.in_position = False
+                    self.entry_price = None
+                    self.target_price = None
+                    self.stop_loss_price = None
+                    self.trade_entry_step = None
+                    self.last_pct_change = reward
+                else:
+                    reward = current_trade_return
+                    info["trade_status"] = f"Trade open: current return {float(reward):.4f}"
+                    self.last_pct_change = reward
 
         if self.current_step >= self.timestep - 1:
             done = True
