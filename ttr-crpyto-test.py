@@ -735,8 +735,8 @@ def test(
         agent = AgentPPO(net_dimension, env_instance.state_dim, env_instance.action_dim, gpu_id=0)
         
         print("\nModel verification:")
-        print(f"Loading model from: {cwd}/best_actor.pth")
-        state_dict = torch.load(f"{cwd}/best_actor.pth", map_location=device)
+        print(f"Loading model from: {cwd}/latest_actor.pth")
+        state_dict = torch.load(f"{cwd}/latest_actor.pth", map_location=device)
         agent.act.load_state_dict(state_dict)
         test_state = torch.zeros((1, env_instance.state_dim), device=device)
         test_action = agent.act(test_state)
@@ -946,7 +946,7 @@ ERL_PARAMS = {
     "gamma": 0.99,                 # Use same discount as in the environment
     "seed": 312,
     "net_dimension": [512, 256, 128],  # You can experiment with these sizes
-    "target_step": 5000,           # More frequent updates might help
+    "target_step": 10000,           # More frequent updates might help
     "eval_gap": 30,
     "eval_times": 1,
     "ratio_clip": 0.5,            # PPO clipping parameter (unchanged)
@@ -968,7 +968,7 @@ API_KEY = os.getenv("API_KEY")
 API_SECRET = os.getenv("API_SECRET")
 API_BASE_URL = "https://paper-api.alpaca.markets" #new url for crpto wss://stream.data.alpaca.markets/v1beta3/crypto/us
 agent_cwd = "/home/souz_wsl/finrl_proj/FinRL_Meta/papertrading_crypto"  # folder containing actor.pth from training
-net_dimensions = [128,64]    # same as you used in training
+
 # typical state_dim for:  1 + 3*action_dim + len(INDICATORS)*action_dim
 # e.g. 1 + 3*3 + 4*3 = 1 + 9 + 12 = 22 (for 3 tickers, 4 indicators)
 # state_dimension = 22
