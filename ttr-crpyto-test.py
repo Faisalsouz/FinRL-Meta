@@ -735,8 +735,8 @@ def test(
         agent = AgentPPO(net_dimension, env_instance.state_dim, env_instance.action_dim, gpu_id=0)
         
         print("\nModel verification:")
-        print(f"Loading model from: {cwd}/latest_actor.pth")
-        state_dict = torch.load(f"{cwd}/latest_actor.pth", map_location=device)
+        print(f"Loading model from: {cwd}/best_actor.pth")
+        state_dict = torch.load(f"{cwd}/best_actor.pth", map_location=device)
         agent.act.load_state_dict(state_dict)
         test_state = torch.zeros((1, env_instance.state_dim), device=device)
         test_action = agent.act(test_state)
@@ -941,12 +941,12 @@ print(INDICATORS)
 # len(INDICATORS) * action_dim (technical indicators)
 
 ERL_PARAMS = {
-    "learning_rate": 3e-7,         # Increased learning rate for faster convergence
-    "batch_size": 1024,             # Batch size remains the same (adjust as needed)
+    "learning_rate": 3e-6,         # Increased learning rate for faster convergence
+    "batch_size": 512,             # Batch size remains the same (adjust as needed)
     "gamma": 0.99,                 # Use same discount as in the environment
     "seed": 312,
-    "net_dimension": [512, 256, 128],  # You can experiment with these sizes
-    "target_step": 10000,           # More frequent updates might help
+    "net_dimension": [256, 128, 64, 32], #[512, 256, 128],  # You can experiment with these sizes
+    "target_step": 5000,           # More frequent updates might help
     "eval_gap": 30,
     "eval_times": 1,
     "ratio_clip": 0.5,            # PPO clipping parameter (unchanged)
