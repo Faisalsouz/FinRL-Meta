@@ -132,6 +132,9 @@ def fetch_latest_data_crypto(
 
     # 7) Extract final arrays
     latest_price = latest_rows['close'].values.astype(np.float32)
+    latest_high = latest_rows['high'].values.astype(np.float32)
+    latest_low = latest_rows['low'].values.astype(np.float32)
+    latest_close = latest_rows['close'].values.astype(np.float32)
     tech_list_data = []
     for indicator in tech_indicator_list:
         tech_list_data.append(latest_rows[indicator].values.astype(np.float32))
@@ -361,7 +364,7 @@ class AlpacaPaperTradingCryptoLive:
         (defined above in the same file).
         Build a state vector of [scaled_cash, price*scale, stocks*scale, stocks_cd, tech_indicators].
         """
-        price, tech = fetch_latest_data_crypto(
+        price, tech, high, low, close = fetch_latest_data_crypto(
             ALPACA_API_KEY= self.API_KEY,
             ALPACA_SECRET_KEY = self.API_SECRET,
             API_BASE_URL= self.API_BASE_URL,
@@ -373,7 +376,7 @@ class AlpacaPaperTradingCryptoLive:
         )
 
         if price.size == 0:
-            return np.zeros(1 + 3*len(self.stockUniverse) + len(self.tech_indicator_list)*len(self.stockUniverse) + len(self.stockUniverse), dtype=np.float32)
+            return np.zeros(1 + 3*len(self.stockUniverse) + len(self.tech_indicator_list)*len(self.stockUniverse) + 2*len(self.stockUniverse), dtype=np.float32)
 
         # positions
         positions = self.alpaca.list_positions()
