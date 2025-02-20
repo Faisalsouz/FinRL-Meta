@@ -645,6 +645,10 @@ def train(
     env,
     model_name,
    
+    tp_multiplier=2,         # Default TP multiplier
+    sl_multiplier=1,         # Default SL multiplier
+    atr_window=14,           # Default ATR window
+    max_trade_duration=20,   # Default max trade duration
     **kwargs,
 ):
     print("Received kwargs:", kwargs)
@@ -668,10 +672,10 @@ def train(
         "close_array": close_array, 
         "tech_array": tech_array,
         "if_train": True,
-        "max_trade_duration": 20,   # Timeout after 20 bars
-        "atr_window": 14,           # 14-day ATR
-        "tp_multiplier": 2,         # TP = Entry + 2*ATR
-        "sl_multiplier": 1,         # SL = Entry - 1*ATR
+        "max_trade_duration": max_trade_duration,   # Timeout after 20 bars
+        "atr_window": atr_window,           # 14-day ATR
+        "tp_multiplier": tp_multiplier,         # TP = Entry + 2*ATR
+        "sl_multiplier": sl_multiplier,         # SL = Entry - 1*ATR
     }
     env_instance = env(config=env_config)
 
