@@ -60,6 +60,9 @@ def fetch_latest_data_crypto(
     -------
     latest_price : np.ndarray  (shape: (len(ticker_list),))
     latest_tech  : np.ndarray  (shape: (len(ticker_list), #indicators))
+    latest_high  : np.ndarray  (shape: (len(ticker_list),))
+    latest_low   : np.ndarray  (shape: (len(ticker_list),))
+    latest_close : np.ndarray  (shape: (len(ticker_list),))
 
     If no data is found, returns two empty arrays.
     """
@@ -135,7 +138,7 @@ def fetch_latest_data_crypto(
     latest_tech = np.array(tech_list_data).T  # shape (#tickers, #indicators)
 
     print(f"Latest Bars data: {latest_price}, {latest_tech}")
-    return latest_price, latest_tech
+    return latest_price, latest_tech, latest_high, latest_low, latest_close
 
 
 def _calculate_indicators_generic(
@@ -370,7 +373,7 @@ class AlpacaPaperTradingCryptoLive:
         )
 
         if price.size == 0:
-            return np.zeros(1 + 3*len(self.stockUniverse) + len(self.tech_indicator_list)*len(self.stockUniverse), dtype=np.float32)
+            return np.zeros(1 + 3*len(self.stockUniverse) + len(self.tech_indicator_list)*len(self.stockUniverse) + len(self.stockUniverse), dtype=np.float32)
 
         # positions
         positions = self.alpaca.list_positions()
@@ -383,6 +386,9 @@ class AlpacaPaperTradingCryptoLive:
         self.stocks = np.array(stock_array, dtype=float)
         self.cash = float(self.alpaca.get_account().cash)
         self.price = price
+
+        # Calculate ATR
+        atr = self._calculate_atr(high, low, close, window=14)
 
         # build state
         amount_scaled = np.array(self.cash*(2**-12), dtype=np.float32)
@@ -397,7 +403,8 @@ class AlpacaPaperTradingCryptoLive:
         # cooldown
         state.extend(list(self.stocks_cd))
 
-        # flatten tech
+        # ATR
+        state.extend(list(atr * scale))
         if len(tech.shape) == 2:
             tech_flat = tech.flatten()
             state.extend(list(tech_flat))
@@ -408,6 +415,20 @@ class AlpacaPaperTradingCryptoLive:
         state[np.isnan(state)] = 0.0
         state[np.isinf(state)] = 0.0
         return state
+
+    def _calculate_atr(self, high, low, close, window=14):
+        """Compute ATR for each timestep using a rolling window."""
+        n = close.shape[0]
+        tr = np.zeros(n, dtype=np.float32)
+        
+        for i in range(1, n):
+            tr[i] = max(
+                high[i] - low[i],
+                abs(high[i] - close[i-1]),
+                abs(low[i] - close[i-1])
+            )
+        atr = np.convolve(tr, np.ones(window)/window, mode='same')
+        return atr.astype(np.float32)
 
     def submitOrder(self, qty, symbol, side, resp):
         """Place a MARKET order via Alpaca paper trading."""
