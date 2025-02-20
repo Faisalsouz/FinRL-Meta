@@ -117,14 +117,21 @@ class DataProcessor:
         self.dataframe = self.processor.dataframe
 
     def df_to_array(self, if_vix: bool) -> np.array:
+        # Existing code to get price, tech, and turbulence arrays
         price_array, tech_array, turbulence_array = self.processor.df_to_array(
             self.tech_indicator_list, if_vix
         )
-        # fill nan with 0 for technical indicators
+        
+        # Extract high, low, close from the dataframe
+        high_array = self.dataframe['high'].values.astype(np.float32)
+        low_array = self.dataframe['low'].values.astype(np.float32)
+        close_array = self.dataframe['close'].values.astype(np.float32)
+        
+        # Fill NaN in technical indicators (existing logic)
         tech_nan_positions = np.isnan(tech_array)
         tech_array[tech_nan_positions] = 0
-
-        return price_array, tech_array, turbulence_array
+        
+        return price_array, tech_array, turbulence_array, high_array, low_array, close_array
 
     def data_split(self, df, start, end, target_date_col="time"):
         """
@@ -191,11 +198,13 @@ class DataProcessor:
         self.add_technical_indicator(technical_indicator_list, select_stockstats_talib)
         if if_vix:
             self.add_vix()
-        price_array, tech_array, turbulence_array = self.df_to_array(if_vix)
+        price_array, tech_array, turbulence_array, high_array, low_array, close_array = self.df_to_array(if_vix)
         tech_nan_positions = np.isnan(tech_array)
         tech_array[tech_nan_positions] = 0
+        
 
-        return price_array, tech_array, turbulence_array
+    
+        return price_array, tech_array, turbulence_array, high_array, low_array, close_array
 
 
 def test_joinquant():

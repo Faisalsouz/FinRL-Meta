@@ -22,7 +22,7 @@ class CryptoTradingEnv(gym.Env):
                maximum trade duration, the trade is forced to exit (a "timeout" exit).
     """
 
-    def __init__(self, config, initial_account=10000, stop_loss_ratio=0.5):
+    def __init__(self, config, initial_account=10000, stop_loss_ratio=0.5, atr_window=14, tp_multiplier=2, sl_multiplier=1):
         """
         Parameters:
           config: dict with keys:
@@ -39,6 +39,15 @@ class CryptoTradingEnv(gym.Env):
         self.if_train = config["if_train"]
         self.initial_capital = initial_account
         self.stop_loss_ratio = stop_loss_ratio
+        # Load high, low, close prices for ATR calculation.
+        self.high_ary = config["high_array"].astype(np.float32)
+        self.low_ary = config["low_array"].astype(np.float32)
+        self.close_ary = config["close_array"].astype(np.float32)
+        
+        # Precompute ATR
+        self.atr_ary = self._calculate_atr(atr_window)
+        self.tp_multiplier = tp_multiplier
+        self.sl_multiplier = sl_multiplier
 
         # Standardize technical indicators using z-score normalization.
         self.tech_mean = np.mean(self.tech_ary, axis=0)
@@ -96,94 +105,119 @@ class CryptoTradingEnv(gym.Env):
             in_trade_flag
         ]).astype(np.float32)
 
+
     def step(self, action):
-        """
-        Process one time step.
-        - If no trade is open and action > 0, initiate a trade.
-        - If no trade is open and action <= 0, move to next bar (reward = natural price change).
-        - If a trade is open, at each new bar:
-             • Compute reward = (current price - entry price) / entry price.
-             • If target or stop loss is hit, exit the trade.
-             • Otherwise, if the trade has been open for >= max_trade_duration candles,
-               force exit (timeout).
-        """
         done = False
         info = {}
         reward = 0.0
-
         current_price = self.price_ary[self.current_step, 0]
 
         if not self.in_position:
-            # Not in trade.
+            # Not in trade - check if opening new position
             signal = action[0]
             if signal > 0:
-                # Initiate trade.
-                self.in_position = True
+                # ========== ATR-BASED TP/SL SETUP ========== #
+                current_atr = self.atr_ary[self.current_step]
+                
+                # Calculate TP/SL using multipliers
                 self.entry_price = current_price
-                self.target_price = current_price * (1 + signal)
-                self.stop_loss_price = current_price * (1 - signal * self.stop_loss_ratio)
-                self.trade_entry_step = self.current_step  # record trade entry step
-                info["trade"] = f"Trade initiated at {float(current_price):.2f}: target {float(self.target_price):.2f}, stop {float(self.stop_loss_price):.2f}"
-                reward = 0.0
-                self.last_pct_change = 0.0
+                self.target_price = self.entry_price + self.tp_multiplier * current_atr
+                self.stop_loss_price = self.entry_price - self.sl_multiplier * current_atr
+                
+                # Validate prices aren't negative (important for crypto)
+                self.stop_loss_price = max(self.stop_loss_price, 0.01)  # Prevent negative SL
+                
+                self.in_position = True
+                self.trade_entry_step = self.current_step
+                info["trade"] = (
+                    f"Opened: Entry={self.entry_price:.2f}, "
+                    f"TP={self.target_price:.2f} (+{self.tp_multiplier}ATR), "
+                    f"SL={self.stop_loss_price:.2f} (-{self.sl_multiplier}ATR)"
+                )
             else:
+                # No trade opened
                 if self.current_step < self.timestep - 1:
                     prev_price = current_price
                     self.current_step += 1
                     new_price = self.price_ary[self.current_step, 0]
-                    reward = (new_price - prev_price) / prev_price
-                    self.last_pct_change = reward
+                    self.last_pct_change = (new_price - prev_price) / prev_price
                 else:
                     done = True
         else:
-            # Trade is open.
+            # Trade is active - check exit conditions
             self.current_step += 1
+            
             if self.current_step >= self.timestep:
-                done = True
+                # End of data - force exit
                 exit_price = self.price_ary[-1, 0]
+                reward = (exit_price - self.entry_price) / self.entry_price
+                self._close_trade("forced exit (data end)", exit_price)
+                done = True
             else:
                 exit_price = self.price_ary[self.current_step, 0]
+                current_return = (exit_price - self.entry_price) / self.entry_price
 
-            current_trade_return = (exit_price - self.entry_price) / self.entry_price
-
-            # Check if trade has been open longer than max_trade_duration.
-            if self.trade_entry_step is not None and (self.current_step - self.trade_entry_step) >= self.max_trade_duration:
-                # Force exit.
-                reward = current_trade_return
-                info["trade_result"] = f"Forced exit (timeout at step {self.current_step}): exit at {float(exit_price):.2f}, reward {float(reward):.4f}"
-                self.in_position = False
-                self.entry_price = None
-                self.target_price = None
-                self.stop_loss_price = None
-                self.trade_entry_step = None
-                self.last_pct_change = reward
-            else:
-                # Otherwise, check normal exit conditions.
+                # ========== CHECK EXIT CONDITIONS ========== #
+                # 1. Take Profit Hit
                 if exit_price >= self.target_price:
                     reward = (self.target_price - self.entry_price) / self.entry_price
-                    info["trade_result"] = f"Target hit: exit at {float(self.target_price):.2f}, reward {float(reward):.4f}"
-                    self.in_position = False
-                    self.entry_price = None
-                    self.target_price = None
-                    self.stop_loss_price = None
-                    self.trade_entry_step = None
-                    self.last_pct_change = reward
+                    self._close_trade("TP hit", self.target_price)
+                    info["trade_result"] = f"TP Hit: return={reward:.4f}"
+                
+                # 2. Stop Loss Hit
                 elif exit_price <= self.stop_loss_price:
                     reward = (self.stop_loss_price - self.entry_price) / self.entry_price
-                    info["trade_result"] = f"Stop loss hit: exit at {float(self.stop_loss_price):.2f}, reward {float(reward):.4f}"
-                    self.in_position = False
-                    self.entry_price = None
-                    self.target_price = None
-                    self.stop_loss_price = None
-                    self.trade_entry_step = None
-                    self.last_pct_change = reward
+                    self._close_trade("SL hit", self.stop_loss_price)
+                    info["trade_result"] = f"SL Hit: return={reward:.4f}"
+                
+                # 3. Timeout Exit
+                elif (self.current_step - self.trade_entry_step) >= self.max_trade_duration:
+                    reward = current_return
+                    self._close_trade("timeout", exit_price)
+                    info["trade_result"] = f"Timeout: return={reward:.4f}"
+                
+                # 4. Trade remains open
                 else:
-                    reward = current_trade_return
-                    info["trade_status"] = f"Trade open: current return {float(reward):.4f}"
-                    self.last_pct_change = reward
+                    reward = current_return
+                    info["trade_status"] = (
+                        f"Open: Unrealized={reward:.4f}, "
+                        f"Current Price={exit_price:.2f}, "
+                        f"TP Remaining={self.target_price - exit_price:.2f}"
+                    )
 
+        # Episode termination check
         if self.current_step >= self.timestep - 1:
             done = True
 
         next_state = self._get_state()
         return next_state, reward, done, False, info
+
+    def _close_trade(self, reason, exit_price):
+        """Helper to reset trade-related variables"""
+        self.in_position = False
+        self.entry_price = None
+        self.target_price = None
+        self.stop_loss_price = None
+        self.trade_entry_step = None
+        self.last_pct_change = (exit_price - self.entry_price) / self.entry_price if self.entry_price else 0.0
+        
+    def _calculate_atr(self, window: int) -> np.ndarray:
+        """Compute ATR for each timestep using a rolling window."""
+        # Flatten the close, high, and low arrays to ensure they are 1D.
+        close_flat = self.close_ary.flatten()
+        high_flat = self.high_ary.flatten()
+        low_flat = self.low_ary.flatten()
+        
+        n = close_flat.shape[0]
+        tr = np.zeros(n, dtype=np.float32)
+        
+        for i in range(1, n):
+            tr[i] = max(
+                high_flat[i] - low_flat[i],
+                abs(high_flat[i] - close_flat[i-1]),
+                abs(low_flat[i] - close_flat[i-1])
+            )
+        atr = np.convolve(tr, np.ones(window)/window, mode='same')
+        return atr.astype(np.float32)
+
+

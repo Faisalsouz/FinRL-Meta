@@ -536,19 +536,23 @@ class DRLAgent:
             make a prediction in a test dataset and get results
     """
 
-    def __init__(self, env, price_array, tech_array):
+    def __init__(self, env, price_array, tech_array, high_array, low_array, close_array):
         self.env = env
         self.price_array = price_array
         self.tech_array = tech_array
-      
+        self.high_array = high_array
+        self.low_array = low_array
+        self.close_array = close_array
 
     def get_model(self, model_name, model_kwargs):
         env_config = {
-            "price_array": self.price_array,
-            "tech_array": self.tech_array,
-         
-            "if_train": True,
-        }
+        "price_array": self.price_array,
+        "tech_array": self.tech_array,
+        "high_array": self.high_array,
+        "low_array": self.low_array,
+        "close_array": self.close_array,
+        "if_train": True,
+    }
         environment = self.env(config=env_config)
         env_args = {'config': env_config,
               'env_name': environment.env_name,
@@ -646,18 +650,28 @@ def train(
     print("Received kwargs:", kwargs)
     # download data
     dp = DataProcessor(data_source,start_date, end_date, time_interval)
-    price_array, tech_array,_ = dp.run(ticker_list,
-                                                        technical_indicator_list, 
-                                                       if_vix=False , cache=True)
-    # data = dp.clean_data(data)
-    # data = dp.add_technical_indicator(data, technical_indicator_list)
- 
-    # price_array, tech_array, turbulence_array = dp.df_to_array(data)
+    price_array, tech_array, turbulence_array, high_array, low_array, close_array = dp.run(
+    ticker_list=CRYPTO_TICKER_TR,
+    technical_indicator_list=INDICATORS,
+    if_vix=False,
+    cache=True
+    )
+    price_array = price_array.astype(np.float32).reshape(-1, 1)  # Shape: (n, 1)
+    high_array = high_array.astype(np.float32).reshape(-1, 1)     # Shape: (n, 1)
+    low_array = low_array.astype(np.float32).reshape(-1, 1)       # Shape: (n, 1)
+    close_array = close_array.astype(np.float32).reshape(-1, 1)   # Shape: (n, 1)
+    tech_array = tech_array.astype(np.float32)
     env_config = {
         "price_array": price_array,
+        "high_array": high_array,  
+        "low_array": low_array,     
+        "close_array": close_array, 
         "tech_array": tech_array,
-        
         "if_train": True,
+        "max_trade_duration": 20,   # Timeout after 20 bars
+        "atr_window": 14,           # 14-day ATR
+        "tp_multiplier": 2,         # TP = Entry + 2*ATR
+        "sl_multiplier": 1,         # SL = Entry - 1*ATR
     }
     env_instance = env(config=env_config)
 
@@ -668,12 +682,15 @@ def train(
         DRLAgent_erl = DRLAgent
         break_step = kwargs.get("break_step", 1e6)
         erl_params = kwargs.get("erl_params")
-        agent = DRLAgent_erl(
-            env=env,
+        agent = DRLAgent(
+            env=CryptoTradingEnv,
             price_array=price_array,
             tech_array=tech_array,
-
+            high_array=high_array,
+            low_array=low_array,
+            close_array=close_array
         )
+
         model = agent.get_model(model_name, model_kwargs=erl_params)
         trained_model = agent.train_model(
             model=model, cwd=cwd, total_timesteps=break_step
@@ -694,11 +711,11 @@ def test(
     **kwargs,
 ):
     """
-    Enhanced test function for the new signal-based crypto environment with trade timeout.
-    
+    Enhanced test function for the new ATR-based crypto environment with trade timeout.
+
     This function:
       - Loads data via DataProcessor.
-      - Builds the environment (which now includes a max_trade_duration parameter).
+      - Builds the environment (which now includes max_trade_duration and ATR-based TP/SL).
       - Loads the trained policy.
       - Runs a test episode while recording per-step details and complete trade events.
       - Saves two CSV files: one with complete trade events and one with step-by-step details.
@@ -710,7 +727,9 @@ def test(
     
     from meta.data_processor import DataProcessor
     dp = DataProcessor(data_source, start_date, end_date, time_interval)
-    price_array, tech_array, _ = dp.run(
+    
+    # Expect dp.run() to return the extra arrays for ATR calculations.
+    price_array, tech_array, turbulence_array, high_array, low_array, close_array = dp.run(
         ticker_list=ticker_list,
         technical_indicator_list=technical_indicator_list,
         if_vix=if_vix,
@@ -720,6 +739,9 @@ def test(
     env_config = {
         "price_array": price_array,
         "tech_array": tech_array,
+        "high_array": high_array,
+        "low_array": low_array,
+        "close_array": close_array,
         "if_train": False,
         # Optionally, you can pass "max_trade_duration": 20 (or desired value) here.
     }
@@ -731,13 +753,15 @@ def test(
     if drl_lib == "elegantrl":
         import torch
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-   
+ 
         agent = AgentPPO(net_dimension, env_instance.state_dim, env_instance.action_dim, gpu_id=0)
         
         print("\nModel verification:")
-        print(f"Loading model from: {cwd}/best_actor.pth")
-        state_dict = torch.load(f"{cwd}/best_actor.pth", map_location=device)
+        model_path = f"{cwd}/latest_actor.pth"
+        print(f"Loading model from: {model_path}")
+        state_dict = torch.load(model_path, map_location=device)
         agent.act.load_state_dict(state_dict)
+        
         test_state = torch.zeros((1, env_instance.state_dim), device=device)
         test_action = agent.act(test_state)
         print(f"Test action output: {test_action.detach().cpu().numpy()}")
@@ -762,6 +786,7 @@ def test(
             predicted_signal = action[0]
             signals.append(predicted_signal)
             
+            # Use current price from the environment.
             current_price = env_instance.price_ary[env_instance.current_step, 0]
             prices.append(current_price)
             
@@ -779,12 +804,13 @@ def test(
             if "trade_result" in info:
                 trade_exit_steps.append(step_idx)
                 res_str = info["trade_result"]
-                if "Target hit" in res_str:
-                    trade_types.append("Target hit")
-                elif "Stop loss hit" in res_str:
-                    trade_types.append("Stop loss hit")
-                elif "Forced exit" in res_str:
-                    trade_types.append("Timeout exit")
+                # Update conditions to match ATR-based messages.
+                if "TP Hit" in res_str:
+                    trade_types.append("TP Hit")
+                elif "SL Hit" in res_str:
+                    trade_types.append("SL Hit")
+                elif "Timeout" in res_str:
+                    trade_types.append("Timeout")
                 else:
                     trade_types.append("Closed")
                 trade_returns.append(reward)
@@ -834,7 +860,9 @@ def test(
                 x=trade_idx,
                 y=[float(x) for x in trade_returns[:min_length]],
                 name="Trade Return",
-                marker_color=["green" if t == "Target hit" else "red" if t == "Stop loss hit" else "orange" for t in trade_types[:min_length]]
+                marker_color=[
+                    "green" if t == "TP Hit" else "red" if t == "SL Hit" else "orange" for t in trade_types[:min_length]
+                ]
             )
         ])
         fig_trade.update_layout(
@@ -847,14 +875,16 @@ def test(
         
         # Graph 2: Filtered Scatter Plot for Trade Events.
         # Filter steps with trade events.
-        trade_steps_df = step_df[step_df["Trade Status"] != "No trade"]
         import plotly.express as px
-        fig_filtered = px.scatter(trade_steps_df,
-                                  x="Step",
-                                  y="Price",
-                                  color="Trade Status",
-                                  hover_data=["Predicted Signal", "Step Return"],
-                                  title="Filtered Trade Events: Price with Predicted Signal and Step Return")
+        trade_steps_df = step_df[step_df["Trade Status"] != "No trade"]
+        fig_filtered = px.scatter(
+            trade_steps_df,
+            x="Step",
+            y="Price",
+            color="Trade Status",
+            hover_data=["Predicted Signal", "Step Return"],
+            title="Filtered Trade Events: Price with Predicted Signal and Step Return"
+        )
         fig_filtered.update_traces(marker=dict(size=10))
         fig_filtered.write_html(f"{cwd}/filtered_trade_details.html")
         
@@ -862,7 +892,6 @@ def test(
         print("\n=== Performance Summary ===")
         if len(trade_returns) > 0:
             cumulative_trade_return = np.prod(1 + np.array([float(r) for r in trade_returns])) - 1
-
         else:
             cumulative_trade_return = 0.0
         print(f"Cumulative Trade Return (complete trades): {float(cumulative_trade_return)*100:.2f}%")
@@ -889,6 +918,7 @@ def test(
         }
     else:
         raise NotImplementedError("Currently only 'elegantrl' is integrated.")
+
 
 
 
@@ -1013,7 +1043,7 @@ agent_cwd = "/home/souz_wsl/finrl_proj/FinRL_Meta/papertrading_crypto"  # folder
 
 #     erl_params=ERL_PARAMS,
 #     cwd=agent_cwd,
-#     break_step=3e5,
+#     break_step=4e5,
 #     gpu_id=0,
 #     initial_capital=10000  # Set to 10K
 # )
