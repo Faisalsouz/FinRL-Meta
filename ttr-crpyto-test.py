@@ -1035,22 +1035,28 @@ agent_cwd = "/home/souz_wsl/finrl_proj/FinRL_Meta/papertrading_crypto"  # folder
 # start training. function
 ##################################
 
-# train(start_date='2024-01-01',
-#     end_date='2024-10-24',
-#     ticker_list=CRYPTO_TICKER_TR, 
-#     data_source='binance',
-#     time_interval='30m',
-#     technical_indicator_list=INDICATORS,
-#     drl_lib='elegantrl',
-#     env=CryptoTradingEnv,
-#     model_name='ppo',
+train(
+    start_date='2024-01-01',
+    end_date='2024-10-24',
+    ticker_list=CRYPTO_TICKER_TR, 
+    data_source='binance',
+    time_interval='30m',
+    technical_indicator_list=INDICATORS,
+    drl_lib='elegantrl',
+    env=CryptoTradingEnv,
+    model_name='ppo',
 
-#     erl_params=ERL_PARAMS,
-#     cwd=agent_cwd,
-#     break_step=4e5,
-#     gpu_id=0,
-#     initial_capital=10000  # Set to 10K
-# )
+    erl_params=ERL_PARAMS,
+    cwd=agent_cwd,
+    break_step=4e5,
+    gpu_id=0,
+    initial_capital=10000,  # Set to 10K
+
+    tp_multiplier=2,         # Default TP multiplier
+    sl_multiplier=1,         # Default SL multiplier
+    atr_window=14,           # Default ATR window
+    max_trade_duration=20    # Default max trade duration
+)
 
 
 
