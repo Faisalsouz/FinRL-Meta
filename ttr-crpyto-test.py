@@ -45,7 +45,8 @@ import os
 import matplotlib.pyplot as plt
 pio.renderers.default = "browser"  # or "notebook" for Jupyter
 
-
+ # Load environment variables from .env file                                                                                                                                                          
+load_dotenv()  
 
 
 
@@ -963,23 +964,7 @@ class StockEnvEmpty(gym.Env):
 
     def step(self, actions):
         return
-############################################
-# parameters for training and paper trading.
-############################################
-data_url = 'wss://data.alpaca.markets'
-env = CryptoTradingEnv
-ticker_list = CRYPTO_TICKER
-action_dim = len(ticker_list) # for training 
-print(ticker_list)
-print(len(ticker_list))
-print(INDICATORS)
-# Calculate state dimension components:
-# 1 (amount) + 
-# action_dim (price_scaled) + 
-# action_dim (stocks_scaled) + 
-# action_dim (stocks_cool_down) +
-# action_dim (position_ratios) +
-# len(INDICATORS) * action_dim (technical indicators)
+
 
 ERL_PARAMS = {
     "learning_rate": 3e-6,         # Increased learning rate for faster convergence
@@ -1007,6 +992,7 @@ CRYPTO_TICKER_TR = ['BTCUSDT']  # For training
 INDICATORS = ["macd","rsi","cci","dx"]
 API_KEY = os.getenv("API_KEY")
 API_SECRET = os.getenv("API_SECRET")
+print(API_KEY, API_SECRET)
 API_BASE_URL = "https://paper-api.alpaca.markets" #new url for crpto wss://stream.data.alpaca.markets/v1beta3/crypto/us
 agent_cwd = "/home/souz_wsl/finrl_proj/FinRL_Meta/papertrading_crypto"  # folder containing actor.pth from training
 
@@ -1017,24 +1003,40 @@ agent_cwd = "/home/souz_wsl/finrl_proj/FinRL_Meta/papertrading_crypto"  # folder
 
 ################ uncomment to run the paper trading ################
 ##################################################################
+############################################
+# parameters for training and paper trading.
+############################################
+data_url = 'wss://data.alpaca.markets'
+env = CryptoTradingEnv
+ticker_list = CRYPTO_TICKER
+action_dim = len(ticker_list) # for training 
+print(ticker_list)
+print(len(ticker_list))
+print(INDICATORS)
+#  1 Scaled Price: 1 dimension                                                                                                                                                                          
+#  2 Technical Indicators: len(INDICATORS) dimensions per ticker                                                                                                                                        
+#  3 Previous Step’s Percentage Change in Price: 1 dimension                                                                                                                                            
+#  4 In-trade Flag: 1 dimension           
 
-# crp_paper_trading = AlpacaPaperTradingCryptoLive(
-#         ticker_list=CRYPTO_TICKER_PT,
-#         time_interval='5min',
-#         drl_lib='elegantrl',
-#         agent='ppo',
-#         cwd=agent_cwd,
-#         net_dim=net_dimensions,
-#         state_dim=state_dim,
-#         action_dim=action_dim,
-#         API_KEY=API_KEY,
-#         API_SECRET=API_SECRET,
-#         API_BASE_URL=API_BASE_URL,
-#         tech_indicator_list=INDICATORS,
+state_dim = 1 + len(INDICATORS) + 1 + 1 
+
+crp_paper_trading = AlpacaPaperTradingCryptoLive(
+        ticker_list=CRYPTO_TICKER_PT,
+        time_interval='30min',
+        drl_lib='elegantrl',
+        agent='ppo',
+        cwd=agent_cwd,
+        net_dim=ERL_PARAMS['net_dimension'],
+        state_dim=state_dim,
+        action_dim=action_dim,
+        API_KEY=API_KEY,
+        API_SECRET=API_SECRET,
+        API_BASE_URL=API_BASE_URL,
+        tech_indicator_list=INDICATORS,
        
-#         max_stock=12
-#     )
-# crp_paper_trading.run()
+        max_stock=12
+    )
+crp_paper_trading.run()
 
 
 
@@ -1042,44 +1044,44 @@ agent_cwd = "/home/souz_wsl/finrl_proj/FinRL_Meta/papertrading_crypto"  # folder
 # start training. function
 ##################################
 
-train(
-    start_date='2024-01-01',
-    end_date='2024-10-24',
-    ticker_list=CRYPTO_TICKER_TR, 
-    data_source='binance',
-    time_interval='30m',
-    technical_indicator_list=INDICATORS,
-    drl_lib='elegantrl',
-    env=CryptoTradingEnv,
-    model_name='ppo',
+# train(
+#     start_date='2024-01-01',
+#     end_date='2024-10-24',
+#     ticker_list=CRYPTO_TICKER_TR, 
+#     data_source='binance',
+#     time_interval='30m',
+#     technical_indicator_list=INDICATORS,
+#     drl_lib='elegantrl',
+#     env=CryptoTradingEnv,
+#     model_name='ppo',
 
-    erl_params=ERL_PARAMS,
-    cwd=agent_cwd,
-    break_step=4e5,
-    gpu_id=0,
-    initial_capital=10000,  # Set to 10K
+#     erl_params=ERL_PARAMS,
+#     cwd=agent_cwd,
+#     break_step=4e5,
+#     gpu_id=0,
+#     initial_capital=10000,  # Set to 10K
 
-    tp_multiplier=2,         # Default TP multiplier
-    sl_multiplier=1,         # Default SL multiplier
-    atr_window=14,           # Default ATR window
-    max_trade_duration=20    # Default max trade duration
-)
+#     tp_multiplier=2,         # Default TP multiplier
+#     sl_multiplier=5,         # Default SL multiplier
+#     atr_window=14,           # Default ATR window
+#     max_trade_duration=20    # Default max trade duration
+# )
 
 
 
 #########calling test function################
 ###############################################
-episode_assets = test(
-        start_date="2024-10-25",
-        end_date="2025-02-02",
-        ticker_list=CRYPTO_TICKER_TR,  # Single asset
-        data_source="binance",
-        time_interval="30m",
-        technical_indicator_list=["macd", "rsi", "cci", "dx"],
-        drl_lib="elegantrl",
-        env=CryptoTradingEnv,
-        model_name="ppo",
-        net_dimension=ERL_PARAMS['net_dimension'],  # Updated net dimensions
-        cwd=agent_cwd,   # folder that has 'actor.pth'
-        initial_capital=10000  # Set to 10K
-    )
+# episode_assets = test(
+#         start_date="2024-10-25",
+#         end_date="2025-02-02",
+#         ticker_list=CRYPTO_TICKER_TR,  # Single asset
+#         data_source="binance",
+#         time_interval="30m",
+#         technical_indicator_list=["macd", "rsi", "cci", "dx"],
+#         drl_lib="elegantrl",
+#         env=CryptoTradingEnv,
+#         model_name="ppo",
+#         net_dimension=ERL_PARAMS['net_dimension'],  # Updated net dimensions
+#         cwd=agent_cwd,   # folder that has 'actor.pth'
+#         initial_capital=10000  # Set to 10K
+#     )
