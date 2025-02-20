@@ -22,7 +22,7 @@ class CryptoTradingEnv(gym.Env):
                maximum trade duration, the trade is forced to exit (a "timeout" exit).
     """
 
-    def __init__(self, config, initial_account=10000, stop_loss_ratio=0.5, atr_window=14, tp_multiplier=2, sl_multiplier=1):
+    def __init__(self, config, initial_account=10000, atr_window=14, tp_multiplier=2, sl_multiplier=1):
         """
         Parameters:
           config: dict with keys:
@@ -31,14 +31,12 @@ class CryptoTradingEnv(gym.Env):
              - "if_train": bool
              - Optionally, "max_trade_duration": int (max number of bars an open trade is allowed to remain open)
           initial_account: starting cash in dollars.
-          stop_loss_ratio: For example, with a target of +2% and a ratio of 0.5, the stop loss is -1%.
         """
         # Load data.
         self.price_ary = config["price_array"].astype(np.float32)
         self.tech_ary = config["tech_array"].astype(np.float32)
         self.if_train = config["if_train"]
         self.initial_capital = initial_account
-        self.stop_loss_ratio = stop_loss_ratio
         # Load high, low, close prices for ATR calculation.
         self.high_ary = config["high_array"].astype(np.float32)
         self.low_ary = config["low_array"].astype(np.float32)
