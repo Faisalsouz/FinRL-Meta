@@ -1006,6 +1006,9 @@ state_dim = 1 + len(INDICATORS) + 1 + 1
 # Define network dimensions
 net_dimensions = [256, 128, 64, 32]
 
+# Calculate action dimension
+action_dim = len(CRYPTO_TICKER_PT)
+
 # Print for debugging
 print(f"Creating model with state_dim: {state_dim}, action_dim: {action_dim}, net_dimensions: {net_dimensions}")
 
