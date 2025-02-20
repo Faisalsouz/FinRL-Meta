@@ -996,10 +996,33 @@ print(API_KEY, API_SECRET)
 API_BASE_URL = "https://paper-api.alpaca.markets" #new url for crpto wss://stream.data.alpaca.markets/v1beta3/crypto/us
 agent_cwd = "/home/souz_wsl/finrl_proj/FinRL_Meta/papertrading_crypto"  # folder containing actor.pth from training
 
-# typical state_dim for:  1 + 3*action_dim + len(INDICATORS)*action_dim
-# e.g. 1 + 3*3 + 4*3 = 1 + 9 + 12 = 22 (for 3 tickers, 4 indicators)
-# state_dimension = 22
-# action_dimension = len(CRYPTO_TICKER)
+# Calculate state dimension components:
+# 1 (scaled price) + 
+# len(INDICATORS) (technical indicators) + 
+# 1 (previous step’s percentage change in price) + 
+# 1 (in-trade flag)
+state_dim = 1 + len(INDICATORS) + 1 + 1
+
+# Define network dimensions
+net_dimensions = [256, 128, 64, 32]
+
+# Print for debugging
+print(f"Creating model with state_dim: {state_dim}, action_dim: {action_dim}, net_dimensions: {net_dimensions}")
+
+# ERL_PARAMS with updated net_dimensions
+ERL_PARAMS = {
+    "learning_rate": 3e-6,         # Increased learning rate for faster convergence
+    "batch_size": 512,             # Batch size remains the same (adjust as needed)
+    "gamma": 0.99,                 # Use same discount as in the environment
+    "seed": 312,
+    "net_dimension": net_dimensions,  # Updated net dimensions
+    "target_step": 5000,           # More frequent updates might help
+    "eval_gap": 30,
+    "eval_times": 1,
+    "ratio_clip": 0.5,            # PPO clipping parameter (unchanged)
+    "lambda_gae_adv": 0.95,        # GAE lambda remains the same
+    "lambda_entropy": 0.01         # Entropy bonus to encourage exploration
+}
 
 ################ uncomment to run the paper trading ################
 ##################################################################
