@@ -898,7 +898,13 @@ def test(
             cumulative_trade_return = np.prod(1 + np.array([float(r) for r in trade_returns])) - 1
         else:
             cumulative_trade_return = 0.0
+        
+        # Calculate net profit (sum of all trade returns)
+        net_profit = sum(trade_returns)
+        
         print(f"Cumulative Trade Return (complete trades): {float(cumulative_trade_return)*100:.2f}%")
+        print(f"Net Profit (sum of all trade returns): {float(net_profit)*100:.2f}%")
+        
         total_trades = len(trade_returns)
         correct_trades = sum(1 for r in trade_returns if r > 0)
         print(f"Number of Trades: {total_trades}")
@@ -915,6 +921,7 @@ def test(
             'step_details': step_df,
             'summary': {
                 'cumulative_trade_return': cumulative_trade_return,
+                'net_profit': net_profit,
                 'total_trades': total_trades,
                 'correct_trades': correct_trades,
                 'correct_trade_pct': (correct_trades/total_trades*100) if total_trades > 0 else 0
