@@ -95,6 +95,9 @@ def fetch_latest_data_crypto(
     if end_date is None:
         end_date = dt.date.today()
 
+    # Ensure enough data for ATR calculation
+    start_date = start_date - dt.timedelta(days=atr_window)
+
     data_df_list = []
 
     # 3) Pull bars for each ticker
