@@ -329,7 +329,14 @@ class AlpacaPaperTradingCryptoLive:
     def trade(self):
         """Fetch state, compute action, place trades accordingly."""
         state = self.get_state()
-        if not self.in_position:
+        if self.drl_lib == 'elegantrl':
+            with torch.no_grad():
+                s_tensor = torch.as_tensor(state, dtype=torch.float32, device=self.device).unsqueeze(0)
+                a_tensor = self.act(s_tensor)
+                action = a_tensor.detach().cpu().numpy()[0]
+                print('Actions value at function trade before scaling,:', action)
+        else:
+            action = np.zeros(len(self.stockUniverse))
             if action > 0:
                 # Calculate ATR
                 atr = self._calculate_atr(self.price, self.price, self.price, self.atr_window)[0]
@@ -380,6 +387,7 @@ class AlpacaPaperTradingCryptoLive:
                     print(f"Timeout exit: Sold at {current_price}")
 
         # update self.cash
+        self.cash = float(self.alpaca.get_account().cash)
         self.cash = float(self.alpaca.get_account().cash)
 
     def get_state(self):
