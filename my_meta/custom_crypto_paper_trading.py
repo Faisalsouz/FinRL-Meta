@@ -354,40 +354,39 @@ class AlpacaPaperTradingCryptoLive:
                     self.in_position = True
                     self.trade_entry_step = self.current_step
                     print(f"Trade initiated: Entry={self.entry_price}, TP={self.target_price}, SL={self.stop_loss_price}")
+            else:
+                # Manage open trade
+                current_price = self.price[0]
+                if current_price >= self.target_price:
+                    # Take profit
+                    qty = self.stocks[0]
+                    if qty > 0:
+                        respSO = []
+                        self.submitOrder(qty, self.stockUniverse[0], 'sell', respSO)
+                        self.stocks_cd[0] = 0
+                        self.in_position = False
+                        print(f"Take profit: Sold at {current_price}")
+                elif current_price <= self.stop_loss_price:
+                    # Stop loss
+                    qty = self.stocks[0]
+                    if qty > 0:
+                        respSO = []
+                        self.submitOrder(qty, self.stockUniverse[0], 'sell', respSO)
+                        self.stocks_cd[0] = 0
+                        self.in_position = False
+                        print(f"Stop loss: Sold at {current_price}")
+                elif (self.current_step - self.trade_entry_step) >= self.max_trade_duration:
+                    # Timeout exit
+                    qty = self.stocks[0]
+                    if qty > 0:
+                        respSO = []
+                        self.submitOrder(qty, self.stockUniverse[0], 'sell', respSO)
+                        self.stocks_cd[0] = 0
+                        self.in_position = False
+                        print(f"Timeout exit: Sold at {current_price}")
 
-        else:
-            # Manage open trade
-            current_price = self.price[0]
-            if current_price >= self.target_price:
-                # Take profit
-                qty = self.stocks[0]
-                if qty > 0:
-                    respSO = []
-                    self.submitOrder(qty, self.stockUniverse[0], 'sell', respSO)
-                    self.stocks_cd[0] = 0
-                    self.in_position = False
-                    print(f"Take profit: Sold at {current_price}")
-            elif current_price <= self.stop_loss_price:
-                # Stop loss
-                qty = self.stocks[0]
-                if qty > 0:
-                    respSO = []
-                    self.submitOrder(qty, self.stockUniverse[0], 'sell', respSO)
-                    self.stocks_cd[0] = 0
-                    self.in_position = False
-                    print(f"Stop loss: Sold at {current_price}")
-            elif (self.current_step - self.trade_entry_step) >= self.max_trade_duration:
-                # Timeout exit
-                qty = self.stocks[0]
-                if qty > 0:
-                    respSO = []
-                    self.submitOrder(qty, self.stockUniverse[0], 'sell', respSO)
-                    self.stocks_cd[0] = 0
-                    self.in_position = False
-                    print(f"Timeout exit: Sold at {current_price}")
-
-        # update self.cash
-        self.cash = float(self.alpaca.get_account().cash)
+            # update self.cash
+            self.cash = float(self.alpaca.get_account().cash)
         self.cash = float(self.alpaca.get_account().cash)
 
     def get_state(self):
