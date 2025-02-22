@@ -375,7 +375,9 @@ class AlpacaPaperTradingCryptoLive:
                 self.stop_loss_price = max(self.stop_loss_price, 0.01)  # Prevent negative SL
 
                 # Place buy order
+                print(f"Current cash balance: {self.cash}")
                 qty = min(self.cash // self.price[0], abs(int(action * self.max_stock)))
+                print(f"Calculated quantity to buy: {qty}")
                 if qty > 0:
                     respSO = []
                     self.submitOrder(qty, self.stockUniverse[0], 'buy', respSO)
