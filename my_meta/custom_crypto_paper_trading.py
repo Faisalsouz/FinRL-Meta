@@ -292,6 +292,7 @@ class AlpacaPaperTradingCryptoLive:
         self.price = np.zeros(len(ticker_list), dtype=float)
         self.equities = []
 
+        self.current_step = 0
         print(f"PaperTradingCryptoLive with tickers: {ticker_list}")
         print("Time interval (seconds) =", self.time_interval)
 
@@ -310,6 +311,7 @@ class AlpacaPaperTradingCryptoLive:
         print('you have this much cash in account:', self.cash)
         while True:
             self.trade()
+            self.current_step += 1
             last_equity = float(self.alpaca.get_account().last_equity)
             print('last_equity:', last_equity)
             self.equities.append((time.time(), last_equity))
