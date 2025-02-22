@@ -390,31 +390,24 @@ class AlpacaPaperTradingCryptoLive:
         self.cash = float(self.alpaca.get_account().cash)
         self.price = price
 
-        # Calculate ATR
-        atr = self._calculate_atr(high, low, close, window=14)
+        # Calculate percentage change in price
+        if self.current_step == 0:
+            self.last_pct_change = 0.0
+        else:
+            self.last_pct_change = (price[0] - self.price[0]) / self.price[0]
 
         # build state
-        amount_scaled = np.array(self.cash*(2**-12), dtype=np.float32)
-        scale = np.array(2**-6, dtype=np.float32)
+        scaled_price = price[0] / self.price[0]
+        tech_features = tech.flatten() if len(tech.shape) == 2 else tech
+        in_trade_flag = 1.0 if self.in_position else 0.0
 
-        state = []
-        state.append(amount_scaled)
-        # price
-        state.extend(list(price * scale))
-        # stocks scaled
-        state.extend(list(self.stocks * scale))
-        # cooldown
-        state.extend(list(self.stocks_cd))
+        state = np.hstack([
+            np.array([scaled_price], dtype=np.float32).flatten(),
+            tech_features,
+            np.array([self.last_pct_change], dtype=np.float32).flatten(),
+            np.array([in_trade_flag], dtype=np.float32).flatten()
+        ]).astype(np.float32)
 
-        # ATR
-        state.extend(list(atr * scale))
-        if len(tech.shape) == 2:
-            tech_flat = tech.flatten()
-            state.extend(list(tech_flat))
-        else:
-            state.extend(list(tech))
-
-        state = np.array(state, dtype=np.float32)
         state[np.isnan(state)] = 0.0
         state[np.isinf(state)] = 0.0
         return state
