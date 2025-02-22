@@ -445,7 +445,7 @@ class AlpacaPaperTradingCryptoLive:
             ALPACA_SECRET_KEY = self.API_SECRET,
             API_BASE_URL= self.API_BASE_URL,
             ticker_list=self.stockUniverse,
-            time_interval=self.time_interval',
+            time_interval=self.time_interval,
             tech_indicator_list=self.tech_indicator_list,
             data_source="alpaca",
             select_stockstats_talib=1
