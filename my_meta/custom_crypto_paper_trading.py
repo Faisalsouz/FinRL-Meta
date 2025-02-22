@@ -79,6 +79,10 @@ def fetch_latest_data_crypto(
         number_str = time_interval.lower().replace('min','')
         tf_value = int(number_str)
         tf_unit = tradeapi.TimeFrameUnit.Minute
+    elif time_interval.lower() == '30min':
+        # Fetch 15Min data and aggregate to 30Min
+        tf_value = 15
+        tf_unit = tradeapi.TimeFrameUnit.Minute
     else:
         raise ValueError(f"Unsupported time_interval: {time_interval}")
 
@@ -114,7 +118,17 @@ def fetch_latest_data_crypto(
     # 4) Concatenate into a single DataFrame
     df = pd.concat(data_df_list, ignore_index=True)
 
-    # 5) Compute technical indicators
+    # 5) Aggregate to 30Min if needed
+    if time_interval.lower() == '30min':
+        df['time'] = pd.to_datetime(df['time'])
+        df.set_index('time', inplace=True)
+        df = df.groupby('tic').resample('30T').agg({
+            'open': 'first',
+            'high': 'max',
+            'low': 'min',
+            'close': 'last',
+            'volume': 'sum'
+        }).reset_index()
     df = _calculate_indicators_generic(
         df=df,
         data_source=data_source,
