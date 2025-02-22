@@ -384,9 +384,9 @@ class AlpacaPaperTradingCryptoLive:
                 self.stop_loss_price = self.entry_price - self.sl_multiplier * atr
                 self.stop_loss_price = max(self.stop_loss_price, 0.01)  # Prevent negative SL
 
-                # Place buy order
+                # Place buy order using all available cash
                 print(f"Current cash balance: {self.cash}")
-                qty = min(self.cash // self.price[0], abs(int(action * self.max_stock)))
+                qty = int(self.cash // self.entry_price)
                 print(f"Calculated quantity to buy: {qty}")
                 if qty > 0:
                     respSO = []
@@ -399,6 +399,7 @@ class AlpacaPaperTradingCryptoLive:
         else:
             # Manage open trade
             current_price = self.price[0]
+            print(f"Trade still open. Current price: {current_price}, TP: {self.target_price}, SL: {self.stop_loss_price}")
             if current_price >= self.target_price:
                 # Take profit
                 qty = self.stocks[0]
