@@ -256,7 +256,7 @@ class AlpacaPaperTradingCryptoLive:
                 tmp_agent = AgentPPO(net_dim, state_dim, action_dim)
                 actor = tmp_agent.act
                 try:
-                    actor_path = f"{cwd}/actor.pth"
+                    actor_path = f"{cwd}/best_actor.pth"
                     print(f"| loading actor from: {actor_path}")
                     actor.load_state_dict(load(actor_path, map_location='cpu'))
                     self.act = actor
