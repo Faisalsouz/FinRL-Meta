@@ -80,10 +80,17 @@ def fetch_latest_data_crypto(
         number_str = time_interval.lower().replace('min','')
         tf_value = int(number_str)
         tf_unit = tradeapi.TimeFrameUnit.Minute
-    elif time_interval.lower() == '30min':
+    elif time_interval.lower().endswith('min'):
+        # e.g. '5Min','15Min','30Min'
+        number_str = time_interval.lower().replace('min','')
+        tf_value = int(number_str)
+        tf_unit = tradeapi.TimeFrameUnit.Minute
+    else:
+        raise ValueError(f"Unsupported time_interval: {time_interval}")
+
+    if tf_value == 30:
         # Fetch 15Min data and aggregate to 30Min
         tf_value = 15
-        tf_unit = tradeapi.TimeFrameUnit.Minute
     else:
         raise ValueError(f"Unsupported time_interval: {time_interval}")
 
@@ -294,15 +301,7 @@ class AlpacaPaperTradingCryptoLive:
         except Exception as e:
             raise ValueError(f"Fail to connect Alpaca. Error: {e}")
 
-        # 3) Parse the time interval for the main loop
-        if time_interval.lower() in ['1min', '5min', '15min']:
-            num = int(time_interval.replace('min',''))
-            self.time_interval = 60 * num
-        else:
-            if time_interval.endswith('s'):
-                self.time_interval = int(time_interval[:-1])
-            else:
-                self.time_interval = 60
+        self.time_interval = time_interval  # Keep time_interval as a string
 
         self.tech_indicator_list = tech_indicator_list
         self.max_stock = max_stock
