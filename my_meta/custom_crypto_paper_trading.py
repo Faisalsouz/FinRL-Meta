@@ -76,11 +76,6 @@ def fetch_latest_data_crypto(
         tf_value = int(number_str)
         tf_unit = tradeapi.TimeFrameUnit.Day
     elif time_interval.lower().endswith('min'):
-        # e.g. '5Min','15Min'
-        number_str = time_interval.lower().replace('min','')
-        tf_value = int(number_str)
-        tf_unit = tradeapi.TimeFrameUnit.Minute
-    elif time_interval.lower().endswith('min'):
         # e.g. '5Min','15Min','30Min'
         number_str = time_interval.lower().replace('min','')
         tf_value = int(number_str)
@@ -91,8 +86,6 @@ def fetch_latest_data_crypto(
     if tf_value == 30:
         # Fetch 15Min data and aggregate to 30Min
         tf_value = 15
-    else:
-        raise ValueError(f"Unsupported time_interval: {time_interval}")
 
     alpaca_tf = tradeapi.TimeFrame(tf_value, tf_unit)
 
