@@ -340,14 +340,24 @@ class AlpacaPaperTradingCryptoLive:
             self.alpaca.cancel_order(order.id)
 
         print("Starting infinite paper trading loop for crypto.")
-        print('you have this much cash in account:', self.cash)
+        print('You have this much cash in account:', self.cash)
         while True:
             self.trade()
             self.current_step += 1
             last_equity = float(self.alpaca.get_account().last_equity)
             print('last_equity:', last_equity)
             self.equities.append((time.time(), last_equity))
-            time.sleep(self.time_interval)
+            # Calculate the time to sleep based on the time interval
+            if self.time_interval.endswith('min'):
+                num_minutes = int(self.time_interval.replace('min', ''))
+                sleep_time = num_minutes * 60
+            elif self.time_interval.endswith('s'):
+                sleep_time = int(self.time_interval.replace('s', ''))
+            else:
+                sleep_time = 60  # Default to 60 seconds if not specified
+
+            print(f"Next bar data will be fetched in {sleep_time // 60} minutes.")
+            time.sleep(sleep_time)
 
     def trade(self):
         """Fetch state, compute action, place trades accordingly."""
