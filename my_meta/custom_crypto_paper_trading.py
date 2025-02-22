@@ -28,6 +28,7 @@ def fetch_latest_data_crypto(
     exchanges: list = ['US'],
     select_stockstats_talib=0, # 0 => stockstats, 1 => talib
     data_source="alpaca",
+    atr_window=14           # ATR window
 ):
     """
     Fetch recent crypto bars from Alpaca using official get_crypto_bars approach,
@@ -255,7 +256,8 @@ class AlpacaPaperTradingCryptoLive:
         tp_multiplier=2,       # TP multiplier
         sl_multiplier=1,       # SL multiplier
         atr_window=14,         # ATR window
-        max_trade_duration=20  # Max trade duration
+        max_trade_duration=20, # Max trade duration
+        initial_capital=10000  # Initial capital for paper trading
     ):
         self.API_BASE_URL = API_BASE_URL
         self.API_SECRET = API_SECRET
@@ -310,7 +312,7 @@ class AlpacaPaperTradingCryptoLive:
         self.stockUniverse = ticker_list
         self.stocks = np.zeros(len(ticker_list), dtype=float)
         self.stocks_cd = np.zeros_like(self.stocks)
-        self.cash = float(self.alpaca.get_account().last_equity)
+        self.cash = initial_capital  # Set initial cash balance
         self.price = np.zeros(len(ticker_list), dtype=float)
         self.equities = []
 
@@ -370,7 +372,8 @@ class AlpacaPaperTradingCryptoLive:
                     time_interval='1Min',
                     tech_indicator_list=self.tech_indicator_list,
                     data_source="alpaca",
-                    select_stockstats_talib=1
+                    select_stockstats_talib=1,
+                    atr_window=self.atr_window
                 )
                 atr = self._calculate_atr(high, low, close, self.atr_window)[0]
                 self.entry_price = self.price[0]
