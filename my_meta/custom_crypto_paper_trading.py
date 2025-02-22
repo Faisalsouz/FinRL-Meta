@@ -238,6 +238,10 @@ class AlpacaPaperTradingCryptoLive:
         API_BASE_URL,
         tech_indicator_list,   # e.g. ['macd','rsi','cci','dx']
         max_stock=1e2,         # scale factor for buy/sell
+        tp_multiplier=2,       # TP multiplier
+        sl_multiplier=1,       # SL multiplier
+        atr_window=14,         # ATR window
+        max_trade_duration=20  # Max trade duration
     ):
         self.API_BASE_URL = API_BASE_URL
         self.API_SECRET = API_SECRET
@@ -294,6 +298,10 @@ class AlpacaPaperTradingCryptoLive:
 
         self.current_step = 0
         self.in_position = False  # Initialize in_position
+        self.entry_price = None
+        self.target_price = None
+        self.stop_loss_price = None
+        self.trade_entry_step = None
         print(f"PaperTradingCryptoLive with tickers: {ticker_list}")
         print("Time interval (seconds) =", self.time_interval)
 
@@ -321,44 +329,55 @@ class AlpacaPaperTradingCryptoLive:
     def trade(self):
         """Fetch state, compute action, place trades accordingly."""
         state = self.get_state()
-        if self.drl_lib == 'elegantrl':
-            with torch.no_grad():
-                s_tensor = torch.as_tensor(state, dtype=torch.float32, device=self.device).unsqueeze(0)
-                a_tensor = self.act(s_tensor)
-                action = a_tensor.detach().cpu().numpy()[0]
-                print('Actions value at function trade before scaling,:', action)
-            action = (action * self.max_stock).astype(int)
-            print('Actions value at function trade,:', action)
+        if not self.in_position:
+            if action > 0:
+                # Calculate ATR
+                atr = self._calculate_atr(self.price, self.price, self.price, self.atr_window)[0]
+                self.entry_price = self.price[0]
+                self.target_price = self.entry_price + self.tp_multiplier * atr
+                self.stop_loss_price = self.entry_price - self.sl_multiplier * atr
+                self.stop_loss_price = max(self.stop_loss_price, 0.01)  # Prevent negative SL
+
+                # Place buy order
+                qty = min(self.cash // self.price[0], abs(int(action * self.max_stock)))
+                if qty > 0:
+                    respSO = []
+                    self.submitOrder(qty, self.stockUniverse[0], 'buy', respSO)
+                    self.stocks_cd[0] = 0
+                    self.in_position = True
+                    self.trade_entry_step = self.current_step
+                    print(f"Trade initiated: Entry={self.entry_price}, TP={self.target_price}, SL={self.stop_loss_price}")
+
         else:
-            action = np.zeros(len(self.stockUniverse))
-
-        self.stocks_cd += 1
-        min_action = 10
-
-        # SELL
-        for idx in np.where(action < -min_action)[0]:
-            sell_num_shares = min(self.stocks[idx], -action[idx])
-            qty = abs(int(sell_num_shares))
-            if qty > 0:
-                respSO = []
-                self.submitOrder(qty, self.stockUniverse[idx], 'sell', respSO)
-                self.stocks_cd[idx] = 0
-                self.in_position = True  # Trade opened
-                self.in_position = False  # Trade closed
-
-        # BUY
-        for idx in np.where(action > min_action)[0]:
-            if self.cash is None or self.cash <= 0:
-                continue
-            buy_num_shares = min(self.cash // self.price[idx], abs(int(action[idx])))
-            if np.isnan(buy_num_shares):
-                qty = 0
-            else:
-                qty = abs(int(buy_num_shares))
-            if qty > 0:
-                respSO = []
-                self.submitOrder(qty, self.stockUniverse[idx], 'buy', respSO)
-                self.stocks_cd[idx] = 0
+            # Manage open trade
+            current_price = self.price[0]
+            if current_price >= self.target_price:
+                # Take profit
+                qty = self.stocks[0]
+                if qty > 0:
+                    respSO = []
+                    self.submitOrder(qty, self.stockUniverse[0], 'sell', respSO)
+                    self.stocks_cd[0] = 0
+                    self.in_position = False
+                    print(f"Take profit: Sold at {current_price}")
+            elif current_price <= self.stop_loss_price:
+                # Stop loss
+                qty = self.stocks[0]
+                if qty > 0:
+                    respSO = []
+                    self.submitOrder(qty, self.stockUniverse[0], 'sell', respSO)
+                    self.stocks_cd[0] = 0
+                    self.in_position = False
+                    print(f"Stop loss: Sold at {current_price}")
+            elif (self.current_step - self.trade_entry_step) >= self.max_trade_duration:
+                # Timeout exit
+                qty = self.stocks[0]
+                if qty > 0:
+                    respSO = []
+                    self.submitOrder(qty, self.stockUniverse[0], 'sell', respSO)
+                    self.stocks_cd[0] = 0
+                    self.in_position = False
+                    print(f"Timeout exit: Sold at {current_price}")
 
         # update self.cash
         self.cash = float(self.alpaca.get_account().cash)
@@ -395,11 +414,6 @@ class AlpacaPaperTradingCryptoLive:
         self.cash = float(self.alpaca.get_account().cash)
         self.price = price
 
-        # Calculate percentage change in price
-        if self.current_step == 0:
-            self.last_pct_change = 0.0
-        else:
-            self.last_pct_change = (price[0] - self.price[0]) / self.price[0]
 
         # Calculate percentage change in price
         if self.current_step == 0:
