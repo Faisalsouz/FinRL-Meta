@@ -301,6 +301,10 @@ class AlpacaPaperTradingCryptoLive:
 
         self.tech_indicator_list = tech_indicator_list
         self.max_stock = max_stock
+        self.tp_multiplier = tp_multiplier
+        self.sl_multiplier = sl_multiplier
+        self.atr_window = atr_window  # Initialize atr_window
+        self.max_trade_duration = max_trade_duration
 
         # 4) Initialize account info
         self.stockUniverse = ticker_list
