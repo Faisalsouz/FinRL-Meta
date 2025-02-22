@@ -396,6 +396,12 @@ class AlpacaPaperTradingCryptoLive:
         else:
             self.last_pct_change = (price[0] - self.price[0]) / self.price[0]
 
+        # Calculate percentage change in price
+        if self.current_step == 0:
+            self.last_pct_change = 0.0
+        else:
+            self.last_pct_change = (price[0] - self.price[0]) / self.price[0]
+
         # build state
         scaled_price = price[0] / self.price[0]
         tech_features = tech.flatten() if len(tech.shape) == 2 else tech
