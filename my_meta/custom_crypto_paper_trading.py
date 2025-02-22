@@ -293,6 +293,7 @@ class AlpacaPaperTradingCryptoLive:
         self.equities = []
 
         self.current_step = 0
+        self.in_position = False  # Initialize in_position
         print(f"PaperTradingCryptoLive with tickers: {ticker_list}")
         print("Time interval (seconds) =", self.time_interval)
 
@@ -342,6 +343,8 @@ class AlpacaPaperTradingCryptoLive:
                 respSO = []
                 self.submitOrder(qty, self.stockUniverse[idx], 'sell', respSO)
                 self.stocks_cd[idx] = 0
+                self.in_position = True  # Trade opened
+                self.in_position = False  # Trade closed
 
         # BUY
         for idx in np.where(action > min_action)[0]:
