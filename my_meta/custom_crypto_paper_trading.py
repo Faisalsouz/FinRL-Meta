@@ -159,6 +159,9 @@ def fetch_latest_data_crypto(
     latest_tech = np.array(tech_list_data).T  # shape (#tickers, #indicators)
 
     print(f"Latest Bars data: {latest_price}, {latest_tech}")
+    print(f"High prices: {latest_high}")
+    print(f"Low prices: {latest_low}")
+    print(f"Close prices: {latest_close}")
     return latest_price, latest_tech, latest_high, latest_low, latest_close
 
 
@@ -381,6 +384,9 @@ class AlpacaPaperTradingCryptoLive:
                     select_stockstats_talib=1,
                     atr_window=self.atr_window
                 )
+                print(f"Fetched high prices: {high}")
+                print(f"Fetched low prices: {low}")
+                print(f"Fetched close prices: {close}")
                 atr = self._calculate_atr(high, low, close, self.atr_window)[0]
                 print(f"ATR value: {atr}")
                 self.entry_price = self.price[0]
@@ -504,6 +510,8 @@ class AlpacaPaperTradingCryptoLive:
                 abs(low[i] - close[i-1])
             )
         atr = np.convolve(tr, np.ones(window)/window, mode='same')
+        print(f"TR values: {tr}")
+        print(f"ATR values: {atr}")
         return atr.astype(np.float32)
 
     def submitOrder(self, qty, symbol, side, resp):
