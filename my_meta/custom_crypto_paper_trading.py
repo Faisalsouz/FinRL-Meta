@@ -382,10 +382,12 @@ class AlpacaPaperTradingCryptoLive:
                     atr_window=self.atr_window
                 )
                 atr = self._calculate_atr(high, low, close, self.atr_window)[0]
+                print(f"ATR value: {atr}")
                 self.entry_price = self.price[0]
                 self.target_price = self.entry_price + self.tp_multiplier * atr
                 self.stop_loss_price = self.entry_price - self.sl_multiplier * atr
                 self.stop_loss_price = max(self.stop_loss_price, 0.01)  # Prevent negative SL
+                print(f"Entry Price: {self.entry_price}, TP: {self.target_price}, SL: {self.stop_loss_price}")
 
                 # Place buy order using all available cash
                 print(f"Current initial cash balance: {self.initial_cash}")
