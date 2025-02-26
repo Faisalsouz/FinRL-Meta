@@ -6,6 +6,7 @@ from __future__ import annotations
 # from finrl.meta.env_stock_trading.env_stocktrading_np import StockTradingEnv
 from my_meta.custom_crypto_env import CryptoTradingEnv
 from my_meta.custom_crypto_paper_trading import AlpacaPaperTradingCryptoLive
+from my_meta.custom_crypto_env import CryptoTradingEnv
 from finrl.meta.env_stock_trading.env_stock_papertrading import AlpacaPaperTrading
 #from finrl.meta.data_processor import DataProcessor
 from meta.data_processor import DataProcessor
