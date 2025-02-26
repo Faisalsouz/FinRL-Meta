@@ -388,8 +388,8 @@ class AlpacaPaperTradingCryptoLive:
 
                 # Place buy order using all available cash
                 print(f"Current cash balance: {self.cash}")
-                qty = int(self.cash // self.entry_price)
-                print(f"Calculated quantity to buy: {qty}")
+                qty = self.cash / self.entry_price
+                print(f"Calculated quantity to buy: {qty:.6f}")
                 if qty > 0:
                     respSO = []
                     self.submitOrder(qty, self.stockUniverse[0], 'buy', respSO)
