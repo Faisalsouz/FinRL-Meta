@@ -373,7 +373,7 @@ class AlpacaPaperTradingCryptoLive:
         if not self.in_position:
             if action > 0:
                 # Calculate ATR using high, low, and close prices
-                price, tech, high, low, close = fetch_latest_data_crypto(
+                price, tech, high, low, close, historical_df = fetch_latest_data_crypto(
                     ALPACA_API_KEY=self.API_KEY,
                     ALPACA_SECRET_KEY=self.API_SECRET,
                     API_BASE_URL=self.API_BASE_URL,
