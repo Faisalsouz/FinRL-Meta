@@ -308,6 +308,7 @@ class AlpacaPaperTradingCryptoLive:
         self.stocks = np.zeros(len(ticker_list), dtype=float)
         self.stocks_cd = np.zeros_like(self.stocks)
         self.cash = initial_capital  # Set initial cash balance
+        self.initial_cash = initial_capital  # Store the initial capital
         self.price = np.zeros(len(ticker_list), dtype=float)
         self.equities = []
 
@@ -387,8 +388,8 @@ class AlpacaPaperTradingCryptoLive:
                 self.stop_loss_price = max(self.stop_loss_price, 0.01)  # Prevent negative SL
 
                 # Place buy order using all available cash
-                print(f"Current cash balance: {self.cash}")
-                qty = self.cash / self.entry_price
+                print(f"Current initial cash balance: {self.initial_cash}")
+                qty = self.initial_cash / self.entry_price
                 print(f"Calculated quantity to buy: {qty:.6f}")
                 if qty > 0:
                     respSO = []
