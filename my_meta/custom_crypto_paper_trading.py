@@ -117,7 +117,7 @@ def fetch_latest_data_crypto(
 
     if len(data_df_list) == 0:
         # No data at all
-        return np.array([]), np.array([])
+        return np.array([]), np.array([]), pd.DataFrame()
 
     # 4) Concatenate into a single DataFrame
     df = pd.concat(data_df_list, ignore_index=True)
@@ -140,7 +140,7 @@ def fetch_latest_data_crypto(
         select_stockstats_talib=select_stockstats_talib
     )
     if df.empty:
-        return np.array([]), np.array([])
+        return np.array([]), np.array([]), pd.DataFrame()
 
     # 6) Take the last row per ticker => "latest" bar
     latest_rows = df.groupby('tic', as_index=False).tail(1).copy()
@@ -162,7 +162,7 @@ def fetch_latest_data_crypto(
     print(f"High prices: {latest_high}")
     print(f"Low prices: {latest_low}")
     print(f"Close prices: {latest_close}")
-    return latest_price, latest_tech, latest_high, latest_low, latest_close
+    return latest_price, latest_tech, latest_high, latest_low, latest_close, df
 
 
 def _calculate_indicators_generic(
@@ -387,7 +387,12 @@ class AlpacaPaperTradingCryptoLive:
                 print(f"Fetched high prices: {high}")
                 print(f"Fetched low prices: {low}")
                 print(f"Fetched close prices: {close}")
-                atr = self._calculate_atr(high, low, close, self.atr_window)[0]
+                atr = self._calculate_atr(
+                    historical_df['high'].values,
+                    historical_df['low'].values,
+                    historical_df['close'].values,
+                    self.atr_window
+                )[-1]  # Use the latest ATR value
                 print(f"ATR value: {atr}")
                 self.entry_price = self.price[0]
                 self.target_price = self.entry_price + self.tp_multiplier * atr
@@ -509,7 +514,7 @@ class AlpacaPaperTradingCryptoLive:
                 abs(high[i] - close[i-1]),
                 abs(low[i] - close[i-1])
             )
-        atr = np.convolve(tr, np.ones(window)/window, mode='same')
+        atr = np.convolve(tr, np.ones(window)/window, mode='valid')
         print(f"TR values: {tr}")
         print(f"ATR values: {atr}")
         return atr.astype(np.float32)
