@@ -59,6 +59,10 @@ def fetch_latest_bar_data(
 
     alpaca_tf = tradeapi.TimeFrame(tf_value, tf_unit)
 
+    # Format dates to RFC3339 or YYYY-MM-DD
+    start_date_str = start_date.strftime('%Y-%m-%dT%H:%M:%SZ')
+    end_date_str = end_date.strftime('%Y-%m-%dT%H:%M:%SZ')
+
     data_df_list = []
 
     # Pull bars for each ticker
@@ -154,8 +158,8 @@ def fetch_historical_data(
         barset = api.get_crypto_bars(
             symbol=tic,
             timeframe=alpaca_tf,
-            start=start_date,
-            end=end_date,
+            start=start_date_str,
+            end=end_date_str,
         )
         tmp_df = barset.df.reset_index()
         if tmp_df.empty:
