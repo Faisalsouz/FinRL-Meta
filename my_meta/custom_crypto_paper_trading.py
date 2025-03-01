@@ -50,10 +50,10 @@ def fetch_latest_bar_data(
         number_str = time_interval.lower().replace('hour', '')
         tf_value = int(number_str)
         tf_unit = tradeapi.TimeFrameUnit.Hour
+    elif time_interval.lower().endswith('min'):
         number_str = time_interval.lower().replace('min', '')
         tf_value = int(number_str)
         tf_unit = tradeapi.TimeFrameUnit.Minute
-    else:
         raise ValueError(f"Unsupported time_interval: {time_interval}")
 
     alpaca_tf = tradeapi.TimeFrame(tf_value, tf_unit)
