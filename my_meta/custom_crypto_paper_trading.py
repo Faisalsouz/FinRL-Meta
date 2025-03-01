@@ -481,6 +481,8 @@ class AlpacaPaperTradingCryptoLive:
         self.price = price
 
 
+        print(f"State update - Price: {self.price}, Cash: {self.cash}, Stocks: {self.stocks}")
+
         # Calculate percentage change in price
         if self.current_step == 0:
             self.last_pct_change = 0.0
@@ -515,6 +517,8 @@ class AlpacaPaperTradingCryptoLive:
                 abs(low[i] - close[i-1])
             )
         atr = np.convolve(tr, np.ones(window)/window, mode='valid')
+        print(f"TR values: {tr}")
+        print(f"ATR values: {atr}")
         print(f"TR values: {tr}")
         print(f"ATR values: {atr}")
         return atr.astype(np.float32)
