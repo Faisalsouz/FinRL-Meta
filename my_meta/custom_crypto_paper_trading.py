@@ -46,7 +46,10 @@ def fetch_latest_bar_data(
         number_str = time_interval.lower().replace('day', '')
         tf_value = int(number_str)
         tf_unit = tradeapi.TimeFrameUnit.Day
-    elif time_interval.lower().endswith('min'):
+    elif time_interval.lower().endswith('hour'):
+        number_str = time_interval.lower().replace('hour', '')
+        tf_value = int(number_str)
+        tf_unit = tradeapi.TimeFrameUnit.Hour
         number_str = time_interval.lower().replace('min', '')
         tf_value = int(number_str)
         tf_unit = tradeapi.TimeFrameUnit.Minute
@@ -136,7 +139,12 @@ def fetch_historical_data(
 
     # Calculate start date for historical data
     end_date = dt.datetime.now()
-    start_date = end_date - dt.timedelta(days=atr_window)
+    if tf_unit == tradeapi.TimeFrameUnit.Day:
+        start_date = end_date - dt.timedelta(days=atr_window)
+    elif tf_unit == tradeapi.TimeFrameUnit.Hour:
+        start_date = end_date - dt.timedelta(hours=atr_window * tf_value)
+    elif tf_unit == tradeapi.TimeFrameUnit.Minute:
+        start_date = end_date - dt.timedelta(minutes=atr_window * tf_value)
 
     data_df_list = []
 
