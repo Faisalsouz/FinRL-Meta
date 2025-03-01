@@ -454,7 +454,7 @@ class AlpacaPaperTradingCryptoLive:
         (defined above in the same file).
         Build a state vector of [scaled_cash, price*scale, stocks*scale, stocks_cd, tech_indicators].
         """
-        price, tech, high, low, close = fetch_latest_data_crypto(
+        price, tech, high, low, close, _ = fetch_latest_data_crypto(
             ALPACA_API_KEY= self.API_KEY,
             ALPACA_SECRET_KEY = self.API_SECRET,
             API_BASE_URL= self.API_BASE_URL,
