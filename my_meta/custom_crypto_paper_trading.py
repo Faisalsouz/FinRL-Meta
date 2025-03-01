@@ -12,6 +12,159 @@ import pandas as pd
 import numpy as np
 import datetime as dt
 
+def fetch_latest_bar_data(
+    ALPACA_API_KEY,
+    ALPACA_SECRET_KEY,
+    API_BASE_URL,
+    ticker_list,
+    time_interval
+):
+    """
+    Fetch the most recent bar data for the current interval.
+
+    Parameters
+    ----------
+    ALPACA_API_KEY : str
+    ALPACA_SECRET_KEY : str
+    API_BASE_URL : str
+    ticker_list : list of str
+        Crypto symbols, e.g. ["BTCUSD","ETHUSD","DOGEUSD"].
+    time_interval : str
+        E.g. '1Day', '5Min', '15Min'. We'll parse into tradeapi.TimeFrame().
+
+    Returns
+    -------
+    latest_price : np.ndarray  (shape: (len(ticker_list),))
+    latest_high  : np.ndarray  (shape: (len(ticker_list),))
+    latest_low   : np.ndarray  (shape: (len(ticker_list),))
+    latest_close : np.ndarray  (shape: (len(ticker_list),))
+    """
+    api = tradeapi.REST(ALPACA_API_KEY, ALPACA_SECRET_KEY, API_BASE_URL)
+
+    # Parse time_interval into an Alpaca TimeFrame
+    if time_interval.lower().endswith('day'):
+        number_str = time_interval.lower().replace('day', '')
+        tf_value = int(number_str)
+        tf_unit = tradeapi.TimeFrameUnit.Day
+    elif time_interval.lower().endswith('min'):
+        number_str = time_interval.lower().replace('min', '')
+        tf_value = int(number_str)
+        tf_unit = tradeapi.TimeFrameUnit.Minute
+    else:
+        raise ValueError(f"Unsupported time_interval: {time_interval}")
+
+    alpaca_tf = tradeapi.TimeFrame(tf_value, tf_unit)
+
+    data_df_list = []
+
+    # Pull bars for each ticker
+    for tic in ticker_list:
+        barset = api.get_crypto_bars(
+            symbol=tic,
+            timeframe=alpaca_tf,
+            limit=1  # Fetch only the latest bar
+        )
+        tmp_df = barset.df.reset_index()
+        if tmp_df.empty:
+            continue
+        tmp_df['tic'] = tic
+        tmp_df.rename(columns={'timestamp': 'time'}, inplace=True)
+        data_df_list.append(tmp_df)
+
+    if len(data_df_list) == 0:
+        # No data at all
+        return np.array([]), np.array([]), np.array([]), np.array([])
+
+    # Concatenate into a single DataFrame
+    df = pd.concat(data_df_list, ignore_index=True)
+
+    # Extract final arrays
+    latest_price = df['close'].values.astype(np.float32)
+    latest_high = df['high'].values.astype(np.float32)
+    latest_low = df['low'].values.astype(np.float32)
+    latest_close = df['close'].values.astype(np.float32)
+
+    print(f"Latest Bars data: {latest_price}")
+    print(f"High prices: {latest_high}")
+    print(f"Low prices: {latest_low}")
+    print(f"Close prices: {latest_close}")
+    return latest_price, latest_high, latest_low, latest_close
+
+def fetch_historical_data(
+    ALPACA_API_KEY,
+    ALPACA_SECRET_KEY,
+    API_BASE_URL,
+    ticker_list,
+    time_interval,
+    atr_window
+):
+    """
+    Fetch historical data for the specified ATR window.
+
+    Parameters
+    ----------
+    ALPACA_API_KEY : str
+    ALPACA_SECRET_KEY : str
+    API_BASE_URL : str
+    ticker_list : list of str
+        Crypto symbols, e.g. ["BTCUSD","ETHUSD","DOGEUSD"].
+    time_interval : str
+        E.g. '1Day', '5Min', '15Min'. We'll parse into tradeapi.TimeFrame().
+    atr_window : int
+        Number of periods for ATR calculation.
+
+    Returns
+    -------
+    historical_df : pd.DataFrame
+        DataFrame containing historical data for ATR calculation.
+    """
+    api = tradeapi.REST(ALPACA_API_KEY, ALPACA_SECRET_KEY, API_BASE_URL)
+
+    # Parse time_interval into an Alpaca TimeFrame
+    if time_interval.lower().endswith('day'):
+        number_str = time_interval.lower().replace('day', '')
+        tf_value = int(number_str)
+        tf_unit = tradeapi.TimeFrameUnit.Day
+    elif time_interval.lower().endswith('min'):
+        number_str = time_interval.lower().replace('min', '')
+        tf_value = int(number_str)
+        tf_unit = tradeapi.TimeFrameUnit.Minute
+    else:
+        raise ValueError(f"Unsupported time_interval: {time_interval}")
+
+    alpaca_tf = tradeapi.TimeFrame(tf_value, tf_unit)
+
+    # Calculate start date for historical data
+    end_date = dt.datetime.now()
+    start_date = end_date - dt.timedelta(days=atr_window)
+
+    data_df_list = []
+
+    # Pull bars for each ticker
+    for tic in ticker_list:
+        barset = api.get_crypto_bars(
+            symbol=tic,
+            timeframe=alpaca_tf,
+            start=start_date,
+            end=end_date,
+        )
+        tmp_df = barset.df.reset_index()
+        if tmp_df.empty:
+            continue
+        tmp_df['tic'] = tic
+        tmp_df.rename(columns={'timestamp': 'time'}, inplace=True)
+        data_df_list.append(tmp_df)
+
+    if len(data_df_list) == 0:
+        # No data at all
+        return pd.DataFrame()
+
+    # Concatenate into a single DataFrame
+    df = pd.concat(data_df_list, ignore_index=True)
+
+    print(f"Historical data fetched for ATR calculation: {df}")
+    return df
+
 ##########################################################
 # 1) Function: fetch_latest_data_crypto
 ##########################################################
@@ -372,45 +525,56 @@ class AlpacaPaperTradingCryptoLive:
         # Use direct action for trade initiation
         if not self.in_position:
             if action > 0:
-                # Calculate ATR using high, low, and close prices
-                price, tech, high, low, close, historical_df = fetch_latest_data_crypto(
+                # Fetch latest bar data
+                price, high, low, close = fetch_latest_bar_data(
+                    ALPACA_API_KEY=self.API_KEY,
+                    ALPACA_SECRET_KEY=self.API_SECRET,
+                    API_BASE_URL=self.API_BASE_URL,
+                    ticker_list=self.stockUniverse,
+                    time_interval=self.time_interval
+                )
+                print(f"Fetched high prices: {high}")
+                print(f"Fetched low prices: {low}")
+                print(f"Fetched close prices: {close}")
+
+                # Fetch historical data for ATR calculation
+                historical_df = fetch_historical_data(
                     ALPACA_API_KEY=self.API_KEY,
                     ALPACA_SECRET_KEY=self.API_SECRET,
                     API_BASE_URL=self.API_BASE_URL,
                     ticker_list=self.stockUniverse,
                     time_interval=self.time_interval,
-                    tech_indicator_list=self.tech_indicator_list,
-                    data_source="alpaca",
-                    select_stockstats_talib=1,
                     atr_window=self.atr_window
                 )
-                print(f"Fetched high prices: {high}")
-                print(f"Fetched low prices: {low}")
-                print(f"Fetched close prices: {close}")
-                atr = self._calculate_atr(
-                    historical_df['high'].values,
-                    historical_df['low'].values,
-                    historical_df['close'].values,
-                    self.atr_window
-                )[-1]  # Use the latest ATR value
-                print(f"ATR value: {atr}")
-                self.entry_price = self.price[0]
-                self.target_price = self.entry_price + self.tp_multiplier * atr
-                self.stop_loss_price = self.entry_price - self.sl_multiplier * atr
-                self.stop_loss_price = max(self.stop_loss_price, 0.01)  # Prevent negative SL
-                print(f"Entry Price: {self.entry_price}, TP: {self.target_price}, SL: {self.stop_loss_price}")
 
-                # Place buy order using all available cash
-                print(f"Current initial cash balance: {self.initial_cash}")
-                qty = self.initial_cash / self.entry_price
-                print(f"Calculated quantity to buy: {qty:.6f}")
-                if qty > 0:
-                    respSO = []
-                    self.submitOrder(qty, self.stockUniverse[0], 'buy', respSO)
-                    self.stocks_cd[0] = 0
-                    self.in_position = True
-                    self.trade_entry_step = self.current_step
-                    print(f"Trade initiated: Entry={self.entry_price}, TP={self.target_price}, SL={self.stop_loss_price}")
+                # Ensure we have enough data for ATR calculation
+                if len(historical_df) >= self.atr_window:
+                    atr = self._calculate_atr(
+                        historical_df['high'].values,
+                        historical_df['low'].values,
+                        historical_df['close'].values,
+                        self.atr_window
+                    )[-1]  # Use the latest ATR value
+                    print(f"ATR value: {atr}")
+                    self.entry_price = price[0]
+                    self.target_price = self.entry_price + self.tp_multiplier * atr
+                    self.stop_loss_price = self.entry_price - self.sl_multiplier * atr
+                    self.stop_loss_price = max(self.stop_loss_price, 0.01)  # Prevent negative SL
+                    print(f"Entry Price: {self.entry_price}, TP: {self.target_price}, SL={self.stop_loss_price}")
+
+                    # Place buy order using all available cash
+                    print(f"Current initial cash balance: {self.initial_cash}")
+                    qty = self.initial_cash / self.entry_price
+                    print(f"Calculated quantity to buy: {qty:.6f}")
+                    if qty > 0:
+                        respSO = []
+                        self.submitOrder(qty, self.stockUniverse[0], 'buy', respSO)
+                        self.stocks_cd[0] = 0
+                        self.in_position = True
+                        self.trade_entry_step = self.current_step
+                        print(f"Trade initiated: Entry={self.entry_price}, TP={self.target_price}, SL={self.stop_loss_price}")
+                else:
+                    print("Not enough data for ATR calculation.")
 
         else:
             # Manage open trade
