@@ -3,6 +3,13 @@
 from fastapi import FastAPI, Body
 from pydantic import BaseModel, Field
 import uvicorn
+from my_meta.custom_crypto_paper_trading import AlpacaPaperTradingCryptoLive
+from my_meta.single_asset_training_ppo import train
+import logging
+
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 # Suppose these are your existing DRL functions:
 # from your_drl_logic import train, start_paper_trading_crypto_live
@@ -53,20 +60,20 @@ def train_endpoint(req: TrainRequest):
     The body of the request must match `TrainRequest`.
     """
     # Convert the pydantic model to a dictionary or pass directly
-    # train(
-    #     start_date=req.start_date,
-    #     end_date=req.end_date,
-    #     ticker_list=req.ticker_list,
-    #     data_source=req.data_source,
-    #     time_interval=req.time_interval,
-    #     technical_indicator_list=req.technical_indicator_list,
-    #     drl_lib=req.drl_lib,
-    #     env=YourEnvClass,  # or string referencing if you prefer 
-    #     model_name=req.model_name,
-    #     cwd=req.cwd,
-    #     break_step=req.break_step,
-    #     ...
-    # )
+    train(
+        start_date=req.start_date,
+        end_date=req.end_date,
+        ticker_list=req.ticker_list,
+        data_source=req.data_source,
+        time_interval=req.time_interval,
+        technical_indicator_list=req.technical_indicator_list,
+        drl_lib=req.drl_lib,
+        env=req.env,  # or string referencing if you prefer 
+        model_name=req.model_name,
+        cwd=req.cwd,
+        break_step=req.break_step,
+        
+    )
     # For demonstration, just returning the request content:
     return {"message": "Training triggered!", "received": req.dict()}
 
@@ -76,22 +83,39 @@ def paper_trade_endpoint(req: PaperTradingRequest):
     """
     Endpoint to start live paper trading on Alpaca with your DRL agent.
     """
-    # e.g. start_paper_trading_crypto_live(
-    #    ticker_list=req.ticker_list,
-    #    time_interval=req.time_interval,
-    #    drl_lib=req.drl_lib,
-    #    agent=req.agent,
-    #    cwd=req.cwd,
-    #    net_dim=req.net_dim,
-    #    state_dim=req.state_dim,
-    #    action_dim=req.action_dim,
-    #    API_KEY=req.API_KEY,
-    #    API_SECRET=req.API_SECRET,
-    #    API_BASE_URL=req.API_BASE_URL,
-    #    tech_indicator_list=req.tech_indicator_list,
-    #    max_stock=req.max_stock
-    # )
-    return {"message": "Paper trading started!", "received": req.dict()}
+    logger.info("Received paper trading request")
+    logger.info(f"Request data: {req.dict()}")
+
+    crp_paper_trading = AlpacaPaperTradingCryptoLive(
+        ticker_list=req.ticker_list,
+        time_interval=req.time_interval,
+        drl_lib=req.drl_lib,
+        agent=req.agent,
+        cwd=req.cwd,
+        net_dim=req.net_dim,
+        state_dim=req.state_dim,
+        action_dim=req.action_dim,
+        API_KEY=req.API_KEY,
+        API_SECRET=req.API_SECRET,
+        API_BASE_URL=req.API_BASE_URL,
+        tech_indicator_list=req.tech_indicator_list,
+        max_stock=req.max_stock
+    )
+    
+    logger.info("Starting paper trading")
+    crp_paper_trading.run()
+    logger.info("Paper trading started successfully")
+
+    return {
+        "message": "Paper trading started!",
+        "received": req.dict(),
+        "logs": [
+            "Received paper trading request",
+            f"Request data: {req.dict()}",
+            "Starting paper trading",
+            "Paper trading started successfully"
+        ]
+    }
 
 ##########################
 # 3) Launch with uvicorn
