@@ -1,8 +1,12 @@
 # main.py
-
+import os
+import sys
 from fastapi import FastAPI, Body
 from pydantic import BaseModel, Field
 import uvicorn
+from fastapi.middleware.cors import CORSMiddleware
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 from my_meta.custom_crypto_paper_trading import AlpacaPaperTradingCryptoLive
 from my_meta.single_asset_training_ppo import train
 import logging
@@ -15,6 +19,18 @@ logger = logging.getLogger(__name__)
 # from your_drl_logic import train, start_paper_trading_crypto_live
 
 app = FastAPI()
+# Configure CORS
+origins = [
+    "http://localhost:3000",  # Add your frontend URL here
+]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 ##########################
 # 1) Pydantic models for input
@@ -29,7 +45,7 @@ class TrainRequest(BaseModel):
     technical_indicator_list: list[str] = Field(..., example=["macd","rsi"])
     drl_lib: str      = Field("elegantrl", example="elegantrl")
     env: str          = Field("CryptoTradingEnv", example="CryptoTradingEnv")
-    model_name: str   = Field("ppo", example="ppo")
+    model: str   = Field("ppo", example="ppo")
     # add any other training parameters like break_step, cwd, etc.
     cwd: str          = Field("./papertrading_crypto", example="./papertrading_crypto")
     break_step: float = Field(1e5, example=1e5)
@@ -40,7 +56,7 @@ class PaperTradingRequest(BaseModel):
     drl_lib: str                = Field("elegantrl", example="elegantrl")
     agent: str                  = Field("ppo", example="ppo")
     cwd: str                    = Field("./papertrading_crypto", example="./papertrading_crypto")
-    net_dim: list[int]          = Field([128,64], example=[128,64])
+    net_dim: list[int]          = Field(..., example=[128,64]) 
     state_dim: int              = Field(22, example=22)
     action_dim: int             = Field(3, example=3)
     API_KEY: str                = Field(..., example="PK...")
@@ -59,6 +75,13 @@ def train_endpoint(req: TrainRequest):
     Endpoint to trigger the DRL training. 
     The body of the request must match `TrainRequest`.
     """
+    logs = []
+    
+    logger.info("Received training request")
+    logs.append("Received training request")
+    logger.info(f"Request data: {req.dict()}")
+    logs.append(f"Request data: {req.dict()}")
+
     # Convert the pydantic model to a dictionary or pass directly
     train(
         start_date=req.start_date,
@@ -69,13 +92,20 @@ def train_endpoint(req: TrainRequest):
         technical_indicator_list=req.technical_indicator_list,
         drl_lib=req.drl_lib,
         env=req.env,  # or string referencing if you prefer 
-        model_name=req.model_name,
+        model_name=req.model,
         cwd=req.cwd,
         break_step=req.break_step,
-        
     )
+    
+    logger.info("Training triggered")
+    logs.append("Training triggered")
+    
     # For demonstration, just returning the request content:
-    return {"message": "Training triggered!", "received": req.dict()}
+    return {
+        "message": "Training triggered!",
+        "received": req.dict(),
+        "logs": logs
+    }
 
 
 @app.post("/paper_trade")
@@ -85,6 +115,7 @@ def paper_trade_endpoint(req: PaperTradingRequest):
     """
     logger.info("Received paper trading request")
     logger.info(f"Request data: {req.dict()}")
+  
 
     crp_paper_trading = AlpacaPaperTradingCryptoLive(
         ticker_list=req.ticker_list,

@@ -8,6 +8,7 @@ import alpaca_trade_api as tradeapi
 import gym
 import stockstats
 import talib
+from my_meta.single_asset_training_ppo import AgentPPO  # Adjust the import as needed
 
 def convert_time_interval_to_timedelta(time_interval: str) -> dt.timedelta:
     """Convert a time_interval string (e.g., '1Day', '5Min', '15Min', '30s') into a timedelta."""
@@ -235,7 +236,7 @@ class AlpacaPaperTradingCryptoLive:
         if agent == 'ppo':
             if drl_lib == 'elegantrl':
                 from torch import load
-                from __main__ import AgentPPO  # Adjust the import as needed
+                # from __main__ import AgentPPO  # Adjust the import as needed
                 tmp_agent = AgentPPO(net_dim, state_dim, action_dim)
                 actor = tmp_agent.act
                 try:
@@ -245,6 +246,7 @@ class AlpacaPaperTradingCryptoLive:
                     self.act = actor
                     self.device = tmp_agent.device
                 except Exception as e:
+                    print(f"Error loading actor: {e}")
                     raise ValueError("Fail to load agent!") from e
             else:
                 raise ValueError("DRL library not supported in this snippet.")
