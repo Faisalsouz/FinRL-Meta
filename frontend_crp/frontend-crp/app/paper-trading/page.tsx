@@ -1,5 +1,7 @@
 "use client";
 import { useState } from "react";
+import { Tooltip } from "react-tooltip";
+import 'react-tooltip/dist/react-tooltip.css';
 
 export default function PaperTradingPage() {
   const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
@@ -11,8 +13,8 @@ export default function PaperTradingPage() {
   const [agent, setAgent] = useState("ppo");
   const [cwd, setCwd] = useState("./papertrading_crypto");
   const [netDim, setNetDim] = useState("128,64");
-  const [stateDim, setStateDim] = useState(22);
-  const [actionDim, setActionDim] = useState(3);
+  const [stateDim, setStateDim] = useState(7);
+  const [actionDim, setActionDim] = useState(1);
   const [apiKey, setApiKey] = useState("");
   const [apiSecret, setApiSecret] = useState("");
   const [apiBaseUrl, setApiBaseUrl] = useState("https://paper-api.alpaca.markets");
@@ -48,6 +50,7 @@ export default function PaperTradingPage() {
       tech_indicator_list: techArray,
       max_stock: Number(maxStock),
     };
+    console.log("The payload :", payload);
 
     try {
       const res = await fetch(`${API_BASE_URL}/paper_trade`, {
@@ -73,12 +76,14 @@ export default function PaperTradingPage() {
         <div>
           <label className="block font-medium mb-1">
             Ticker List (comma-separated)
+            <span data-tooltip-id="ticker-tooltip" data-tooltip-content="Currently supports only single asset.i.e format BTC/USD" className="ml-2 text-blue-500 cursor-pointer">i</span>
+            <Tooltip id="ticker-tooltip" />
           </label>
           <input
             type="text"
             value={tickerList}
             onChange={(e) => setTickerList(e.target.value)}
-            placeholder="BTCUSD,ETHUSD,SOLUSD"
+            placeholder="BTC/USD,ETH/USD,SOL/USD"
             required
             className="w-full rounded border border-gray-300 px-3 py-2"
           />
@@ -108,7 +113,11 @@ export default function PaperTradingPage() {
 
         {/* Agent */}
         <div>
-          <label className="block font-medium mb-1">Agent</label>
+          <label className="block font-medium mb-1">
+            Agent
+            <span data-tooltip-id="agent-tooltip" data-tooltip-content="Currently supports only PPO type" className="ml-2 text-blue-500 cursor-pointer">i</span>
+            <Tooltip id="agent-tooltip" />
+          </label>
           <input
             type="text"
             value={agent}
@@ -130,7 +139,11 @@ export default function PaperTradingPage() {
 
         {/* Net Dim */}
         <div>
-          <label className="block font-medium mb-1">Net Dim (comma-separated)</label>
+          <label className="block font-medium mb-1">Net Dim (comma-separated)
+          <span data-tooltip-id="net-tooltip" data-tooltip-content="How Dense network should be. this value must match with value you have 
+          set in training">i</span>
+          <Tooltip id="net-tooltip" />
+          </label>
           <input
             type="text"
             value={netDim}
@@ -141,7 +154,11 @@ export default function PaperTradingPage() {
 
         {/* State Dim */}
         <div>
-          <label className="block font-medium mb-1">State Dim</label>
+          <label className="block font-medium mb-1">
+            State Dim
+            <span data-tooltip-id="state-tooltip" data-tooltip-content="Calculated as: 1 (scaled price) + len(INDICATORS) (technical indicators) + 1 (previous step’s percentage change in price) + 1 (in-trade flag)" className="ml-2 text-blue-500 cursor-pointer">i</span>
+            <Tooltip id="state-tooltip" />
+          </label>
           <input
             type="number"
             value={stateDim}
@@ -152,7 +169,11 @@ export default function PaperTradingPage() {
 
         {/* Action Dim */}
         <div>
-          <label className="block font-medium mb-1">Action Dim</label>
+          <label className="block font-medium mb-1">
+            Action Dim
+            <span data-tooltip-id="action-tooltip" data-tooltip-content="Always equal to the number of assets, currently supports only single asset, so it should be 1" className="ml-2 text-blue-500 cursor-pointer">i</span>
+            <Tooltip id="action-tooltip" />
+          </label>
           <input
             type="number"
             value={actionDim}
@@ -200,6 +221,8 @@ export default function PaperTradingPage() {
         <div>
           <label className="block font-medium mb-1">
             Tech Indicator List (comma-separated)
+            <span data-tooltip-id="tech-tooltip" data-tooltip-content="List of technical indicators, e.g., macd,rsi,cci,dx" className="ml-2 text-blue-500 cursor-pointer">i</span>
+            <Tooltip id="tech-tooltip" />
           </label>
           <input
             type="text"
