@@ -68,6 +68,25 @@ export default function PaperTradingPage() {
     }
   };
 
+  const handleStopPaperTrading = async () => {
+    setResponse(null);
+    setError(null);
+
+    try {
+      const res = await fetch(`${API_BASE_URL}/stop_paper_trade`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+      });
+      if (!res.ok) {
+        throw new Error(`HTTP error! status: ${res.status}`);
+      }
+      const data = await res.json();
+      setResponse(data);
+    } catch (err: any) {
+      setError(err.message);
+    }
+  };
+
   return (
     <div>
       <h1 className="text-2xl font-bold mb-4">Paper Trading Form</h1>
@@ -245,6 +264,12 @@ export default function PaperTradingPage() {
         </div>
 
         <button
+          type="button"
+          onClick={handleStopPaperTrading}
+          className="px-4 py-2 bg-red-600 text-white font-semibold rounded hover:bg-red-700 ml-4"
+        >
+          Stop Paper Trading
+        </button>
           type="submit"
           className="px-4 py-2 bg-green-600 text-white font-semibold rounded hover:bg-green-700"
         >
