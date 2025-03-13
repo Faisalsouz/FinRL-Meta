@@ -32,25 +32,35 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+crp_paper_trading = None
+
 @app.post("/stop_paper_trade")
 def stop_paper_trade_endpoint():
     """
     Endpoint to stop the live paper trading loop.
     """
+    global crp_paper_trading
     logger.info("Received stop paper trading request")
     
-    # Assuming `crp_paper_trading` is the instance of AlpacaPaperTradingCryptoLive
-    crp_paper_trading.stop()
-    
-    logger.info("Paper trading stopped successfully")
-
-    return {
-        "message": "Paper trading stopped!",
-        "logs": [
-            "Received stop paper trading request",
-            "Paper trading stopped successfully"
-        ]
-    }
+    if crp_paper_trading:
+        crp_paper_trading.stop()
+        logger.info("Paper trading stopped successfully")
+        return {
+            "message": "Paper trading stopped!",
+            "logs": [
+                "Received stop paper trading request",
+                "Paper trading stopped successfully"
+            ]
+        }
+    else:
+        logger.error("Paper trading instance not found")
+        return {
+            "message": "Paper trading instance not found!",
+            "logs": [
+                "Received stop paper trading request",
+                "Paper trading instance not found"
+            ]
+        }
 
 ##########################
 # 1) Pydantic models for input
@@ -137,6 +147,7 @@ def paper_trade_endpoint(req: PaperTradingRequest):
     logger.info(f"Request data: {req.dict()}")
   
 
+    global crp_paper_trading
     crp_paper_trading = AlpacaPaperTradingCryptoLive(
         ticker_list=req.ticker_list,
         time_interval=req.time_interval,
