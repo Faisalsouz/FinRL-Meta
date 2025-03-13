@@ -32,6 +32,26 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+@app.post("/stop_paper_trade")
+def stop_paper_trade_endpoint():
+    """
+    Endpoint to stop the live paper trading loop.
+    """
+    logger.info("Received stop paper trading request")
+    
+    # Assuming `crp_paper_trading` is the instance of AlpacaPaperTradingCryptoLive
+    crp_paper_trading.stop()
+    
+    logger.info("Paper trading stopped successfully")
+
+    return {
+        "message": "Paper trading stopped!",
+        "logs": [
+            "Received stop paper trading request",
+            "Paper trading stopped successfully"
+        ]
+    }
+
 ##########################
 # 1) Pydantic models for input
 ##########################

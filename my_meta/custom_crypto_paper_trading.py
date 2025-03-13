@@ -282,6 +282,7 @@ class AlpacaPaperTradingCryptoLive:
         self.stop_loss_price = None
         self.trade_entry_step = None
 
+        self.stop_trading = False  # Flag to control the trading loop
         print(f"PaperTradingCryptoLive with tickers: {ticker_list}")
         print("Time interval =", self.time_interval)
 
@@ -294,7 +295,7 @@ class AlpacaPaperTradingCryptoLive:
 
         print("Starting infinite paper trading loop for crypto.")
         print('Initial cash balance:', self.cash)
-        while True:
+        while not self.stop_trading:  # Check the flag
             self.trade()
             self.current_step += 1
             last_equity = float(self.alpaca.get_account().last_equity)
@@ -310,6 +311,10 @@ class AlpacaPaperTradingCryptoLive:
                 sleep_time = 60  # default fallback
             print(f"Next bar data will be fetched in {sleep_time // 60} minutes.")
             time.sleep(sleep_time)
+
+    def stop(self):
+        """Stop the trading loop."""
+        self.stop_trading = True
 
     def trade(self):
         """Fetch state, compute action, and place trades accordingly."""
