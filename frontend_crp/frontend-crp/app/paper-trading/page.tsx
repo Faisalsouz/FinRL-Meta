@@ -7,7 +7,7 @@ export default function PaperTradingPage() {
   const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
 
   // Form state
-  const [tickerList, setTickerList] = useState("");
+  const [tickerList, setTickerList] = useState("BTC/USD");
   const [timeInterval, setTimeInterval] = useState("5Min");
   const [drlLib, setDrlLib] = useState("elegantrl");
   const [agent, setAgent] = useState("ppo");
@@ -18,7 +18,7 @@ export default function PaperTradingPage() {
   const [apiKey, setApiKey] = useState("");
   const [apiSecret, setApiSecret] = useState("");
   const [apiBaseUrl, setApiBaseUrl] = useState("https://paper-api.alpaca.markets");
-  const [techIndicatorList, setTechIndicatorList] = useState("");
+  const [techIndicatorList, setTechIndicatorList] = useState("macd,rsi,cci,dx");  
   const [maxStock, setMaxStock] = useState(100.0);
 
   // Response & error
