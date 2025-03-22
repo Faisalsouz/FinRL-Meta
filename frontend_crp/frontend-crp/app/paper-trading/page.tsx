@@ -270,6 +270,7 @@ export default function PaperTradingPage() {
         >
           Stop Paper Trading
         </button>
+        <button
           type="submit"
           className="px-4 py-2 bg-green-600 text-white font-semibold rounded hover:bg-green-700"
         >
