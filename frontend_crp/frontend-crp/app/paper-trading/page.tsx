@@ -205,7 +205,7 @@ export default function PaperTradingPage() {
         <div>
           <label className="block font-medium mb-1">API Key</label>
           <input
-            type="text"
+            type="password"
             value={apiKey}
             onChange={(e) => setApiKey(e.target.value)}
             required
@@ -217,7 +217,7 @@ export default function PaperTradingPage() {
         <div>
           <label className="block font-medium mb-1">API Secret</label>
           <input
-            type="text"
+            type="password"
             value={apiSecret}
             onChange={(e) => setApiSecret(e.target.value)}
             required
