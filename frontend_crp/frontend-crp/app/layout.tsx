@@ -30,7 +30,7 @@ import type { Metadata } from "next";
    children: React.ReactNode;                                                                                                                                                         
  }) {                                                                                                                                                                                 
    return (                                                                                                                                                                           
-     <html lang="en">                                                                                                                                                                 
+     <html lang="en" suppressHydrationWarning>                                                                                                                                                                 
        <body                                                                                                                                                                          
          className={`${geistSans.variable} ${geistMono.variable} ${poppins.variable} antialiased min-h-screen bg-white dark:bg-black text-gray-800 dark:text-gray-100`}               
        >                                                                                                                                                                              
