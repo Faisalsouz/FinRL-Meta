@@ -282,7 +282,7 @@ export default function PaperTradingPage() {
       {response && (
         <div className="mt-4">
           <h3 className="font-semibold">Response:</h3>
-          <pre className="bg-gray-100 p-4 rounded mt-2">
+          <pre className="w-full rounded border border-gray-300 px-3 py-2 bg-white dark:bg-gray-800 text-black dark:text-white mt-2">
             {JSON.stringify(response, null, 2)}
           </pre>
         </div>
