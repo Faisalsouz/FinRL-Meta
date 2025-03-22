@@ -27,7 +27,7 @@ export default function PaperTradingPage() {
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
-    setResponse(null);
+    setResponse(data); // Set the response state here
     setError(null);
 
     // Convert comma-separated strings
