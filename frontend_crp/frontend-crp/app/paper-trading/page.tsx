@@ -104,7 +104,7 @@ export default function PaperTradingPage() {
             onChange={(e) => setTickerList(e.target.value)}
             placeholder="BTC/USD,ETH/USD,SOL/USD"
             required
-            className="w-full rounded border border-gray-300 px-3 py-2"
+            className="w-full rounded border border-gray-300 px-3 py-2 bg-white dark:bg-gray-800 text-black dark:text-white"
           />
         </div>
 
@@ -115,7 +115,7 @@ export default function PaperTradingPage() {
             type="text"
             value={timeInterval}
             onChange={(e) => setTimeInterval(e.target.value)}
-            className="w-full rounded border border-gray-300 px-3 py-2"
+            className="w-full rounded border border-gray-300 px-3 py-2 bg-white dark:bg-gray-800 text-black dark:text-white"
           />
         </div>
 
@@ -126,7 +126,7 @@ export default function PaperTradingPage() {
             type="text"
             value={drlLib}
             onChange={(e) => setDrlLib(e.target.value)}
-            className="w-full rounded border border-gray-300 px-3 py-2"
+            className="w-full rounded border border-gray-300 px-3 py-2 bg-white dark:bg-gray-800 text-black dark:text-white"
           />
         </div>
 
@@ -141,7 +141,7 @@ export default function PaperTradingPage() {
             type="text"
             value={agent}
             onChange={(e) => setAgent(e.target.value)}
-            className="w-full rounded border border-gray-300 px-3 py-2"
+            className="w-full rounded border border-gray-300 px-3 py-2 bg-white dark:bg-gray-800 text-black dark:text-white"
           />
         </div>
 
@@ -152,7 +152,7 @@ export default function PaperTradingPage() {
             type="text"
             value={cwd}
             onChange={(e) => setCwd(e.target.value)}
-            className="w-full rounded border border-gray-300 px-3 py-2"
+            className="w-full rounded border border-gray-300 px-3 py-2 bg-white dark:bg-gray-800 text-black dark:text-white"
           />
         </div>
 
@@ -167,7 +167,7 @@ export default function PaperTradingPage() {
             type="text"
             value={netDim}
             onChange={(e) => setNetDim(e.target.value)}
-            className="w-full rounded border border-gray-300 px-3 py-2"
+            className="w-full rounded border border-gray-300 px-3 py-2 bg-white dark:bg-gray-800 text-black dark:text-white"
           />
         </div>
 
@@ -182,7 +182,7 @@ export default function PaperTradingPage() {
             type="number"
             value={stateDim}
             onChange={(e) => setStateDim(e.target.value)}
-            className="w-full rounded border border-gray-300 px-3 py-2"
+            className="w-full rounded border border-gray-300 px-3 py-2 bg-white dark:bg-gray-800 text-black dark:text-white"
           />
         </div>
 
@@ -197,7 +197,7 @@ export default function PaperTradingPage() {
             type="number"
             value={actionDim}
             onChange={(e) => setActionDim(e.target.value)}
-            className="w-full rounded border border-gray-300 px-3 py-2"
+            className="w-full rounded border border-gray-300 px-3 py-2 bg-white dark:bg-gray-800 text-black dark:text-white"
           />
         </div>
 
@@ -209,7 +209,7 @@ export default function PaperTradingPage() {
             value={apiKey}
             onChange={(e) => setApiKey(e.target.value)}
             required
-            className="w-full rounded border border-gray-300 px-3 py-2"
+            className="w-full rounded border border-gray-300 px-3 py-2 bg-white dark:bg-gray-800 text-black dark:text-white"
           />
         </div>
 
@@ -221,7 +221,7 @@ export default function PaperTradingPage() {
             value={apiSecret}
             onChange={(e) => setApiSecret(e.target.value)}
             required
-            className="w-full rounded border border-gray-300 px-3 py-2"
+            className="w-full rounded border border-gray-300 px-3 py-2 bg-white dark:bg-gray-800 text-black dark:text-white"
           />
         </div>
 
@@ -232,7 +232,7 @@ export default function PaperTradingPage() {
             type="text"
             value={apiBaseUrl}
             onChange={(e) => setApiBaseUrl(e.target.value)}
-            className="w-full rounded border border-gray-300 px-3 py-2"
+            className="w-full rounded border border-gray-300 px-3 py-2 bg-white dark:bg-gray-800 text-black dark:text-white"
           />
         </div>
 
@@ -248,7 +248,7 @@ export default function PaperTradingPage() {
             value={techIndicatorList}
             onChange={(e) => setTechIndicatorList(e.target.value)}
             placeholder="macd,rsi,cci,dx"
-            className="w-full rounded border border-gray-300 px-3 py-2"
+            className="w-full rounded border border-gray-300 px-3 py-2 bg-white dark:bg-gray-800 text-black dark:text-white"
           />
         </div>
 
@@ -259,7 +259,7 @@ export default function PaperTradingPage() {
             type="number"
             value={maxStock}
             onChange={(e) => setMaxStock(e.target.value)}
-            className="w-full rounded border border-gray-300 px-3 py-2"
+            className="w-full rounded border border-gray-300 px-3 py-2 bg-white dark:bg-gray-800 text-black dark:text-white"
           />
         </div>
 
