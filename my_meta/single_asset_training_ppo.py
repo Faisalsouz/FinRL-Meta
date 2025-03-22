@@ -5,9 +5,9 @@ from __future__ import annotations
 # from finrl.config import INDICATORS
 # from finrl.meta.env_stock_trading.env_stocktrading_np import StockTradingEnv
 from my_meta.custom_crypto_env import CryptoTradingEnv
-from my_meta.custom_crypto_paper_trading import AlpacaPaperTradingCryptoLive
+# from my_meta.custom_crypto_paper_trading import AlpacaPaperTradingCryptoLive
 from my_meta.custom_crypto_env import CryptoTradingEnv
-from finrl.meta.env_stock_trading.env_stock_papertrading import AlpacaPaperTrading
+# from finrl.meta.env_stock_trading.env_stock_papertrading import AlpacaPaperTrading
 #from finrl.meta.data_processor import DataProcessor
 from meta.data_processor import DataProcessor
 
@@ -993,7 +993,7 @@ CRYPTO_TICKER_TR = ['BTCUSDT']  # For training
 INDICATORS = ["macd","rsi","cci","dx"]
 API_KEY = os.getenv("API_KEY")
 API_SECRET = os.getenv("API_SECRET")
-print(API_KEY, API_SECRET)
+
 API_BASE_URL = "https://paper-api.alpaca.markets" #new url for crpto wss://stream.data.alpaca.markets/v1beta3/crypto/us
 agent_cwd = "/home/souz_wsl/finrl_proj/FinRL_Meta/papertrading_crypto"  # folder containing actor.pth from training
 
@@ -1047,23 +1047,23 @@ print(INDICATORS)
 
 state_dim = 1 + len(INDICATORS) + 1 + 1 
 
-crp_paper_trading = AlpacaPaperTradingCryptoLive(
-        ticker_list=CRYPTO_TICKER_PT,
-        time_interval='30min',
-        drl_lib='elegantrl',
-        agent='ppo',
-        cwd=agent_cwd,
-        net_dim=ERL_PARAMS['net_dimension'],
-        state_dim=state_dim,
-        action_dim=action_dim,
-        API_KEY=API_KEY,
-        API_SECRET=API_SECRET,
-        API_BASE_URL=API_BASE_URL,
-        tech_indicator_list=INDICATORS,
+# crp_paper_trading = AlpacaPaperTradingCryptoLive(
+#         ticker_list=CRYPTO_TICKER_PT,
+#         time_interval='30min',
+#         drl_lib='elegantrl',
+#         agent='ppo',
+#         cwd=agent_cwd,
+#         net_dim=ERL_PARAMS['net_dimension'],
+#         state_dim=state_dim,
+#         action_dim=action_dim,
+#         API_KEY=API_KEY,
+#         API_SECRET=API_SECRET,
+#         API_BASE_URL=API_BASE_URL,
+#         tech_indicator_list=INDICATORS,
        
-        max_stock=12
-    )
-crp_paper_trading.run()
+#         max_stock=12
+#     )
+# crp_paper_trading.run()
 
 
 

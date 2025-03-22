@@ -1122,3 +1122,27 @@
 
 # 2025-03-12 15:20:07.457327
 +n
+
+# 2025-03-13 14:02:28.134778
++/architect
+
+# 2025-03-13 14:02:33.494039
++/add api/main.py
+
+# 2025-03-13 14:02:46.877320
++/add /home/souz_wsl/finrl_proj/FinRL_Meta/my_meta/custom_crypto_paper_trading.py
+
+# 2025-03-13 14:04:33.851698
++here is my api and cutome pape trading environmnt.I want to add stop route to it. For example any way to stop the trading loop . very similar to ctl c c . to sotp the tarding. how I can acheive this. 
+
+# 2025-03-13 14:05:51.808613
++yes
+
+# 2025-03-13 14:11:18.630769
++/add /home/souz_wsl/finrl_proj/FinRL_Meta/frontend_crp/frontend-crp/app/paper-trading/page.tsx
+
+# 2025-03-13 14:12:55.335814
++next I want to add html code inside paper trading/page.tsx new html button next to start paper tarding with name "stop paper trading".  and also fecth api call to fast api to rout which we have just defined. 
+
+# 2025-03-13 14:15:16.683144
++yes
