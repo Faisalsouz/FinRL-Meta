@@ -2,6 +2,7 @@
 import os
 import sys
 from fastapi import FastAPI, Body
+import threading
 import os
 from pydantic import BaseModel, Field
 import uvicorn
@@ -142,18 +143,11 @@ def train_endpoint(req: TrainRequest):
     }
 
 
-@app.post("/paper_trade")
-def paper_trade_endpoint(req: PaperTradingRequest):
-    """
-    Endpoint to start live paper trading on Alpaca with your DRL agent.
-    """
-    logger.info("Received paper trading request")
-    logger.info(f"Request data: {req.dict()}")
-  
+def start_paper_trading(req: PaperTradingRequest):
+    global crp_paper_trading
     script_dir = os.path.dirname(os.path.abspath(__file__))
     cwd_path = os.path.join(script_dir, req.cwd)
 
-    global crp_paper_trading
     crp_paper_trading = AlpacaPaperTradingCryptoLive(
         ticker_list=req.ticker_list,
         time_interval=req.time_interval,
@@ -174,13 +168,25 @@ def paper_trade_endpoint(req: PaperTradingRequest):
     crp_paper_trading.run()
     logger.info("Paper trading started successfully")
 
+@app.post("/paper_trade")
+def paper_trade_endpoint(req: PaperTradingRequest):
+    """
+    Endpoint to start live paper trading on Alpaca with your DRL agent.
+    """
+    logger.info("Received paper trading request")
+    logger.info(f"Request data: {req.dict()}")
+  
+    # Start paper trading in a separate thread
+    paper_trading_thread = threading.Thread(target=start_paper_trading, args=(req,))
+    paper_trading_thread.start()
+
     return {
         "message": "Paper trading started!",
         "received": req.dict(),
         "logs": [
-            # "Received paper trading request",
-            # f"Request data: {req.dict()}",
-            # "Starting paper trading",
+            "Received paper trading request",
+            f"Request data: {req.dict()}",
+            "Starting paper trading",
             "Paper trading started successfully"
         ]
     }
