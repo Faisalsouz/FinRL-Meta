@@ -113,6 +113,9 @@ def train_endpoint(req: TrainRequest):
     logger.info(f"Request data: {req.dict()}")
     logs.append(f"Request data: {req.dict()}")
 
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    cwd_path = os.path.join(script_dir, req.cwd)
+
     # Convert the pydantic model to a dictionary or pass directly
     train(
         start_date=req.start_date,
@@ -124,7 +127,7 @@ def train_endpoint(req: TrainRequest):
         drl_lib=req.drl_lib,
         env=req.env,  # or string referencing if you prefer 
         model_name=req.model,
-        cwd=req.cwd,
+        cwd=cwd_path,
         break_step=req.break_step,
     )
     
@@ -147,6 +150,8 @@ def paper_trade_endpoint(req: PaperTradingRequest):
     logger.info("Received paper trading request")
     logger.info(f"Request data: {req.dict()}")
   
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    cwd_path = os.path.join(script_dir, req.cwd)
 
     global crp_paper_trading
     crp_paper_trading = AlpacaPaperTradingCryptoLive(
@@ -154,7 +159,7 @@ def paper_trade_endpoint(req: PaperTradingRequest):
         time_interval=req.time_interval,
         drl_lib=req.drl_lib,
         agent=req.agent,
-        cwd=req.cwd,
+        cwd=cwd_path,
         net_dim=req.net_dim,
         state_dim=req.state_dim,
         action_dim=req.action_dim,
