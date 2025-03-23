@@ -8,11 +8,11 @@ export default function PaperTradingPage() {
 
   // Form state
   const [tickerList, setTickerList] = useState("BTC/USD");
-  const [timeInterval, setTimeInterval] = useState("5Min");
+  const [timeInterval, setTimeInterval] = useState("5min");
   const [drlLib, setDrlLib] = useState("elegantrl");
   const [agent, setAgent] = useState("ppo");
-  const [cwd, setCwd] = useState("./papertrading_crypto");
-  const [netDim, setNetDim] = useState("128,64");
+  const [cwd, setCwd] = useState("papertrading_crypto");
+  const [netDim, setNetDim] = useState("256, 128, 64, 32");
   const [stateDim, setStateDim] = useState(7);
   const [actionDim, setActionDim] = useState(1);
   const [apiKey, setApiKey] = useState("");
@@ -109,7 +109,9 @@ export default function PaperTradingPage() {
 
         {/* Time Interval */}
         <div>
-          <label className="block font-medium mb-1">Time Interval</label>
+          <label className="block font-medium mb-1">Time Interval
+          <span data-tooltip-id="time-tooltip" data-tooltip-content="the format must be in small 'min'i.e. 5min, 10min" className="ml-2 text-blue-500 cursor-pointer">i</span>
+            </label>
           <input
             type="text"
             value={timeInterval}
@@ -146,7 +148,9 @@ export default function PaperTradingPage() {
 
         {/* CWD */}
         <div>
-          <label className="block font-medium mb-1">CWD</label>
+          <label className="block font-medium mb-1">CWD
+          <span data-tooltip-id="cwd-tooltip" data-tooltip-content="Current Working Directory. Please don't change it if you are not developer!" className="ml-2 text-blue-500 cursor-pointer">i</span>
+          </label>
           <input
             type="text"
             value={cwd}

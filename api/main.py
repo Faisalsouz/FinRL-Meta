@@ -184,9 +184,7 @@ def paper_trade_endpoint(req: PaperTradingRequest):
         "message": "Paper trading started!",
         "received": req.dict(),
         "logs": [
-            "Received paper trading request",
-            f"Request data: {req.dict()}",
-            "Starting paper trading",
+         
             "Paper trading started successfully"
         ]
     }
