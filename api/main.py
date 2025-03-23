@@ -114,7 +114,7 @@ def train_endpoint(req: TrainRequest):
     logs.append(f"Request data: {req.dict()}")
 
     script_dir = os.path.dirname(os.path.abspath(__file__))
-    cwd_path = os.path.join(script_dir, '..', req.cwd)
+    cwd_path = os.path.join(script_dir, req.cwd)
 
     # Convert the pydantic model to a dictionary or pass directly
     train(
@@ -151,7 +151,7 @@ def paper_trade_endpoint(req: PaperTradingRequest):
     logger.info(f"Request data: {req.dict()}")
   
     script_dir = os.path.dirname(os.path.abspath(__file__))
-    cwd_path = os.path.join(script_dir, '..', req.cwd)
+    cwd_path = os.path.join(script_dir, req.cwd)
 
     global crp_paper_trading
     crp_paper_trading = AlpacaPaperTradingCryptoLive(
@@ -178,9 +178,9 @@ def paper_trade_endpoint(req: PaperTradingRequest):
         "message": "Paper trading started!",
         "received": req.dict(),
         "logs": [
-            "Received paper trading request",
-            f"Request data: {req.dict()}",
-            "Starting paper trading",
+            # "Received paper trading request",
+            # f"Request data: {req.dict()}",
+            # "Starting paper trading",
             "Paper trading started successfully"
         ]
     }
