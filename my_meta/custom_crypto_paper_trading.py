@@ -8,6 +8,7 @@ import alpaca_trade_api as tradeapi
 import gym
 import stockstats
 import talib
+import logging
 from my_meta.single_asset_training_ppo import AgentPPO  # Adjust the import as needed
 
 def convert_time_interval_to_timedelta(time_interval: str) -> dt.timedelta:
@@ -225,9 +226,26 @@ class AlpacaPaperTradingCryptoLive:
         sl_multiplier=1,       # SL multiplier
         atr_window=14,         # ATR window (in bars)
         max_trade_duration=20, # Max trade duration in steps
-        initial_capital=10000  # Initial capital for paper trading
+        initial_capital=10000, # Initial capital for paper trading
+        log_file_path=None     # Path to the log file
     ):
-        self.API_BASE_URL = API_BASE_URL
+        # Set up logging
+        self.logger = logging.getLogger(__name__)
+        self.logger.setLevel(logging.INFO)
+        if log_file_path:
+            handler = logging.FileHandler(log_file_path, mode='w')  # 'w' mode to replace contents
+            handler.setLevel(logging.INFO)
+            formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+            handler.setFormatter(formatter)
+            self.logger.addHandler(handler)
+        else:
+            handler = logging.StreamHandler()
+            handler.setLevel(logging.INFO)
+            formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+            handler.setFormatter(formatter)
+            self.logger.addHandler(handler)
+
+        self.logger.info("Initializing AlpacaPaperTradingCryptoLive")
         self.API_SECRET = API_SECRET
         self.API_KEY = API_KEY
 
@@ -241,12 +259,12 @@ class AlpacaPaperTradingCryptoLive:
                 actor = tmp_agent.act
                 try:
                     actor_path = f"{cwd}/best_actor.pth"
-                    print(f"| loading actor from: {actor_path}")
+                    self.logger.info(f"| loading actor from: {actor_path}")
                     actor.load_state_dict(load(actor_path, map_location='cpu'))
                     self.act = actor
                     self.device = tmp_agent.device
                 except Exception as e:
-                    print(f"Error loading actor: {e}")
+                    self.logger.error(f"Error loading actor: {e}")
                     raise ValueError("Fail to load agent!") from e
             else:
                 raise ValueError("DRL library not supported in this snippet.")
@@ -256,8 +274,9 @@ class AlpacaPaperTradingCryptoLive:
         # 2) Connect to Alpaca
         try:
             self.alpaca = tradeapi.REST(self.API_KEY, self.API_SECRET, self.API_BASE_URL)
-            print("Alpaca connected.", self.alpaca)
+            self.logger.info("Alpaca connected.")
         except Exception as e:
+            self.logger.error(f"Fail to connect Alpaca. Error: {e}")
             raise ValueError(f"Fail to connect Alpaca. Error: {e}")
 
         self.time_interval = time_interval
@@ -283,8 +302,8 @@ class AlpacaPaperTradingCryptoLive:
         self.trade_entry_step = None
 
         self.stop_trading = False  # Flag to control the trading loop
-        print(f"PaperTradingCryptoLive with tickers: {ticker_list}")
-        print("Time interval =", self.time_interval)
+        self.logger.info(f"PaperTradingCryptoLive with tickers: {ticker_list}")
+        self.logger.info(f"Time interval = {self.time_interval}")
 
     def run(self):
         """Main loop: fetch data, trade, etc. (crypto is 24/7)."""
@@ -293,13 +312,13 @@ class AlpacaPaperTradingCryptoLive:
         for order in orders:
             self.alpaca.cancel_order(order.id)
 
-        print("Starting infinite paper trading loop for crypto.")
-        print('Initial cash balance:', self.cash)
+        self.logger.info("Starting infinite paper trading loop for crypto.")
+        self.logger.info(f'Initial cash balance: {self.cash}')
         while not self.stop_trading:  # Check the flag
             self.trade()
             self.current_step += 1
             last_equity = float(self.alpaca.get_account().last_equity)
-            print('Last equity:', last_equity)
+            self.logger.info(f'Last equity: {last_equity}')
             self.equities.append((time.time(), last_equity))
             # Calculate sleep time based on time_interval
             if self.time_interval.endswith('min'):
@@ -309,7 +328,7 @@ class AlpacaPaperTradingCryptoLive:
                 sleep_time = int(self.time_interval.replace('s', ''))
             else:
                 sleep_time = 60  # default fallback
-            print(f"Next bar data will be fetched in {sleep_time // 60} minutes.")
+            self.logger.info(f"Next bar data will be fetched in {sleep_time // 60} minutes.")
             time.sleep(sleep_time)
 
     def stop(self):
@@ -353,28 +372,28 @@ class AlpacaPaperTradingCryptoLive:
                         timeperiod=self.atr_window
                     )
                     atr = atr_values[-1]
-                    print(f"ATR value: {atr}")
+                    self.logger.info(f"ATR value: {atr}")
                     self.entry_price = price[0]
                     self.target_price = self.entry_price + self.tp_multiplier * atr
                     self.stop_loss_price = max(self.entry_price - self.sl_multiplier * atr, 0.01)
-                    print(f"Entry Price: {self.entry_price}, TP: {self.target_price}, SL: {self.stop_loss_price}")
+                    self.logger.info(f"Entry Price: {self.entry_price}, TP: {self.target_price}, SL: {self.stop_loss_price}")
 
                     # Place a buy order using all available cash
                     qty = self.initial_cash / self.entry_price
-                    print(f"Calculated quantity to buy: {qty:.6f}")
+                    self.logger.info(f"Calculated quantity to buy: {qty:.6f}")
                     if qty > 0:
                         respSO = []
                         self.submitOrder(qty, self.stockUniverse[0], 'buy', respSO)
                         self.stocks_cd[0] = 0
                         self.in_position = True
                         self.trade_entry_step = self.current_step
-                        print(f"Trade initiated: Entry={self.entry_price}, TP={self.target_price}, SL={self.stop_loss_price}")
+                        self.logger.info(f"Trade initiated: Entry={self.entry_price}, TP={self.target_price}, SL={self.stop_loss_price}")
                 else:
-                    print("Not enough historical data for ATR calculation.")
+                    self.logger.info("Not enough historical data for ATR calculation.")
         else:
             # Manage open trade
             current_price = self.price[0]
-            print(f"Trade open. Current price: {current_price}, TP: {self.target_price}, SL: {self.stop_loss_price}")
+            self.logger.info(f"Trade open. Current price: {current_price}, TP: {self.target_price}, SL: {self.stop_loss_price}")
             if current_price >= self.target_price:
                 qty = self.stocks[0]
                 if qty > 0:
@@ -382,7 +401,7 @@ class AlpacaPaperTradingCryptoLive:
                     self.submitOrder(qty, self.stockUniverse[0], 'sell', respSO)
                     self.stocks_cd[0] = 0
                     self.in_position = False
-                    print(f"Take profit: Sold at {current_price}")
+                    self.logger.info(f"Take profit: Sold at {current_price}")
             elif current_price <= self.stop_loss_price:
                 qty = self.stocks[0]
                 if qty > 0:
@@ -390,7 +409,7 @@ class AlpacaPaperTradingCryptoLive:
                     self.submitOrder(qty, self.stockUniverse[0], 'sell', respSO)
                     self.stocks_cd[0] = 0
                     self.in_position = False
-                    print(f"Stop loss: Sold at {current_price}")
+                    self.logger.info(f"Stop loss: Sold at {current_price}")
             elif (self.current_step - self.trade_entry_step) >= self.max_trade_duration:
                 qty = self.stocks[0]
                 if qty > 0:
@@ -398,7 +417,7 @@ class AlpacaPaperTradingCryptoLive:
                     self.submitOrder(qty, self.stockUniverse[0], 'sell', respSO)
                     self.stocks_cd[0] = 0
                     self.in_position = False
-                    print(f"Timeout exit: Sold at {current_price}")
+                    self.logger.info(f"Timeout exit: Sold at {current_price}")
 
         # Update cash balance
         self.cash = float(self.alpaca.get_account().cash)
@@ -436,7 +455,7 @@ class AlpacaPaperTradingCryptoLive:
         self.cash = float(self.alpaca.get_account().cash)
         self.price = price
 
-        print(f"State update - Price: {self.price}, Cash: {self.cash}, Stocks: {self.stocks}")
+        self.logger.info(f"State update - Price: {self.price}, Cash: {self.cash}, Stocks: {self.stocks}")
 
         if self.current_step == 0:
             self.last_pct_change = 0.0
@@ -463,11 +482,11 @@ class AlpacaPaperTradingCryptoLive:
         if qty > 0:
             try:
                 self.alpaca.submit_order(symbol, qty, side, "market", time_in_force="gtc")
-                print(f"{side.upper()} {qty} {symbol} completed.")
+                self.logger.info(f"{side.upper()} {qty} {symbol} completed.")
                 resp.append(True)
             except Exception as e:
-                print(f"{side.upper()} {qty} {symbol} failed. Error: {e}")
+                self.logger.error(f"{side.upper()} {qty} {symbol} failed. Error: {e}")
                 resp.append(False)
         else:
-            print(f"Quantity=0, skipping order for {symbol} ({side}).")
+            self.logger.info(f"Quantity=0, skipping order for {symbol} ({side}).")
             resp.append(True)

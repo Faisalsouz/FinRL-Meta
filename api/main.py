@@ -12,6 +12,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from my_meta.custom_crypto_paper_trading import AlpacaPaperTradingCryptoLive
 from my_meta.single_asset_training_ppo import train
 import logging
+from fastapi.responses import FileResponse
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -63,6 +64,14 @@ def stop_paper_trade_endpoint():
                 "Paper trading instance not found"
             ]
         }
+
+@app.get("/fetch_logs")
+def fetch_logs():
+    """
+    Endpoint to fetch the log file contents.
+    """
+    log_file_path = "/home/souz_wsl/finrl_proj/FinRL_Meta/api/papertrading_crypto/paper_trading.log"
+    return FileResponse(log_file_path, media_type='text/plain')
 
 ##########################
 # 1) Pydantic models for input
