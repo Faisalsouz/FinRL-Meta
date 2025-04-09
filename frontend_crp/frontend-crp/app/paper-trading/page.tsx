@@ -20,6 +20,7 @@ export default function PaperTradingPage() {
   const [apiBaseUrl, setApiBaseUrl] = useState("https://paper-api.alpaca.markets");
   const [techIndicatorList, setTechIndicatorList] = useState("macd,rsi,cci,dx");  
   const [maxStock, setMaxStock] = useState(100.0);
+  const [logFilePath, setLogFilePath] = useState("/home/souz_wsl/finrl_proj/FinRL_Meta/api/papertrading_crypto/paper_trading.log");
 
   // Response & error
   const [response, setResponse] = useState<any>(null);
@@ -50,6 +51,7 @@ export default function PaperTradingPage() {
       API_BASE_URL: apiBaseUrl,
       tech_indicator_list: techArray,
       max_stock: Number(maxStock),
+      log_file_path: logFilePath,  // Use logFilePath from state
       log_file_path: logFilePath,
     };
     console.log("The payload :", payload);
