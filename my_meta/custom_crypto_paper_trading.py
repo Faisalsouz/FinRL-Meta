@@ -395,7 +395,7 @@ class AlpacaPaperTradingCryptoLive:
             # Manage open trade
             current_price = self.price[0]
             self.logger.info(f"Trade open. Current price: {current_price}, TP: {self.target_price}, SL: {self.stop_loss_price}")
-            # Do not recalculate target_price and stop_loss_price
+            # Manage open trade without recalculating target_price and stop_loss_price
             if current_price >= self.target_price:
                 qty = self.stocks[0]
                 if qty > 0:
