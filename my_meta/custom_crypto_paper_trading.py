@@ -248,6 +248,7 @@ class AlpacaPaperTradingCryptoLive:
         self.logger.info("Initializing AlpacaPaperTradingCryptoLive")
         self.API_SECRET = API_SECRET
         self.API_KEY = API_KEY
+        self.API_BASE_URL = API_BASE_URL
 
         # 1) Load the trained PPO actor (example using elegantrl)
         self.drl_lib = drl_lib
