@@ -70,7 +70,9 @@ def fetch_logs():
     """
     Endpoint to fetch the log file contents.
     """
-    log_file_path = "/home/souz_wsl/finrl_proj/FinRL_Meta/api/papertrading_crypto/paper_trading.log"
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    
+    log_file_path = script_dir + "/papertrading_crypto/paper_trading.log"
     return FileResponse(log_file_path, media_type='text/plain')
 
 ##########################
@@ -170,7 +172,8 @@ def start_paper_trading(req: PaperTradingRequest):
         API_SECRET=req.API_SECRET,
         API_BASE_URL=req.API_BASE_URL,
         tech_indicator_list=req.tech_indicator_list,
-        max_stock=req.max_stock
+        max_stock=req.max_stock,
+        log_file_path=cwd_path + "/paper_trading.log",
     )
     
     logger.info("Starting paper trading")

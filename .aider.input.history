@@ -1511,3 +1511,181 @@
 
 # 2025-03-23 21:13:06.336731
 +yes
+
+# 2025-03-23 21:32:07.989090
++i want to consult one thing. when I run paper trading . on my terminal I ahve some logs . sshoing some information about trading. This info I want to stream to frontend ideally in response windows or any other page where. suggest me best way to acheieve this. 
+
+# 2025-03-23 21:38:53.088478
++n
+
+# 2025-03-23 21:41:24.192396
++what is alternative way for example to save it somewhere for example if I wirte is in papertrading folder and then, for every time interval it runs after the sleep it, saves in json or text file etc. then frontend parse that text file and shows it. 
+
+# 2025-04-09 20:58:01.142252
++yes
+
+# 2025-04-09 20:58:25.008916
++n
+
+# 2025-04-09 20:58:35.933760
++/architect
+
+# 2025-04-09 20:58:46.252170
++/add /home/souz_wsl/finrl_proj/FinRL_Meta/api/main.py
+
+# 2025-04-09 20:58:54.042283
++/add /home/souz_wsl/finrl_proj/FinRL_Meta/my_meta/custom_crypto_env.py
+
+# 2025-04-09 20:59:10.374406
++/add /home/souz_wsl/finrl_proj/FinRL_Meta/frontend_crp/frontend-crp/app/paper-trading/page.tsx
+
+# 2025-04-09 20:59:39.311123
++/add /home/souz_wsl/finrl_proj/FinRL_Meta/my_meta/custom_crypto_paper_trading.py
+
+# 2025-04-09 21:00:46.423170
++in my fast api mani.py  I am running paper trading class which runs fine. however it generates some logs. like "FO:main:Request data: {'ticker_list': ['BTC/USD'], 'time_interval': '5min', 'drl_lib': 'elegantrl', 'agent': 'ppo', 'cwd': 'papertrading_crypto', 'net_dim': [256, 128, 64, 32], 'state_dim': 7, 'action_dim': 1, 'API_KEY': 'PK0HYWTXV4JHULYVK2KY', 'API_SECRET': '11ErKPAJ8JdCy6LbSYRWPcEzdzZGse4iJgSzGl7g', 'API_BASE_URL': 'https://paper-api.alpaca.markets', 'tech_indicator_list': ['macd', 'rsi', 'cci', 'dx'], 'max_stock': 100.0}
++Using device: cuda:0
++INFO:     127.0.0.1:45734 - "POST /paper_trade HTTP/1.1" 200 OK
++| loading actor from: /home/souz_wsl/finrl_proj/FinRL_Meta/api/papertrading_crypto/best_actor.pth
++Alpaca connected. <alpaca_trade_api.rest.REST object at 0x7fd952703220>
++PaperTradingCryptoLive with tickers: ['BTC/USD']
++Time interval = 5min
++INFO:main:Starting paper trading
++Starting infinite paper trading loop for crypto.
++Initial cash balance: 10000
++State update - Price: [82951.45], Cash: 2664.02, Stocks: [0.]
++Action from actor (before scaling): [0.9999986]
++ATR value: 275.75557590401274
++Entry Price: 82951.453125, TP: 83502.96427680802, SL: 82675.69754909599
++Calculated quantity to buy: 0.120552
++BUY 0.12055243908664198 BTC/USD failed. Error: insufficient balance for USD (requested: 10207.52, available: 2664.02)
++Trade initiated: Entry=82951.453125, TP=83502.96427680802, SL=82675.69754909599
++Last equity: 75145.7572602752
++Next bar data will be fetched in 5 minutes.
++INFO:main:Received stop paper trading request
++INFO:main:Paper trading stopped successfully"
+
+# 2025-04-09 21:00:52.732938
++n
+
+# 2025-04-09 21:05:43.645572
++so in previous suggestion I want following additions;, 1st, please add logs in api filder /home/souz_wsl/finrl_proj/FinRL_Meta/api/papertrading_crypto  in txt file and secondly how can I add or call loging file in fornt end at every x time interval . the idea is to not append the log file rather replace everything . and this file then show at front end in given space. so suggest me the possible work flow for that. 
+
+# 2025-04-09 21:08:07.542138
++n
+
+# 2025-04-09 21:09:13.643914
++We have token limit so please implement fist step1 and step2 logic then we will add frontend login in next command . 
+
+# 2025-04-09 21:09:49.165460
++yes
+
+# 2025-04-09 21:10:26.022720
++now change the forntend part as step 3 as well. to complete the login flow. 
+
+# 2025-04-09 21:11:01.948548
++yes
+
+# 2025-04-09 21:27:25.144131
++here is new errro ReferenceError: logFilePath is not defined
++    at handleSubmit (http://localhost:3000/_next/static/chunks/app_paper-trading_page_tsx_97082208._.js:63:28)
++    at executeDispatch (http://localhost:3000/_next/static/chunks/node_modules_next_dist_compiled_react-dom_1f56dc06._.js:8710:13)
++    at runWithFiberInDEV (http://localhost:3000/_next/static/chunks/node_modules_next_dist_compiled_react-dom_1f56dc06._.js:1326:74)
++    at processDispatchQueue (http://localhost:3000/_next/static/chunks/node_modules_next_dist_compiled_react-dom_1f56dc06._.js:8736:41)
++    at http://localhost:3000/_next/static/chunks/node_modules_next_dist_compiled_react-dom_1f56dc06._.js:9027:13
++    at batchedUpdates$1 (http://localhost:3000/_next/static/chunks/node_modules_next_dist_compiled_react-dom_1f56dc06._.js:2170:44)
++    at dispatchEventForPluginEventSystem (http://localhost:3000/_next/static/chunks/node_modules_next_dist_compiled_react-dom_1f56dc06._.js:8812:9)
++    at dispatchEvent (http://localhost:3000/_next/static/chunks/node_modules_next_dist_compiled_react-dom_1f56dc06._.js:10909:37)
++    at dispatchDiscreteEvent (http://localhost:3000/_next/static/chunks/node_modules_next_dist_compiled_react-dom_1f56dc06._.js:10891:64)in my trading papertrading/page.txs
+
+# 2025-04-09 21:27:36.976038
++n
+
+# 2025-04-09 21:27:40.864772
++D
+
+# 2025-04-09 21:27:53.442792
++NA
+
+# 2025-04-09 21:27:57.938757
++N
+
+# 2025-04-09 21:27:59.803305
++n
+
+# 2025-04-09 21:28:41.376561
++yes
+
+# 2025-04-09 21:29:22.934117
++/undo
+
+# 2025-04-09 21:30:53.703627
++previous commit made whole fine red underlined. due to errror. Please help me how I can define logFilepath. its in api folder under FinRL_Meta/api/papertrading_crypto 
+
+# 2025-04-09 21:31:42.581684
++yes
+
+# 2025-04-09 21:40:12.761580
++why this error is coming when I start trading at frontend. in my `custom_crypto_paper_trading` there is `API_BASE_URL` but it says following INFO:     127.0.0.1:55030 - "POST /paper_trade HTTP/1.1" 200 OK
++INFO:my_meta.custom_crypto_paper_trading:Initializing AlpacaPaperTradingCryptoLive
++Using device: cuda:0
++INFO:my_meta.custom_crypto_paper_trading:| loading actor from: /home/souz_wsl/finrl_proj/FinRL_Meta/api/papertrading_crypto/best_actor.pth
++ERROR:my_meta.custom_crypto_paper_trading:Fail to connect Alpaca. Error: 'AlpacaPaperTradingCryptoLive' object has no attribute 'API_BASE_URL'
++Exception in thread Thread-1 (start_paper_trading):
++Traceback (most recent call last):
++  File "/home/souz_wsl/finrl_proj/FinRL_Meta/my_meta/custom_crypto_paper_trading.py", line 276, in __init__
++    self.alpaca = tradeapi.REST(self.API_KEY, self.API_SECRET, self.API_BASE_URL)
++AttributeError: 'AlpacaPaperTradingCryptoLive' object has no attribute 'API_BASE_URL'
+
+# 2025-04-09 21:41:45.735415
++n
+
+# 2025-04-10 22:07:36.224959
++/architect
+
+# 2025-04-10 22:07:47.789741
++/add /home/souz_wsl/finrl_proj/FinRL_Meta/my_meta/custom_crypto_paper_trading.py
+
+# 2025-04-10 22:10:02.879643
++for some reason Trade open prints two prices 2025-04-10 21:57:17,193 - my_meta.custom_crypto_paper_trading - INFO - Next bar data will be fetched in 5 minutes.
++2025-04-10 22:02:10,973 - my_meta.custom_crypto_paper_trading - INFO - State update - Price: [79774.56], Cash: 2664.02, Stocks: [0.]
++2025-04-10 22:02:10,976 - my_meta.custom_crypto_paper_trading - INFO - Trade open. Current price: 79774.5625, TP: 79635.83962657998, SL: 78382.81846796001
++2025-04-10 22:02:11,383 - my_meta.custom_crypto_paper_trading - INFO - Last equity: 80708.16044056146
++2025-04-10 22:02:11,383 - my_meta.custom_crypto_paper_trading - INFO - Next bar data will be fetched in 5 minutes.
++2025-04-10 22:02:18,505 - my_meta.custom_crypto_paper_trading - INFO - State update - Price: [79774.56], Cash: 2664.02, Stocks: [0.]
++2025-04-10 22:02:18,511 - my_meta.custom_crypto_paper_trading - INFO - Trade open. Current price: 79774.5625, TP: 80019.23330083818, SL: 79204.98100583091
++2025-04-10 22:02:18,857 - my_meta.custom_crypto_paper_trading - INFO - Last equity: 80708.16044056146
++2025-04-10 22:02:18,857 - my_meta.custom_crypto_paper_trading - INFO - Next bar data will be fetched in 5 minutes.
++For TP one price is 79xxx and one 80019. in principle untill price is oopen these values should be calcualted based on entry price and ART value at entry time. please investigate where from two value at log info comes. either its just prining mistake or there is problem with logger. ?
+
+# 2025-04-10 22:11:35.815733
++yes
+
+# 2025-04-10 22:15:28.260171
++what you ave changed i see nonthing . 
+
+# 2025-04-10 22:19:08.332070
++n
+
+# 2025-04-10 22:25:06.456169
++/add /home/souz_wsl/finrl_proj/FinRL_Meta/my_meta/custom_crypto_env.py
+
+# 2025-04-10 22:25:56.764508
++still surprise where form two values of TP are comming. please investigate both file now.  Trade open. Current price: 79765.4140625, TP: 79635.83962657998, SL: 78382.81846796001
++2025-04-10 22:17:16,395 - my_meta.custom_crypto_paper_trading - INFO - Last equity: 80708.16044056146
++2025-04-10 22:17:16,395 - my_meta.custom_crypto_paper_trading - INFO - Next bar data will be fetched in 5 minutes.
++2025-04-10 22:17:23,056 - my_meta.custom_crypto_paper_trading - INFO - State update - Price: [79765.414], Cash: 2664.02, Stocks: [0.]
++2025-04-10 22:17:23,058 - my_meta.custom_crypto_paper_trading - INFO - Trade open. Current price: 79765.4140625, TP: 80019.23330083818, SL: 79204.98100583091
++2025-04-10 22:17:23,466 - my_meta.custom_crypto_paper_trading - INFO - Last equity: 80708.16044056146
++2025-04-10 22:17:23,466 - my_meta.custom_crypto_paper_trading - INFO - Next bar data will be fetched in 5 minutes.
++2025-04-10 22:22:17,539 - my_meta.custom_crypto_paper_trading - INFO - State update - Price: [79631.766], Cash: 2664.02, Stocks: [0.]
++2025-04-10 22:22:17,542 - my_meta.custom_crypto_paper_trading - INFO - Trade open. Current price: 79631.765625, TP: 79635.83962657998, SL: 78382.81846796001
++2025-04-10 22:22:17,766 - my_meta.custom_crypto_paper_trading - INFO - Last equity: 80708.16044056146
++2025-04-10 22:22:17,766 - my_meta.custom_crypto_paper_trading - INFO - Next bar data will be fetched in 5 minutes.
++2025-04-10 22:22:24,426 - my_meta.custom_crypto_paper_trading - INFO - State update - Price: [79631.766], Cash: 2664.02, Stocks: [0.]
++2025-04-10 22:22:24,429 - my_meta.custom_crypto_paper_trading - INFO - Trade open. Current price: 79631.765625, TP: 80019.23330083818, SL: 79204.98100583091
++2025-04-10 22:22:24,656 - my_meta.custom_crypto_paper_trading - INFO - Last equity: 80708.16044056146
++2025-04-10 22:22:24,656 - my_meta.custom_crypto_paper_trading - INFO - Next bar data will be fetched in 5 minutes.
+
+# 2025-04-10 22:29:58.163368
++yes

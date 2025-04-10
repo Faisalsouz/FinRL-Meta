@@ -52,7 +52,7 @@ export default function PaperTradingPage() {
       tech_indicator_list: techArray,
       max_stock: Number(maxStock),
       log_file_path: logFilePath,  // Use logFilePath from state
-      log_file_path: logFilePath,
+      
     };
     console.log("The payload :", payload);
 
@@ -105,7 +105,7 @@ export default function PaperTradingPage() {
   };
 
   useEffect(() => {
-    const interval = setInterval(fetchLogs, 60000); // Fetch logs every 60 seconds
+    const interval = setInterval(fetchLogs, 6000); // Fetch logs every 6 seconds
     return () => clearInterval(interval); // Cleanup interval on component unmount
   }, []);
 
@@ -314,7 +314,7 @@ export default function PaperTradingPage() {
         </div>
       )}
       <div className="mt-4">
-        <h3 className="font-semibold">Logs:</h3>
+        <h3 className="font-semibold">Logs Generated at backend [Refreshes every 60Sec]:</h3>
         <pre className="w-full rounded border border-gray-300 px-3 py-2 bg-white dark:bg-gray-800 text-black dark:text-white mt-2">
           {logs}
         </pre>
