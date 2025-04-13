@@ -19,6 +19,19 @@ export default function TrainPage() {
   const [cwd, setCwd] = useState("./papertrading_crypto");
   const [breakStep, setBreakStep] = useState(100000);
 
+  // ERL Parameters state
+  const [learningRate, setLearningRate] = useState(3e-6);
+  const [batchSize, setBatchSize] = useState(512);
+  const [gamma, setGamma] = useState(0.99);
+  const [seed, setSeed] = useState(312);
+  const [netDimension, setNetDimension] = useState("256, 128, 64, 32");
+  const [targetStep, setTargetStep] = useState(5000);
+  const [evalGap, setEvalGap] = useState(30);
+  const [evalTimes, setEvalTimes] = useState(1);
+  const [ratioClip, setRatioClip] = useState(0.5);
+  const [lambdaGaeAdv, setLambdaGaeAdv] = useState(0.95);
+  const [lambdaEntropy, setLambdaEntropy] = useState(0.01);
+
   const [response, setResponse] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
 
