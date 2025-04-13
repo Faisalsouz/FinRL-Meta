@@ -141,6 +141,7 @@ def train_endpoint(req: TrainRequest):
         model_name=req.model,
         cwd=cwd_path,
         break_step=req.break_step,
+        log_file_path=f"{cwd_path}/training.log",  # Derive log file path from cwd
     )
     
     logger.info("Training triggered")

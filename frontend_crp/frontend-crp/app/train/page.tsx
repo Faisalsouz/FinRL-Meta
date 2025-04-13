@@ -19,7 +19,6 @@ export default function TrainPage() {
   const [cwd, setCwd] = useState("./papertrading_crypto");
   const [breakStep, setBreakStep] = useState(100000);
 
-  const [logFilePath, setLogFilePath] = useState("/home/souz_wsl/finrl_proj/FinRL_Meta/api/papertrading_crypto/training.log");
   const [response, setResponse] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -43,7 +42,7 @@ export default function TrainPage() {
       model_name: modelName,
       cwd: cwd,
       break_step: Number(breakStep),
-      log_file_path: logFilePath,  // Use logFilePath from state
+      log_file_path: `${cwd}/training.log`,  // Derive log file path from cwd
     };
 
     try {
@@ -239,20 +238,6 @@ export default function TrainPage() {
           />
         </div>
 
-        {/* Log File Path */}
-        <div>
-          <label className="block font-medium mb-1">
-            Log File Path
-            <span data-tooltip-id="log-file-path-tooltip" data-tooltip-content="Path to the log file, e.g., /home/souz_wsl/finrl_proj/FinRL_Meta/api/papertrading_crypto/training.log" className="ml-2 text-blue-500 cursor-pointer">i</span>
-            <Tooltip id="log-file-path-tooltip" />
-          </label>
-          <input
-            type="text"
-            value={logFilePath}
-            onChange={(e) => setLogFilePath(e.target.value)}
-            className="w-full rounded border border-gray-300 px-3 py-2"
-          />
-        </div>
 
         <button
           type="submit"
