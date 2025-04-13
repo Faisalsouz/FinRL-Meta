@@ -1,5 +1,7 @@
 "use client";
 import { useState } from "react";
+import { Tooltip } from "react-tooltip";
+import 'react-tooltip/dist/react-tooltip.css';
 
 export default function TrainPage() {
   const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
@@ -17,6 +19,7 @@ export default function TrainPage() {
   const [cwd, setCwd] = useState("./papertrading_crypto");
   const [breakStep, setBreakStep] = useState(100000);
 
+  const [logFilePath, setLogFilePath] = useState("/home/souz_wsl/finrl_proj/FinRL_Meta/api/papertrading_crypto/training.log");
   const [response, setResponse] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -40,6 +43,7 @@ export default function TrainPage() {
       model_name: modelName,
       cwd: cwd,
       break_step: Number(breakStep),
+      log_file_path: logFilePath,  // Use logFilePath from state
     };
 
     try {
@@ -64,7 +68,11 @@ export default function TrainPage() {
       <form onSubmit={handleSubmit} className="space-y-4">
         {/* Start Date */}
         <div>
-          <label className="block font-medium mb-1">Start Date</label>
+          <label className="block font-medium mb-1">
+            Start Date
+            <span data-tooltip-id="start-date-tooltip" data-tooltip-content="Format: YYYY-MM-DD" className="ml-2 text-blue-500 cursor-pointer">i</span>
+            <Tooltip id="start-date-tooltip" />
+          </label>
           <input
             type="text"
             value={startDate}
@@ -77,7 +85,11 @@ export default function TrainPage() {
 
         {/* End Date */}
         <div>
-          <label className="block font-medium mb-1">End Date</label>
+          <label className="block font-medium mb-1">
+            End Date
+            <span data-tooltip-id="end-date-tooltip" data-tooltip-content="Format: YYYY-MM-DD" className="ml-2 text-blue-500 cursor-pointer">i</span>
+            <Tooltip id="end-date-tooltip" />
+          </label>
           <input
             type="text"
             value={endDate}
@@ -90,7 +102,11 @@ export default function TrainPage() {
 
         {/* Ticker List */}
         <div>
-          <label className="block font-medium mb-1">Ticker List (comma-separated)</label>
+          <label className="block font-medium mb-1">
+            Ticker List (comma-separated)
+            <span data-tooltip-id="ticker-tooltip" data-tooltip-content="List of tickers, e.g., BTCUSDT,ETHUSDT" className="ml-2 text-blue-500 cursor-pointer">i</span>
+            <Tooltip id="ticker-tooltip" />
+          </label>
           <input
             type="text"
             value={tickerList}
@@ -103,7 +119,11 @@ export default function TrainPage() {
 
         {/* Data Source */}
         <div>
-          <label className="block font-medium mb-1">Data Source</label>
+          <label className="block font-medium mb-1">
+            Data Source
+            <span data-tooltip-id="data-source-tooltip" data-tooltip-content="Source of data, e.g., binance" className="ml-2 text-blue-500 cursor-pointer">i</span>
+            <Tooltip id="data-source-tooltip" />
+          </label>
           <input
             type="text"
             value={dataSource}
@@ -114,7 +134,11 @@ export default function TrainPage() {
 
         {/* Time Interval */}
         <div>
-          <label className="block font-medium mb-1">Time Interval</label>
+          <label className="block font-medium mb-1">
+            Time Interval
+            <span data-tooltip-id="time-interval-tooltip" data-tooltip-content="Interval between data points, e.g., 15Min" className="ml-2 text-blue-500 cursor-pointer">i</span>
+            <Tooltip id="time-interval-tooltip" />
+          </label>
           <input
             type="text"
             value={timeInterval}
@@ -140,7 +164,11 @@ export default function TrainPage() {
 
         {/* DRL Lib */}
         <div>
-          <label className="block font-medium mb-1">DRL Lib</label>
+          <label className="block font-medium mb-1">
+            DRL Lib
+            <span data-tooltip-id="drl-lib-tooltip" data-tooltip-content="Deep Reinforcement Learning library, e.g., elegantrl" className="ml-2 text-blue-500 cursor-pointer">i</span>
+            <Tooltip id="drl-lib-tooltip" />
+          </label>
           <input
             type="text"
             value={drlLib}
@@ -151,7 +179,11 @@ export default function TrainPage() {
 
         {/* Env */}
         <div>
-          <label className="block font-medium mb-1">Env</label>
+          <label className="block font-medium mb-1">
+            Env
+            <span data-tooltip-id="env-tooltip" data-tooltip-content="Environment class, e.g., CryptoTradingEnv" className="ml-2 text-blue-500 cursor-pointer">i</span>
+            <Tooltip id="env-tooltip" />
+          </label>
           <input
             type="text"
             value={env}
@@ -162,7 +194,11 @@ export default function TrainPage() {
 
         {/* Model Name */}
         <div>
-          <label className="block font-medium mb-1">Model Name</label>
+          <label className="block font-medium mb-1">
+            Model Name
+            <span data-tooltip-id="model-name-tooltip" data-tooltip-content="Name of the model, e.g., ppo" className="ml-2 text-blue-500 cursor-pointer">i</span>
+            <Tooltip id="model-name-tooltip" />
+          </label>
           <input
             type="text"
             value={modelName}
@@ -173,7 +209,11 @@ export default function TrainPage() {
 
         {/* CWD */}
         <div>
-          <label className="block font-medium mb-1">CWD</label>
+          <label className="block font-medium mb-1">
+            CWD
+            <span data-tooltip-id="cwd-tooltip" data-tooltip-content="Current Working Directory. Please don't change it if you are not developer!" className="ml-2 text-blue-500 cursor-pointer">i</span>
+            <Tooltip id="cwd-tooltip" />
+          </label>
           <input
             type="text"
             value={cwd}
@@ -184,11 +224,30 @@ export default function TrainPage() {
 
         {/* Break Step */}
         <div>
-          <label className="block font-medium mb-1">Break Step</label>
+          <label className="block font-medium mb-1">
+            Break Step
+            <span data-tooltip-id="break-step-tooltip" data-tooltip-content="Number of steps after which training should stop, e.g., 100000" className="ml-2 text-blue-500 cursor-pointer">i</span>
+            <Tooltip id="break-step-tooltip" />
+          </label>
           <input
             type="number"
             value={breakStep}
             onChange={(e) => setBreakStep(e.target.value)}
+            className="w-full rounded border border-gray-300 px-3 py-2"
+          />
+        </div>
+
+        {/* Log File Path */}
+        <div>
+          <label className="block font-medium mb-1">
+            Log File Path
+            <span data-tooltip-id="log-file-path-tooltip" data-tooltip-content="Path to the log file, e.g., /home/souz_wsl/finrl_proj/FinRL_Meta/api/papertrading_crypto/training.log" className="ml-2 text-blue-500 cursor-pointer">i</span>
+            <Tooltip id="log-file-path-tooltip" />
+          </label>
+          <input
+            type="text"
+            value={logFilePath}
+            onChange={(e) => setLogFilePath(e.target.value)}
             className="w-full rounded border border-gray-300 px-3 py-2"
           />
         </div>
