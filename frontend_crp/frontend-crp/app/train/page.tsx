@@ -32,6 +32,22 @@ export default function TrainPage() {
     const tickersArray = tickerList.split(",").map((item) => item.trim());
     const techArray = technicalIndicators.split(",").map((item) => item.trim());
 
+    const netDimArray = netDimension.split(",").map((s) => Number(s.trim()));
+
+    const erlParams = {
+      learning_rate: learningRate,
+      batch_size: batchSize,
+      gamma: gamma,
+      seed: seed,
+      net_dimension: netDimArray,
+      target_step: targetStep,
+      eval_gap: evalGap,
+      eval_times: evalTimes,
+      ratio_clip: ratioClip,
+      lambda_gae_adv: lambdaGaeAdv,
+      lambda_entropy: lambdaEntropy,
+    };
+
     const payload = {
       start_date: startDate,
       end_date: endDate,
@@ -44,7 +60,7 @@ export default function TrainPage() {
       model_name: modelName,
       cwd: cwd,
       break_step: Number(breakStep),
-      log_file_path: `${cwd}/training.log`,  // Derive log file path from cwd
+      erl_params: erlParams,  // Include ERL parameters
     };
 
     try {
@@ -258,6 +274,112 @@ export default function TrainPage() {
           />
         </div>
 
+
+        {/* ERL Parameters Subform */}
+        <div className="mt-4">
+          <h2 className="text-xl font-bold mb-2">ERL Parameters</h2>
+          <div className="space-y-4">
+            <div>
+              <label className="block font-medium mb-1">Learning Rate</label>
+              <input
+                type="number"
+                value={learningRate}
+                onChange={(e) => setLearningRate(Number(e.target.value))}
+                className="w-full rounded border border-gray-300 px-3 py-2"
+              />
+            </div>
+            <div>
+              <label className="block font-medium mb-1">Batch Size</label>
+              <input
+                type="number"
+                value={batchSize}
+                onChange={(e) => setBatchSize(Number(e.target.value))}
+                className="w-full rounded border border-gray-300 px-3 py-2"
+              />
+            </div>
+            <div>
+              <label className="block font-medium mb-1">Gamma</label>
+              <input
+                type="number"
+                value={gamma}
+                onChange={(e) => setGamma(Number(e.target.value))}
+                className="w-full rounded border border-gray-300 px-3 py-2"
+              />
+            </div>
+            <div>
+              <label className="block font-medium mb-1">Seed</label>
+              <input
+                type="number"
+                value={seed}
+                onChange={(e) => setSeed(Number(e.target.value))}
+                className="w-full rounded border border-gray-300 px-3 py-2"
+              />
+            </div>
+            <div>
+              <label className="block font-medium mb-1">Net Dimension (comma-separated)</label>
+              <input
+                type="text"
+                value={netDimension}
+                onChange={(e) => setNetDimension(e.target.value)}
+                className="w-full rounded border border-gray-300 px-3 py-2"
+              />
+            </div>
+            <div>
+              <label className="block font-medium mb-1">Target Step</label>
+              <input
+                type="number"
+                value={targetStep}
+                onChange={(e) => setTargetStep(Number(e.target.value))}
+                className="w-full rounded border border-gray-300 px-3 py-2"
+              />
+            </div>
+            <div>
+              <label className="block font-medium mb-1">Eval Gap</label>
+              <input
+                type="number"
+                value={evalGap}
+                onChange={(e) => setEvalGap(Number(e.target.value))}
+                className="w-full rounded border border-gray-300 px-3 py-2"
+              />
+            </div>
+            <div>
+              <label className="block font-medium mb-1">Eval Times</label>
+              <input
+                type="number"
+                value={evalTimes}
+                onChange={(e) => setEvalTimes(Number(e.target.value))}
+                className="w-full rounded border border-gray-300 px-3 py-2"
+              />
+            </div>
+            <div>
+              <label className="block font-medium mb-1">Ratio Clip</label>
+              <input
+                type="number"
+                value={ratioClip}
+                onChange={(e) => setRatioClip(Number(e.target.value))}
+                className="w-full rounded border border-gray-300 px-3 py-2"
+              />
+            </div>
+            <div>
+              <label className="block font-medium mb-1">Lambda GAE Adv</label>
+              <input
+                type="number"
+                value={lambdaGaeAdv}
+                onChange={(e) => setLambdaGaeAdv(Number(e.target.value))}
+                className="w-full rounded border border-gray-300 px-3 py-2"
+              />
+            </div>
+            <div>
+              <label className="block font-medium mb-1">Lambda Entropy</label>
+              <input
+                type="number"
+                value={lambdaEntropy}
+                onChange={(e) => setLambdaEntropy(Number(e.target.value))}
+                className="w-full rounded border border-gray-300 px-3 py-2"
+              />
+            </div>
+          </div>
+        </div>
 
         <button
           type="submit"
