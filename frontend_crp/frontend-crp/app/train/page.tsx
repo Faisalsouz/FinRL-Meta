@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Tooltip } from "react-tooltip";
 import 'react-tooltip/dist/react-tooltip.css';
 
@@ -21,6 +21,8 @@ export default function TrainPage() {
 
   const [response, setResponse] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
+
+  const [logs, setLogs] = useState<string>("");
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -60,6 +62,24 @@ export default function TrainPage() {
       setError(err.message);
     }
   };
+
+  const fetchLogs = async () => {
+    try {
+      const res = await fetch(`${API_BASE_URL}/fetch_logs`);
+      if (!res.ok) {
+        throw new Error(`HTTP error! status: ${res.status}`);
+      }
+      const data = await res.text();
+      setLogs(data);
+    } catch (err: any) {
+      setError(err.message);
+    }
+  };
+
+  useEffect(() => {
+    const interval = setInterval(fetchLogs, 6000); // Fetch logs every 6 seconds
+    return () => clearInterval(interval); // Cleanup interval on component unmount
+  }, []);
 
   return (
     <div>
@@ -256,6 +276,12 @@ export default function TrainPage() {
           </pre>
         </div>
       )}
+      <div className="mt-4">
+        <h3 className="font-semibold">Logs Generated at backend [Refreshes every 60Sec]:</h3>
+        <pre className="w-full rounded border border-gray-300 px-3 py-2 bg-white dark:bg-gray-800 text-black dark:text-white mt-2">
+          {logs}
+        </pre>
+      </div>
     </div>
   );
 }
