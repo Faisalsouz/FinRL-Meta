@@ -151,6 +151,8 @@ export default function TrainPage() {
         <div>
           <label className="block font-medium mb-1">
             Technical Indicators (comma-separated)
+            <span data-tooltip-id="technical-indicators-tooltip" data-tooltip-content="List of technical indicators, e.g., macd,rsi,cci" className="ml-2 text-blue-500 cursor-pointer">i</span>
+            <Tooltip id="technical-indicators-tooltip" />
           </label>
           <input
             type="text"
