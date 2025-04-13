@@ -75,6 +75,16 @@ def fetch_logs():
     log_file_path = script_dir + "/papertrading_crypto/paper_trading.log"
     return FileResponse(log_file_path, media_type='text/plain')
 
+@app.get("/fetch_logs_train")
+def fetch_logs_train():
+    """
+    Endpoint to fetch the training log file contents.
+    """
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    
+    log_file_path = script_dir + "/papertrading_crypto/training.log"
+    return FileResponse(log_file_path, media_type='text/plain')
+
 ##########################
 # 1) Pydantic models for input
 ##########################

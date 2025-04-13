@@ -65,7 +65,7 @@ export default function TrainPage() {
 
   const fetchLogs = async () => {
     try {
-      const res = await fetch(`${API_BASE_URL}/fetch_logs`);
+      const res = await fetch(`${API_BASE_URL}/fetch_logs_train`);
       if (!res.ok) {
         throw new Error(`HTTP error! status: ${res.status}`);
       }
