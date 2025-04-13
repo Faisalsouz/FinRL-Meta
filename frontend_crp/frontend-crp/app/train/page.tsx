@@ -104,7 +104,7 @@ export default function TrainPage() {
         <div>
           <label className="block font-medium mb-1">
             Ticker List (comma-separated)
-            <span data-tooltip-id="ticker-tooltip" data-tooltip-content="List of tickers, e.g., BTCUSDT,ETHUSDT" className="ml-2 text-blue-500 cursor-pointer">i</span>
+            <span data-tooltip-id="ticker-tooltip" data-tooltip-content="Right now we only support single asset" className="ml-2 text-blue-500 cursor-pointer">i</span>
             <Tooltip id="ticker-tooltip" />
           </label>
           <input
