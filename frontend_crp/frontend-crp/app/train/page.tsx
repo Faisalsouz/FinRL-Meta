@@ -76,8 +76,8 @@ export default function TrainPage() {
       atr_window: atrWindow,
       max_trade_duration: maxTradeDuration,
       gpu_id: gpuId,
-      start_date: startDate,
-      end_date: endDate,
+      start_date: formattedStartDate,  // Use formatted date
+      end_date: formattedEndDate,      // Use formatted date
       ticker_list: tickersArray,
       data_source: dataSource,
       time_interval: timeInterval,

@@ -102,6 +102,25 @@ class TrainRequest(BaseModel):
     # add any other training parameters like break_step, cwd, etc.
     cwd: str          = Field("./papertrading_crypto", example="./papertrading_crypto")
     break_step: float = Field(1e5, example=1e5)
+    initial_capital: float = Field(10000, example=10000)
+    tp_multiplier: float = Field(2, example=2)
+    sl_multiplier: float = Field(5, example=5)
+    atr_window: int = Field(14, example=14)
+    max_trade_duration: int = Field(20, example=20)
+    gpu_id: int = Field(0, example=0)
+    erl_params: dict = Field(..., example={
+        "learning_rate": 3e-6,
+        "batch_size": 512,
+        "gamma": 0.99,
+        "seed": 312,
+        "net_dimension": [256, 128, 64, 32],
+        "target_step": 5000,
+        "eval_gap": 30,
+        "eval_times": 1,
+        "ratio_clip": 0.5,
+        "lambda_gae_adv": 0.95,
+        "lambda_entropy": 0.01
+    })
 
 class PaperTradingRequest(BaseModel):
     ticker_list: list[str]      = Field(..., example=["BTCUSD","ETHUSD","SOLUSD"])
@@ -157,8 +176,15 @@ def train_endpoint(req: TrainRequest):
         drl_lib=req.drl_lib,
         env=req.env,  # or string referencing if you prefer 
         model_name=req.model,
+        erl_params=req.erl_params,  # Pass ERL parameters
         cwd=cwd_path,
         break_step=req.break_step,
+        gpu_id=req.gpu_id,
+        initial_capital=req.initial_capital,
+        tp_multiplier=req.tp_multiplier,
+        sl_multiplier=req.sl_multiplier,
+        atr_window=req.atr_window,
+        max_trade_duration=req.max_trade_duration,
         log_file_path=f"{cwd_path}/training.log",  # Derive log file path from cwd
     )
     
