@@ -108,7 +108,6 @@ class PaperTradingRequest(BaseModel):
     time_interval: str          = Field("5Min", example="5Min")
     drl_lib: str                = Field("elegantrl", example="elegantrl")
     agent: str                  = Field("ppo", example="ppo")
-    cwd: str                    = Field("./papertrading_crypto", example="./papertrading_crypto")
     net_dim: list[int]          = Field(..., example=[128,64]) 
     state_dim: int              = Field(22, example=22)
     action_dim: int             = Field(3, example=3)
@@ -136,7 +135,16 @@ def train_endpoint(req: TrainRequest):
     logs.append(f"Request data: {req.dict()}")
 
     script_dir = os.path.dirname(os.path.abspath(__file__))
-    cwd_path = os.path.join(script_dir, req.cwd)
+    cwd_path = script_dir + "/papertrading_crypto"
+    if not os.path.exists(cwd_path):
+        os.makedirs(cwd_path)
+        logger.info(f"Created directory: {cwd_path}")
+        logs.append(f"Created directory: {cwd_path}")
+    else:
+        logger.info(f"Directory already exists: {cwd_path}")
+        logs.append(f"Directory already exists: {cwd_path}")
+    
+
 
     # Convert the pydantic model to a dictionary or pass directly
     train(
