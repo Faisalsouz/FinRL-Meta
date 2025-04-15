@@ -98,9 +98,7 @@ class TrainRequest(BaseModel):
     technical_indicator_list: list[str] = Field(..., example=["macd","rsi"])
     drl_lib: str      = Field("elegantrl", example="elegantrl")
     env: str          = Field("CryptoTradingEnv", example="CryptoTradingEnv")
-    model: str   = Field("ppo", example="ppo")
-    # add any other training parameters like break_step, cwd, etc.
-    cwd: str          = Field("./papertrading_crypto", example="./papertrading_crypto")
+    model: str   = Field("ppo", example="ppo")   
     break_step: float = Field(1e5, example=1e5)
     initial_capital: float = Field(10000, example=10000)
     tp_multiplier: float = Field(2, example=2)
@@ -185,7 +183,7 @@ def train_endpoint(req: TrainRequest):
         sl_multiplier=req.sl_multiplier,
         atr_window=req.atr_window,
         max_trade_duration=req.max_trade_duration,
-        log_file_path=f"{cwd_path}/training.log",  # Derive log file path from cwd
+        log_file_path=f"{cwd_path}/training.log",  
     )
     
     logger.info("Training triggered")
