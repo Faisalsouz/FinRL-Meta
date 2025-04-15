@@ -1689,3 +1689,494 @@
 
 # 2025-04-10 22:29:58.163368
 +yes
+
+# 2025-04-13 19:18:36.349232
++n
+
+# 2025-04-13 19:19:00.740445
++/add /home/souz_wsl/finrl_proj/FinRL_Meta/frontend_crp/frontend-crp/app/train/page.tsx
+
+# 2025-04-13 19:19:13.968254
++/add /home/souz_wsl/finrl_proj/FinRL_Meta/frontend_crp/frontend-crp/app/paper-trading/page.tsx
+
+# 2025-04-13 19:19:34.380899
++/add /home/souz_wsl/finrl_proj/FinRL_Meta/api/main.py
+
+# 2025-04-13 19:20:02.982567
++/add /home/souz_wsl/finrl_proj/FinRL_Meta/my_meta/single_asset_training_ppo.py
+
+# 2025-04-13 19:21:15.427883
++/architect
+
+# 2025-04-13 19:24:28.231647
++please have look on to page paper-trading/page.tsx and adopt changes into train/page.txs. more significatly, tooltip insturctions, and adding log file name of log file should be different, i.e. trainings.logs 
+
+# 2025-04-13 19:24:42.130931
++yes
+
+# 2025-04-13 19:29:24.994551
++As followup please don't add log file path rather in main use CWD value where moudle is run and add subpath . similar to papertading page.tsx. 
+
+# 2025-04-13 19:30:01.207172
++yes
+
+# 2025-04-13 19:39:04.425790
++Please add one heading for exmaple log will be desplayed. here.  there is mayb be need to add fetchlog constant like 
++  const fetchLogs = async () => {
++    try {
++      const res = await fetch(`${API_BASE_URL}/fetch_logs`);
++      if (!res.ok) {
++        throw new Error(`HTTP error! status: ${res.status}`);
++      }
++      const data = await res.text();
++      setLogs(data);
++    } catch (err: any) {
++      setError(err.message);
++    }
++  };
++
++  useEffect(() => {
++    const interval = setInterval(fetchLogs, 6000); // Fetch logs every 6 seconds
++    return () => clearInterval(interval); // Cleanup interval on component unmount
++  }, []); to fetch log every x seecond. 
+
+# 2025-04-13 19:39:35.760109
++yes
+
+# 2025-04-13 19:41:40.694003
++so this route fetch_logs is reserved for paper trading log. may be crate new route in main.py api fetch_logs-train and then set new route in teain/page.tsx
+
+# 2025-04-13 19:41:45.000359
++yes
+
+# 2025-04-13 19:54:03.216756
++Please add following paramters of ERL traning. use the given value as default.  may be create small subform if you think,  is beautifull to add. and also add backend login from api side to convert them into key: value pari dictionary. here is traning parameter.ERL_PARAMS = {
++    "learning_rate": 3e-6,         # Increased learning rate for faster convergence
++    "batch_size": 512,             # Batch size remains the same (adjust as needed)
++    "gamma": 0.99,                 # Use same discount as in the environment
++    "seed": 312,
++    "net_dimension": net_dimensions,  # Updated net dimensions
++    "target_step": 5000,           # More frequent updates might help
++    "eval_gap": 30,
++    "eval_times": 1,
++    "ratio_clip": 0.5,            # PPO clipping parameter (unchanged)
++    "lambda_gae_adv": 0.95,        # GAE lambda remains the same
++    "lambda_entropy": 0.01         # Entropy bonus to encourage exploration
++} here is training function receive them train(
++#     start_date='2024-01-01',
++#     end_date='2024-10-24',
++#     ticker_list=CRYPTO_TICKER_TR, 
++#     data_source='binance',
++#     time_interval='30m',
++#     technical_indicator_list=INDICATORS,
++#     drl_lib='elegantrl',
++#     env=CryptoTradingEnv,
++#     model_name='ppo',
++
++#     erl_params=ERL_PARAMS,
++#     cwd=agent_cwd,
++#     break_step=4e5,
++#     gpu_id=0,
++#     initial_capital=10000,  # Set to 10K
++
++#     tp_multiplier=2,         # Default TP multiplier
++#     sl_multiplier=5,         # Default SL multiplier
++#     atr_window=14,           # Default ATR window
++#     max_trade_duration=20    # Default max trade duration
++# ) 
+
+# 2025-04-13 19:55:10.017206
++n
+
+# 2025-04-13 19:55:55.277220
++I ave token limit please add the login in two steps, fist on frontend side and in next step on backend side. 
+
+# 2025-04-13 19:57:01.847212
++yes
+
+# 2025-04-13 20:02:07.855020
++one more instruction there not such page exits "train/pag.tsx" only page is under  app/tain/. So again the form looks good but what if you stack them in tabular form like two or three inputs filed in one row and and then seoncd row. in this way we don't have long horizontal input fileds which are making the design bad . I mean this for both main form and the  sub form. 
+
+# 2025-04-13 20:02:58.384951
++yes
+
+# 2025-04-13 20:03:52.805689
++n
+
+# 2025-04-13 20:04:31.788521
++tocken limit reached. please do the changes in two step if needed. for example first one form and then second form
+
+# 2025-04-13 20:05:19.793527
++yes
+
+# 2025-04-13 20:06:04.182527
++n
+
+# 2025-04-13 20:06:42.864219
++token limit reach while chaning the files. can you give me only the changes again don't use the whole process again. only implement chages. 
+
+# 2025-04-13 20:08:55.453376
++n
+
+# 2025-04-13 20:09:00.489592
++here is errro in changes. Parsing ecmascript source code failed
++  112 |                                                                                                                                                                                                
++  113 |   return (                                                                                                                                                                                     
++> 114 |     <div>                                                                                                                                                                                      
++      |      ^^^
++  115 |       <h1 className="text-2xl font-bold mb-4">Training Form</h1>                                                                                                                               
++  116 |       <form onSubmit={handleSubmit} className="space-y-4">                                                                                                                                     
++  117 |         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">                                                                                                                                
++
++Unexpected token `div`. Expected jsx identifier
+
+# 2025-04-13 20:09:47.978388
++yes
+
+# 2025-04-13 20:10:57.595575
++n
+
+# 2025-04-14 13:34:09.841900
++/architect
+
+# 2025-04-14 13:34:13.307965
++/add /home/souz_wsl/finrl_proj/FinRL_Meta/frontend_crp/frontend-crp/app/train/page.tsx
+
+# 2025-04-14 13:34:23.724525
++/add /home/souz_wsl/finrl_proj/FinRL_Meta/api/main.py
+
+# 2025-04-14 13:35:41.078337
++in date field of train/page.tsx type is date to fasiliate user to pic date form calender. but the date fomate sshold be yyyy-mm-dd. when its supplied to main.py api. please make sure that. 
+
+# 2025-04-14 13:35:46.233336
++yes
+
+# 2025-04-14 13:40:08.158442
++n
+
+# 2025-04-14 14:32:46.532703
++please add elr paramters in main tain request. also add these paramters then to train function here is original train function paramters should look like. ERL_PARAMS = {
++    "learning_rate": 3e-6,         # Increased learning rate for faster convergence
++    "batch_size": 512,             # Batch size remains the same (adjust as needed)
++    "gamma": 0.99,                 # Use same discount as in the environment
++    "seed": 312,
++    "net_dimension": net_dimensions,  # Updated net dimensions
++    "target_step": 5000,           # More frequent updates might help
++    "eval_gap": 30,
++    "eval_times": 1,
++    "ratio_clip": 0.5,            # PPO clipping parameter (unchanged)
++    "lambda_gae_adv": 0.95,        # GAE lambda remains the same
++    "lambda_entropy": 0.01         # Entropy bonus to encourage exploration
++}
++
++################ uncomment to run the paper trading ################
++##################################################################
++############################################
++# parameters for training and paper trading.
++############################################
++data_url = 'wss://data.alpaca.markets'
++env = CryptoTradingEnv
++ticker_list = CRYPTO_TICKER
++action_dim = len(ticker_list) # for training 
++print(ticker_list)
++print(len(ticker_list))
++print(INDICATORS)
++#  1 Scaled Price: 1 dimension                                                                                                                                                                          
++#  2 Technical Indicators: len(INDICATORS) dimensions per ticker                                                                                                                                        
++#  3 Previous Step’s Percentage Change in Price: 1 dimension                                                                                                                                            
++#  4 In-trade Flag: 1 dimension           
++
++state_dim = 1 + len(INDICATORS) + 1 + 1 
++
++# crp_paper_trading = AlpacaPaperTradingCryptoLive(
++#         ticker_list=CRYPTO_TICKER_PT,
++#         time_interval='30min',
++#         drl_lib='elegantrl',
++#         agent='ppo',
++#         cwd=agent_cwd,
++#         net_dim=ERL_PARAMS['net_dimension'],
++#         state_dim=state_dim,
++#         action_dim=action_dim,
++#         API_KEY=API_KEY,
++#         API_SECRET=API_SECRET,
++#         API_BASE_URL=API_BASE_URL,
++#         tech_indicator_list=INDICATORS,
++       
++#         max_stock=12
++#     )
++# crp_paper_trading.run()
++
++
++
++##################################
++# start training. function
++##################################
++
++# train(
++#     start_date='2024-01-01',
++#     end_date='2024-10-24',
++#     ticker_list=CRYPTO_TICKER_TR, 
++#     data_source='binance',
++#     time_interval='30m',
++#     technical_indicator_list=INDICATORS,
++#     drl_lib='elegantrl',
++#     env=CryptoTradingEnv,
++#     model_name='ppo',
++
++#     erl_params=ERL_PARAMS,
++#     cwd=agent_cwd,
++#     break_step=4e5,
++#     gpu_id=0,
++#     initial_capital=10000,  # Set to 10K
++
++#     tp_multiplier=2,         # Default TP multiplier
++#     sl_multiplier=5,         # Default SL multiplier
++#     atr_window=14,           # Default ATR window
++#     max_trade_duration=20    # Default max trade duration
++# )
++
++
+
+# 2025-04-14 14:38:20.078091
++yes
+
+# 2025-04-14 14:47:02.129116
++where could be possibly error occurs INFO:     Started server process [20965]
++INFO:     Waiting for application startup.
++INFO:     Application startup complete.
++INFO:     127.0.0.1:33760 - "OPTIONS /train HTTP/1.1" 200 OK
++INFO:main:Received training request
++/home/souz_wsl/.pyenv/versions/3.10.0/envs/finrl/lib/python3.10/site-packages/pydantic/main.py:1070: PydanticDeprecatedSince20:
++
++The `dict` method is deprecated; use `model_dump` instead. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.7/migration/
++
++INFO:main:Request data: {'start_date': '2025-01-01', 'end_date': '2025-04-13', 'ticker_list': ['BTCUSDT'], 'data_source': 'binance', 'time_interval': '10Min', 'technical_indicator_list': ['macd', 'rsi', 'cci', 'dx'], 'drl_lib': 'elegantrl', 'env': 'CryptoTradingEnv', 'model': 'ppo', 'cwd': './papertrading_crypto', 'break_step': 100000.0, 'initial_capital': 10000.0, 'tp_multiplier': 2.0, 'sl_multiplier': 5.0, 'atr_window': 14, 'max_trade_duration': 20, 'gpu_id': 0, 'erl_params': {'learning_rate': 3e-06, 'batch_size': 512, 'gamma': 0.99, 'seed': 312, 'net_dimension': [256, 128, 64, 32], 'target_step': 5000, 'eval_gap': 30, 'eval_times': 1, 'ratio_clip': 0.5, 'lambda_gae_adv': 0.95, 'lambda_entropy': 0.01}}
++INFO:main:Directory already exists: /home/souz_wsl/finrl_proj/FinRL_Meta/api/papertrading_crypto
++Received kwargs: {'erl_params': {'learning_rate': 3e-06, 'batch_size': 512, 'gamma': 0.99, 'seed': 312, 'net_dimension': [256, 128, 64, 32], 'target_step': 5000, 'eval_gap': 30, 'eval_times': 1, 'ratio_clip': 0.5, 'lambda_gae_adv': 0.95, 'lambda_entropy': 0.01}, 'cwd': '/home/souz_wsl/finrl_proj/FinRL_Meta/api/papertrading_crypto', 'break_step': 100000.0, 'gpu_id': 0, 'initial_capital': 10000.0, 'log_file_path': '/home/souz_wsl/finrl_proj/FinRL_Meta/api/papertrading_crypto/training.log'}
++binance successfully connected
++INFO:     127.0.0.1:33760 - "POST /train HTTP/1.1" 500 Internal Server Error
++ERROR:    Exception in ASGI application
++Traceback (most recent call last):
++  File "/home/souz_wsl/.pyenv/versions/3.10.0/envs/finrl/lib/python3.10/site-packages/uvicorn/protocols/http/httptools_impl.py", line 401, in run_asgi
++    result = await app(  # type: ignore[func-returns-value]
++  File "/home/souz_wsl/.pyenv/versions/3.10.0/envs/finrl/lib/python3.10/site-packages/uvicorn/middleware/proxy_headers.py", line 70, in __call__
++    return await self.app(scope, receive, send)
++  File "/home/souz_wsl/.pyenv/versions/3.10.0/envs/finrl/lib/python3.10/site-packages/fastapi/applications.py", line 1054, in __call__
++    await super().__call__(scope, receive, send)
++  File "/home/souz_wsl/.pyenv/versions/3.10.0/envs/finrl/lib/python3.10/site-packages/starlette/applications.py", line 123, in __call__
++    await self.middleware_stack(scope, receive, send)
++  File "/home/souz_wsl/.pyenv/versions/3.10.0/envs/finrl/lib/python3.10/site-packages/starlette/middleware/errors.py", line 186, in __call__
++    raise exc
++  File "/home/souz_wsl/.pyenv/versions/3.10.0/envs/finrl/lib/python3.10/site-packages/starlette/middleware/errors.py", line 164, in __call__
++    await self.app(scope, receive, _send)
++  File "/home/souz_wsl/.pyenv/versions/3.10.0/envs/finrl/lib/python3.10/site-packages/starlette/middleware/cors.py", line 93, in __call__
++    await self.simple_response(scope, receive, send, request_headers=headers)
++  File "/home/souz_wsl/.pyenv/versions/3.10.0/envs/finrl/lib/python3.10/site-packages/starlette/middleware/cors.py", line 148, in simple_response
++    await self.app(scope, receive, send)
++  File "/home/souz_wsl/.pyenv/versions/3.10.0/envs/finrl/lib/python3.10/site-packages/starlette/middleware/exceptions.py", line 65, in __call__
++    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
++  File "/home/souz_wsl/.pyenv/versions/3.10.0/envs/finrl/lib/python3.10/site-packages/starlette/_exception_handler.py", line 64, in wrapped_app
++    raise exc
++  File "/home/souz_wsl/.pyenv/versions/3.10.0/envs/finrl/lib/python3.10/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
++    await app(scope, receive, sender)
++  File "/home/souz_wsl/.pyenv/versions/3.10.0/envs/finrl/lib/python3.10/site-packages/starlette/routing.py", line 754, in __call__
++    await self.middleware_stack(scope, receive, send)
++  File "/home/souz_wsl/.pyenv/versions/3.10.0/envs/finrl/lib/python3.10/site-packages/starlette/routing.py", line 774, in app
++    await route.handle(scope, receive, send)
++  File "/home/souz_wsl/.pyenv/versions/3.10.0/envs/finrl/lib/python3.10/site-packages/starlette/routing.py", line 295, in handle
++    await self.app(scope, receive, send)
++  File "/home/souz_wsl/.pyenv/versions/3.10.0/envs/finrl/lib/python3.10/site-packages/starlette/routing.py", line 77, in app
++    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
++  File "/home/souz_wsl/.pyenv/versions/3.10.0/envs/finrl/lib/python3.10/site-packages/starlette/_exception_handler.py", line 64, in wrapped_app
++    raise exc
++  File "/home/souz_wsl/.pyenv/versions/3.10.0/envs/finrl/lib/python3.10/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
++    await app(scope, receive, sender)
++  File "/home/souz_wsl/.pyenv/versions/3.10.0/envs/finrl/lib/python3.10/site-packages/starlette/routing.py", line 74, in app
++    response = await f(request)
++  File "/home/souz_wsl/.pyenv/versions/3.10.0/envs/finrl/lib/python3.10/site-packages/fastapi/routing.py", line 297, in app
++    raw_response = await run_endpoint_function(
++  File "/home/souz_wsl/.pyenv/versions/3.10.0/envs/finrl/lib/python3.10/site-packages/fastapi/routing.py", line 212, in run_endpoint_function
++    return await run_in_threadpool(dependant.call, **values)
++  File "/home/souz_wsl/.pyenv/versions/3.10.0/envs/finrl/lib/python3.10/site-packages/starlette/concurrency.py", line 42, in run_in_threadpool
++    return await anyio.to_thread.run_sync(func, *args)
++  File "/home/souz_wsl/.pyenv/versions/3.10.0/envs/finrl/lib/python3.10/site-packages/anyio/to_thread.py", line 56, in run_sync
++    return await get_async_backend().run_sync_in_worker_thread(
++  File "/home/souz_wsl/.pyenv/versions/3.10.0/envs/finrl/lib/python3.10/site-packages/anyio/_backends/_asyncio.py", line 2177, in run_sync_in_worker_thread
++    return await future
++  File "/home/souz_wsl/.pyenv/versions/3.10.0/envs/finrl/lib/python3.10/site-packages/anyio/_backends/_asyncio.py", line 859, in run
++    result = context.run(func, *args)
++  File "/home/souz_wsl/finrl_proj/FinRL_Meta/api/main.py", line 169, in train_endpoint
++    train(
++  File "/home/souz_wsl/finrl_proj/FinRL_Meta/my_meta/single_asset_training_ppo.py", line 659, in train
++    price_array, tech_array, turbulence_array, high_array, low_array, close_array = dp.run(
++  File "/home/souz_wsl/finrl_proj/FinRL_Meta/meta/data_processor.py", line 186, in run
++    self.download_data(ticker_list)
++  File "/home/souz_wsl/finrl_proj/FinRL_Meta/meta/data_processor.py", line 94, in download_data
++    self.processor.download_data(ticker_list=ticker_list)
++  File "/home/souz_wsl/finrl_proj/FinRL_Meta/meta/data_processors/binance.py", line 65, in download_data
++    hist_data = self.dataframe_with_limit(symbol=i)
++  File "/home/souz_wsl/finrl_proj/FinRL_Meta/meta/data_processors/binance.py", line 200, in dataframe_with_limit
++    new_df = self.get_binance_bars(last_datetime, symbol)
++  File "/home/souz_wsl/finrl_proj/FinRL_Meta/meta/data_processors/binance.py", line 139, in get_binance_bars
++    df = pd.DataFrame(requests.get(self.url, params=req_params).json())
++  File "/home/souz_wsl/.pyenv/versions/3.10.0/envs/finrl/lib/python3.10/site-packages/pandas/core/frame.py", line 778, in __init__
++    mgr = dict_to_mgr(data, index, columns, dtype=dtype, copy=copy, typ=manager)
++  File "/home/souz_wsl/.pyenv/versions/3.10.0/envs/finrl/lib/python3.10/site-packages/pandas/core/internals/construction.py", line 503, in dict_to_mgr
++    return arrays_to_mgr(arrays, columns, index, dtype=dtype, typ=typ, consolidate=copy)
++  File "/home/souz_wsl/.pyenv/versions/3.10.0/envs/finrl/lib/python3.10/site-packages/pandas/core/internals/construction.py", line 114, in arrays_to_mgr
++    index = _extract_index(arrays)
++  File "/home/souz_wsl/.pyenv/versions/3.10.0/envs/finrl/lib/python3.10/site-packages/pandas/core/internals/construction.py", line 667, in _extract_index
++    raise ValueError("If using all scalar values, you must pass an index")
++ValueError: If using all scalar values, you must pass an index
+
+# 2025-04-14 14:47:08.811068
++n
+
+# 2025-04-14 14:50:45.583703
++what does that means. scaler value add index. its about ticker list of it about technical indictor list. 
+
+# 2025-04-14 14:55:36.551569
++n
+
+# 2025-04-14 14:56:26.504384
++here is working paramter "train(
++#     start_date='2024-01-01',
++#     end_date='2024-10-24',
++#     ticker_list=CRYPTO_TICKER_TR, 
++#     data_source='binance',
++#     time_interval='30m',
++#     technical_indicator_list=INDICATORS,
++#     drl_lib='elegantrl',
++#     env=CryptoTradingEnv,
++#     model_name='ppo',
++
++#     erl_params=ERL_PARAMS,
++#     cwd=agent_cwd,
++#     break_step=4e5,
++#     gpu_id=0,
++#     initial_capital=10000,  # Set to 10K
++
++#     tp_multiplier=2,         # Default TP multiplier
++#     sl_multiplier=5,         # Default SL multiplier
++#     atr_window=14,           # Default ATR window
++#     max_trade_duration=20    # Default max trade duration
++# )" and here are train paramters received by the main.py INFO:main:Request data: {'start_date': '2025-01-01', 'end_date': '2025-04-13', 'ticker_list': ['BTCUSDT'], 'data_source': 'binance', 'time_interval': '10m', 'technical_indicator_list': ['macd', 'rsi', 'cci', 'dx'], 'drl_lib': 'elegantrl', 'env': 'CryptoTradingEnv', 'model': 'ppo', 'cwd': './papertrading_crypto', 'break_step': 100000.0, 'initial_capital': 10000.0, 'tp_multiplier': 2.0, 'sl_multiplier': 5.0, 'atr_window': 14, 'max_trade_duration': 20, 'gpu_id': 0, 'erl_params': {'learning_rate': 3e-06, 'batch_size': 512, 'gamma': 0.99, 'seed': 312, 'net_dimension': [256, 128, 64, 32], 'target_step': 5000, 'eval_gap': 30, 'eval_times': 1, 'ratio_clip': 0.5, 'lambda_gae_adv': 0.95, 'lambda_entropy': 0.01}}
++INFO:main:Directory already exists: /home/souz_wsl/finrl_proj/FinRL_Meta/api/papertrading_crypto
++Received kwargs: {'erl_params': {'learning_rate': 3e-06, 'batch_size': 512, 'gamma': 0.99, 'seed': 312, 'net_dimension': [256, 128, 64, 32], 'target_step': 5000, 'eval_gap': 30, 'eval_times': 1, 'ratio_clip': 0.5, 'lambda_gae_adv': 0.95, 'lambda_entropy': 0.01}, 'cwd': '/home/souz_wsl/finrl_proj/FinRL_Meta/api/papertrading_crypto', 'break_step': 100000.0, 'gpu_id': 0, 'initial_capital': 10000.0, 'log_file_path': '/home/souz_wsl/finrl_proj/FinRL_Meta/api/papertrading_crypto/training.log'} please match them and check if there is any discrepency in them. 
+
+# 2025-04-14 14:57:56.033212
++n
+
+# 2025-04-14 14:59:03.038030
++please add binnace.py and check if there is problm in time interval or anywhere elese. binance is connected but I assume its not able to collect the data. 
+
+# 2025-04-14 14:59:22.730570
++/add binance.py
+
+# 2025-04-14 14:59:46.616889
++n
+
+# 2025-04-14 14:59:51.437738
++/add /home/souz_wsl/finrl_proj/FinRL_Meta/meta/data_processors/binance.py
+
+# 2025-04-14 15:00:08.627040
++now heck if there is problm in time interval or anywhere elese. binance is connected but
++architect>  I assume its not able to collect the data.
+
+# 2025-04-14 15:00:46.157369
++yes
+
+# 2025-04-14 15:03:36.799664
++/undo
+
+# 2025-04-14 15:08:54.464837
++so again read also may be search web. and tell me what are support time interval to downlaod data from binance . it is also possible thery only support spesicfic time intervals. 
+
+# 2025-04-15 11:31:51.378201
++/architect
+
+# 2025-04-15 11:31:55.473810
++/add /home/souz_wsl/finrl_proj/FinRL_Meta/my_meta/single_asset_training_ppo.py
+
+# 2025-04-15 11:32:29.831116
++/add /home/souz_wsl/finrl_proj/FinRL_Meta/api/main.py
+
+# 2025-04-15 11:33:30.445699
++here is error I am getting . please help me solving it. INFO:main:Request data: {'start_date': '2025-01-01', 'end_date': '2025-04-13', 'ticker_list': ['BTCUSDT'], 'data_source': 'binance', 'time_interval': '30m', 'technical_indicator_list': ['macd', 'rsi', 'cci', 'dx'], 'drl_lib': 'elegantrl', 'env': 'CryptoTradingEnv', 'model': 'ppo', 'break_step': 100000.0, 'initial_capital': 10000.0, 'tp_multiplier': 2.0, 'sl_multiplier': 5.0, 'atr_window': 14, 'max_trade_duration': 20, 'gpu_id': 0, 'erl_params': {'learning_rate': 3e-06, 'batch_size': 512, 'gamma': 0.99, 'seed': 312, 'net_dimension': [256, 128, 64, 32], 'target_step': 5000, 'eval_gap': 30, 'eval_times': 1, 'ratio_clip': 0.5, 'lambda_gae_adv': 0.95, 'lambda_entropy': 0.01}}
++INFO:main:Directory already exists: /home/souz_wsl/finrl_proj/FinRL_Meta/api/papertrading_crypto
++Received kwargs: {'erl_params': {'learning_rate': 3e-06, 'batch_size': 512, 'gamma': 0.99, 'seed': 312, 'net_dimension': [256, 128, 64, 32], 'target_step': 5000, 'eval_gap': 30, 'eval_times': 1, 'ratio_clip': 0.5, 'lambda_gae_adv': 0.95, 'lambda_entropy': 0.01}, 'cwd': '/home/souz_wsl/finrl_proj/FinRL_Meta/api/papertrading_crypto', 'break_step': 100000.0, 'gpu_id': 0, 'initial_capital': 10000.0, 'log_file_path': '/home/souz_wsl/finrl_proj/FinRL_Meta/api/papertrading_crypto/training.log'}
++binance successfully connected
++Using cached file ./cache/BTCUSDT_binance_2025-01-01_2025-04-13_30m.pickle
++tech_indicator_list:  ['macd', 'rsi', 'cci', 'dx']
++indicator:  macd
++indicator:  rsi
++indicator:  cci
++indicator:  dx
++Succesfully add technical indicators
++Successfully transformed into array
++INFO:     127.0.0.1:52406 - "POST /train HTTP/1.1" 500 Internal Server Error
++ERROR:    Exception in ASGI application
++Traceback (most recent call last):
++  File "/home/souz_wsl/.pyenv/versions/3.10.0/envs/finrl/lib/python3.10/site-packages/uvicorn/protocols/http/httptools_impl.py", line 401, in run_asgi
++    result = await app(  # type: ignore[func-returns-value]
++  File "/home/souz_wsl/.pyenv/versions/3.10.0/envs/finrl/lib/python3.10/site-packages/uvicorn/middleware/proxy_headers.py", line 70, in __call__
++    return await self.app(scope, receive, send)
++  File "/home/souz_wsl/.pyenv/versions/3.10.0/envs/finrl/lib/python3.10/site-packages/fastapi/applications.py", line 1054, in __call__
++    await super().__call__(scope, receive, send)
++  File "/home/souz_wsl/.pyenv/versions/3.10.0/envs/finrl/lib/python3.10/site-packages/starlette/applications.py", line 123, in __call__
++    await self.middleware_stack(scope, receive, send)
++  File "/home/souz_wsl/.pyenv/versions/3.10.0/envs/finrl/lib/python3.10/site-packages/starlette/middleware/errors.py", line 186, in __call__
++    raise exc
++  File "/home/souz_wsl/.pyenv/versions/3.10.0/envs/finrl/lib/python3.10/site-packages/starlette/middleware/errors.py", line 164, in __call__
++    await self.app(scope, receive, _send)
++  File "/home/souz_wsl/.pyenv/versions/3.10.0/envs/finrl/lib/python3.10/site-packages/starlette/middleware/cors.py", line 93, in __call__
++    await self.simple_response(scope, receive, send, request_headers=headers)
++  File "/home/souz_wsl/.pyenv/versions/3.10.0/envs/finrl/lib/python3.10/site-packages/starlette/middleware/cors.py", line 148, in simple_response
++    await self.app(scope, receive, send)
++  File "/home/souz_wsl/.pyenv/versions/3.10.0/envs/finrl/lib/python3.10/site-packages/starlette/middleware/exceptions.py", line 65, in __call__
++    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
++  File "/home/souz_wsl/.pyenv/versions/3.10.0/envs/finrl/lib/python3.10/site-packages/starlette/_exception_handler.py", line 64, in wrapped_app
++    raise exc
++  File "/home/souz_wsl/.pyenv/versions/3.10.0/envs/finrl/lib/python3.10/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
++    await app(scope, receive, sender)
++  File "/home/souz_wsl/.pyenv/versions/3.10.0/envs/finrl/lib/python3.10/site-packages/starlette/routing.py", line 754, in __call__
++    await self.middleware_stack(scope, receive, send)
++  File "/home/souz_wsl/.pyenv/versions/3.10.0/envs/finrl/lib/python3.10/site-packages/starlette/routing.py", line 774, in app
++    await route.handle(scope, receive, send)
++  File "/home/souz_wsl/.pyenv/versions/3.10.0/envs/finrl/lib/python3.10/site-packages/starlette/routing.py", line 295, in handle
++    await self.app(scope, receive, send)
++  File "/home/souz_wsl/.pyenv/versions/3.10.0/envs/finrl/lib/python3.10/site-packages/starlette/routing.py", line 77, in app
++    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
++  File "/home/souz_wsl/.pyenv/versions/3.10.0/envs/finrl/lib/python3.10/site-packages/starlette/_exception_handler.py", line 64, in wrapped_app
++    raise exc
++  File "/home/souz_wsl/.pyenv/versions/3.10.0/envs/finrl/lib/python3.10/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
++    await app(scope, receive, sender)
++  File "/home/souz_wsl/.pyenv/versions/3.10.0/envs/finrl/lib/python3.10/site-packages/starlette/routing.py", line 74, in app
++    response = await f(request)
++  File "/home/souz_wsl/.pyenv/versions/3.10.0/envs/finrl/lib/python3.10/site-packages/fastapi/routing.py", line 297, in app
++    raw_response = await run_endpoint_function(
++  File "/home/souz_wsl/.pyenv/versions/3.10.0/envs/finrl/lib/python3.10/site-packages/fastapi/routing.py", line 212, in run_endpoint_function
++    return await run_in_threadpool(dependant.call, **values)
++  File "/home/souz_wsl/.pyenv/versions/3.10.0/envs/finrl/lib/python3.10/site-packages/starlette/concurrency.py", line 42, in run_in_threadpool
++    return await anyio.to_thread.run_sync(func, *args)
++  File "/home/souz_wsl/.pyenv/versions/3.10.0/envs/finrl/lib/python3.10/site-packages/anyio/to_thread.py", line 56, in run_sync
++    return await get_async_backend().run_sync_in_worker_thread(
++  File "/home/souz_wsl/.pyenv/versions/3.10.0/envs/finrl/lib/python3.10/site-packages/anyio/_backends/_asyncio.py", line 2177, in run_sync_in_worker_thread
++    return await future
++  File "/home/souz_wsl/.pyenv/versions/3.10.0/envs/finrl/lib/python3.10/site-packages/anyio/_backends/_asyncio.py", line 859, in run
++    result = context.run(func, *args)
++  File "/home/souz_wsl/finrl_proj/FinRL_Meta/api/main.py", line 167, in train_endpoint
++    train(
++  File "/home/souz_wsl/finrl_proj/FinRL_Meta/my_meta/single_asset_training_ppo.py", line 682, in train
++    env_instance = env(config=env_config)
++TypeError: 'str' object is not callable
++
+
+# 2025-04-15 11:36:11.074713
++n
+
+# 2025-04-15 11:36:29.210227
++what should I wirte in `TrainRequest` in main pydentic model  env: str          = Field("CryptoTradingEnv", example="CryptoTradingEnv")
+
+# 2025-04-15 11:39:08.197155
++yes

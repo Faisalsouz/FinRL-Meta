@@ -11,7 +11,7 @@ export default function TrainPage() {
   const [endDate, setEndDate] = useState("2025-04-13");
   const [tickerList, setTickerList] = useState("BTCUSDT");
   const [dataSource, setDataSource] = useState("binance");
-  const [timeInterval, setTimeInterval] = useState("15Min");
+  const [timeInterval, setTimeInterval] = useState("30m");
   const [technicalIndicators, setTechnicalIndicators] = useState("macd,rsi,cci,dx");
   const [drlLib, setDrlLib] = useState("elegantrl");
   const [env, setEnv] = useState("CryptoTradingEnv");
@@ -268,6 +268,29 @@ export default function TrainPage() {
                 type="number"
                 value={gpuId}
                 onChange={(e) => setGpuId(Number(e.target.value))}
+                className="w-full rounded border border-gray-300 px-3 py-2"
+              />
+            </div>
+            <div>
+              <label className="block font-medium mb-1">
+                Break Step
+                <span
+                  data-tooltip-id="break-step-tooltip"
+                  className="ml-2 text-blue-500 cursor-pointer"
+                >
+                  i
+                </span>
+                <Tooltip
+                  id="break-step-tooltip"
+                  content="Number of steps before training stops. Example: 100000 (1e5)."
+                />
+              </label>
+              <input
+                type="number"
+                value={breakStep}
+                onChange={(e) => setBreakStep(Number(e.target.value))}
+                placeholder="Enter break step (e.g., 100000)"
+                required
                 className="w-full rounded border border-gray-300 px-3 py-2"
               />
             </div>

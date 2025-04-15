@@ -375,8 +375,9 @@ class AlpacaPaperTradingCryptoLive:
                     atr = atr_values[-1]
                     self.logger.info(f"ATR value: {atr}")
                     self.entry_price = price[0]
-                    self.target_price = self.entry_price + self.tp_multiplier * atr
-                    self.stop_loss_price = max(self.entry_price - self.sl_multiplier * atr, 0.01)
+                    self.initial_atr = atr  # 🟠 Store ATR at entry
+                    self.target_price = self.entry_price + self.tp_multiplier * self.initial_atr
+                    self.stop_loss_price = max(self.entry_price - self.sl_multiplier * self.initial_atr, 0.01)
                     self.logger.info(f"Entry Price: {self.entry_price}, TP: {self.target_price}, SL: {self.stop_loss_price}")
 
                     # Place a buy order using all available cash
