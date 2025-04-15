@@ -97,7 +97,7 @@ class TrainRequest(BaseModel):
     time_interval: str= Field("15Min", example="1Min")
     technical_indicator_list: list[str] = Field(..., example=["macd","rsi"])
     drl_lib: str      = Field("elegantrl", example="elegantrl")
-    env: str          = Field("CryptoTradingEnv", example="CryptoTradingEnv")
+    env: str          = Field("CryptoTradingEnv", example="CryptoTradingEnv")  # Keep as string
     model: str   = Field("ppo", example="ppo")   
     break_step: float = Field(1e5, example=1e5)
     initial_capital: float = Field(10000, example=10000)
@@ -138,12 +138,15 @@ class PaperTradingRequest(BaseModel):
 # 2) Endpoints
 ##########################
 
+from my_meta.custom_crypto_env import CryptoTradingEnv  # Ensure this import is present
+
+ENV_CLASSES = {
+    "CryptoTradingEnv": CryptoTradingEnv,
+    # Add other environment classes here if needed
+}
+
 @app.post("/train")
 def train_endpoint(req: TrainRequest):
-    """
-    Endpoint to trigger the DRL training. 
-    The body of the request must match `TrainRequest`.
-    """
     logs = []
     
     logger.info("Received training request")
@@ -161,7 +164,14 @@ def train_endpoint(req: TrainRequest):
         logger.info(f"Directory already exists: {cwd_path}")
         logs.append(f"Directory already exists: {cwd_path}")
     
-
+    # Convert the env string to the actual class object
+    env_class = ENV_CLASSES.get(req.env)
+    if env_class is None:
+        logger.error(f"Environment class '{req.env}' not found")
+        return {
+            "message": f"Environment class '{req.env}' not found!",
+            "logs": logs
+        }
 
     # Convert the pydantic model to a dictionary or pass directly
     train(
@@ -172,7 +182,7 @@ def train_endpoint(req: TrainRequest):
         time_interval=req.time_interval,
         technical_indicator_list=req.technical_indicator_list,
         drl_lib=req.drl_lib,
-        env=req.env,  # or string referencing if you prefer 
+        env=env_class,  # Pass the class object instead of a string
         model_name=req.model,
         erl_params=req.erl_params,  # Pass ERL parameters
         cwd=cwd_path,
