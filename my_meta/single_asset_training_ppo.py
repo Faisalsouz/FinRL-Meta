@@ -1,7 +1,7 @@
 # get more info about this here. https://chatgpt.com/share/6790f22c-24f0-800b-9023-bc1caa8fa0f5
 
 from __future__ import annotations
-
+import logging
 # from finrl.config import INDICATORS
 # from finrl.meta.env_stock_trading.env_stocktrading_np import StockTradingEnv
 from my_meta.custom_crypto_env import CryptoTradingEnv
@@ -48,6 +48,44 @@ pio.renderers.default = "browser"  # or "notebook" for Jupyter
 
  # Load environment variables from .env file                                                                                                                                                          
 load_dotenv()  
+# logging utility
+def setup_logger(log_file_name="training.log", log_dir_name="papertrading_crypto"):
+    """
+    Sets up a logger that writes to a specified log file within a given directory.
+    
+    Args:
+        log_file_name (str): Name of the log file (default: "training.log").
+        log_dir_name (str): Name of the directory where the log file will be stored (default: "papertrading_crypto").
+    
+    Returns:
+        logging.Logger: Configured logger instance.
+    """
+   
+       
+    # Construct the full path to the log directory
+    log_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "api", log_dir_name, log_file_name))
+    # os.makedirs(log_dir, exist_ok=True)  # Ensure the directory exists
+
+    
+    # Configure the logger
+    logger = logging.getLogger("train_logger")
+    logger.setLevel(logging.INFO)
+
+    # Avoid duplicate handlers during reloads
+    if logger.hasHandlers():
+        logger.handlers.clear()
+
+    # Set up file handler
+    handler = logging.FileHandler(log_dir, mode='w')  # Overwrite log on every run
+    formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
+    handler.setFormatter(formatter)
+
+    logger.addHandler(handler)
+    return logger
+#setup_logger() global logger
+
+
+
 
 
 
@@ -208,7 +246,8 @@ class AgentBase:
 
         self.states = None  # assert self.states == (1, state_dim)
         self.device = torch.device(f"cuda:{gpu_id}" if (torch.cuda.is_available() and (gpu_id >= 0)) else "cpu")
-        print("Using device:", self.device)
+        logger=setup_logger()
+        logger.info("Using device:", self.device)
 
         act_class = getattr(self, "act_class", None)
         cri_class = getattr(self, "cri_class", None)
@@ -379,7 +418,7 @@ def train_agent(args: Config):
 
     new_env, _ = env.reset()
     agent.states = new_env[np.newaxis, :]
-
+    logger = setup_logger()
     evaluator = Evaluator(eval_env=build_env(args.env_class, args.env_args),
                          eval_per_step=args.eval_per_step,
                          eval_times=args.eval_times,
@@ -401,25 +440,26 @@ def train_agent(args: Config):
                 break
 
     except KeyboardInterrupt:
-        print("\nTraining interrupted! Saving current model...")
+        logger.info("\nTraining interrupted! Saving current model...")
         # Save interrupted model
         torch.save(agent.act.state_dict(), args.cwd + '/interrupted_actor.pth')
-        print(f"Model saved to {args.cwd}/interrupted_actor.pth")
+        logger.info(f"Model saved to {args.cwd}/interrupted_actor.pth")
 
 
 def render_agent(env_class, env_args: dict, net_dims: [int], agent_class, actor_path: str, render_times: int = 8):
     env = build_env(env_class, env_args)
-
+    logger = setup_logger()
     state_dim = env_args['state_dim']
     action_dim = env_args['action_dim']
     agent = agent_class(net_dims, state_dim, action_dim, gpu_id=-1)
     actor = agent.act
+    
 
-    print(f"| render and load actor from: {actor_path}")
+    logger.info(f"| render and load actor from: {actor_path}")
     actor.load_state_dict(torch.load(actor_path, map_location=lambda storage, loc: storage))
     for i in range(render_times):
         cumulative_reward, episode_step = get_rewards_and_steps(env, actor, if_render=True)
-        print(f"|{i:4}  cumulative_reward {cumulative_reward:9.3f}  episode_step {episode_step:5.0f}")
+        logger.info(f"|{i:4}  cumulative_reward {cumulative_reward:9.3f}  episode_step {episode_step:5.0f}")
 
         
 class Evaluator:
@@ -439,7 +479,8 @@ class Evaluator:
         self.min_eval_steps = 100  # Minimum steps before considering "best"
 
         self.recorder = []
-        print(f"\n| `step`: Number of samples, or total training steps, or running times of `env.step()`."
+        logger=setup_logger()
+        logger.info(f"\n| `step`: Number of samples, or total training steps, or running times of `env.step()`."
               f"\n| `time`: Time spent from the start of training to this moment."
               f"\n| `avgR`: Average value of cumulative rewards, which is the sum of rewards in an episode."
               f"\n| `stdR`: Standard dev of cumulative rewards, which is the sum of rewards in an episode."
@@ -453,7 +494,7 @@ class Evaluator:
         if self.eval_step + self.eval_per_step > self.total_step:
             return
         self.eval_step = self.total_step
-
+        logger = setup_logger()
         rewards_steps_ary = [get_rewards_and_steps(self.env_eval, actor) for _ in range(self.eval_times)]
         rewards_steps_ary = np.array(rewards_steps_ary, dtype=np.float32)
         avg_r = rewards_steps_ary[:, 0].mean()  # average of cumulative rewards
@@ -468,21 +509,21 @@ class Evaluator:
         if self.save_counter % self.checkpoint_interval == 0:
             checkpoint_path = f"{self.cwd}/checkpoint_{self.total_step}.pth"
             torch.save(actor.state_dict(), checkpoint_path)
-            print(f"\nSaved periodic checkpoint to {checkpoint_path}")
+            logger.info(f"\nSaved periodic checkpoint to {checkpoint_path}")
 
         # Save best model if performance improves
         if self.total_step > self.min_eval_steps and avg_r > self.best_reward:
             self.best_reward = avg_r
             best_path = f"{self.cwd}/best_actor.pth"
             torch.save(actor.state_dict(), best_path)
-            print(f"\nNew best model! Saved to {best_path}")
-            print(f"New best reward: {self.best_reward:.2f}")
+            logger.info(f"\nNew best model! Saved to {best_path}")
+            logger.info(f"New best reward: {self.best_reward:.2f}")
 
         # Always save latest model
         latest_path = f"{self.cwd}/latest_actor.pth"
         torch.save(actor.state_dict(), latest_path)
 
-        print(f"| {self.total_step:8.2e}  {used_time:8.0f}  "
+        logger.info(f"| {self.total_step:8.2e}  {used_time:8.0f}  "
               f"| {avg_r:8.2f}  {std_r:6.2f}  {avg_s:6.0f}  "
               f"| {logging_tuple[0]:8.2f}  {logging_tuple[1]:8.2f}")
 
@@ -589,6 +630,7 @@ class DRLAgent:
 
     @staticmethod
     def DRL_prediction(model_name, cwd, net_dimension, environment):
+        logger = setup_logger()
         if model_name not in MODELS:
             raise NotImplementedError("NotImplementedError")
         agent_class = MODELS[model_name]
@@ -598,7 +640,7 @@ class DRLAgent:
         # load agent
         try:  
             cwd = cwd + '/actor.pth'
-            print(f"| load actor from: {cwd}")
+            logger.info(f"| load actor from: {cwd}")
             actor.load_state_dict(torch.load(cwd, map_location=lambda storage, loc: storage))
             act = actor
             device = agent.device
@@ -630,9 +672,9 @@ class DRLAgent:
                 episode_returns.append(episode_return)
                 if done:
                     break
-        print("Test Finished!")
+        logger.info("Test Finished!")
         # return episode total_assets on testing data
-        print("episode_return", episode_return)
+        logger.info("episode_return", episode_return)
         return episode_total_assets
     
 #Test and train functinos: 
@@ -653,7 +695,8 @@ def train(
     max_trade_duration=20,   # Default max trade duration
     **kwargs,
 ):
-    print("Received kwargs:", kwargs)
+    logger = setup_logger()
+    logger.info("Received kwargs:", kwargs)
     # download data
     dp = DataProcessor(data_source,start_date, end_date, time_interval)
     price_array, tech_array, turbulence_array, high_array, low_array, close_array = dp.run(
@@ -729,7 +772,8 @@ def test(
             • A grouped bar chart comparing predicted signal and realized trade return for each trade.
             • A filtered scatter plot showing only steps where trade events occurred.
     """
-    print("Received kwargs:", kwargs)
+    logger = setup_logger()
+    logger.info("Received kwargs:", kwargs)
     
     from meta.data_processor import DataProcessor
     dp = DataProcessor(data_source, start_date, end_date, time_interval)
@@ -762,15 +806,15 @@ def test(
  
         agent = AgentPPO(net_dimension, env_instance.state_dim, env_instance.action_dim, gpu_id=0)
         
-        print("\nModel verification:")
+        logger.info("\nModel verification:")
         model_path = f"{cwd}/latest_actor.pth"
-        print(f"Loading model from: {model_path}")
+        logger.info(f"Loading model from: {model_path}")
         state_dict = torch.load(model_path, map_location=device)
         agent.act.load_state_dict(state_dict)
         
         test_state = torch.zeros((1, env_instance.state_dim), device=device)
         test_action = agent.act(test_state)
-        print(f"Test action output: {test_action.detach().cpu().numpy()}")
+        logger.info(f"Test action output: {test_action.detach().cpu().numpy()}")
         
         prices = []
         signals = []
@@ -832,7 +876,7 @@ def test(
         min_length = min(len(trade_entry_steps), len(trade_exit_steps), len(trade_pred_signals), len(trade_returns), len(trade_types))
         if not (len(trade_entry_steps) == len(trade_exit_steps) ==
                 len(trade_pred_signals) == len(trade_returns) == len(trade_types)):
-            print("Warning: Some trade events were incomplete. Only complete trade pairs will be recorded.")
+            logger.info("Warning: Some trade events were incomplete. Only complete trade pairs will be recorded.")
         trade_df = pd.DataFrame({
             "Entry Step": trade_entry_steps[:min_length],
             "Exit Step": trade_exit_steps[:min_length],
@@ -894,8 +938,8 @@ def test(
         fig_filtered.update_traces(marker=dict(size=10))
         fig_filtered.write_html(f"{cwd}/filtered_trade_details.html")
         
-        print(f"\nTest completed. Plots and CSV files saved to {cwd}/")
-        print("\n=== Performance Summary ===")
+        logger.info(f"\nTest completed. Plots and CSV files saved to {cwd}/")
+        logger.info("\n=== Performance Summary ===")
         if len(trade_returns) > 0:
             cumulative_trade_return = np.prod(1 + np.array([float(r) for r in trade_returns])) - 1
         else:
@@ -904,16 +948,16 @@ def test(
         # Calculate net profit (sum of all trade returns)
         net_profit = sum(trade_returns)
         
-        print(f"Cumulative Trade Return (complete trades): {float(cumulative_trade_return)*100:.2f}%")
-        print(f"Net Profit (sum of all trade returns): {float(net_profit)*100:.2f}%")
+        logger.info(f"Cumulative Trade Return (complete trades): {float(cumulative_trade_return)*100:.2f}%")
+        logger.info(f"Net Profit (sum of all trade returns): {float(net_profit)*100:.2f}%")
         
         total_trades = len(trade_returns)
         correct_trades = sum(1 for r in trade_returns if r > 0)
-        print(f"Number of Trades: {total_trades}")
+        logger.info(f"Number of Trades: {total_trades}")
         if total_trades > 0:
-            print(f"Correct Trades: {correct_trades} ({(correct_trades/total_trades*100):.2f}%)")
+            logger.info(f"Correct Trades: {correct_trades} ({(correct_trades/total_trades*100):.2f}%)")
         else:
-            print("No trades executed.")
+            logger.info("No trades executed.")
         
         return {
             'prices': prices,
@@ -980,7 +1024,7 @@ ERL_PARAMS = {
     "lambda_gae_adv": 0.95,        # GAE lambda remains the same
     "lambda_entropy": 0.01         # Entropy bonus to encourage exploration
 }
-# print(f"Creating model with state_dim: {state_dim}, action_dim: {action_dim}")  # Debug print
+# logger.info(f"Creating model with state_dim: {state_dim}, action_dim: {action_dim}")  # Debug logger.info
 #############################
 # end of the parameters
 #############################
@@ -1010,8 +1054,9 @@ net_dimensions = [256, 128, 64, 32]
 # Calculate action dimension
 action_dim = len(CRYPTO_TICKER_PT)
 
-# Print for debugging
-print(f"Creating model with state_dim: {state_dim}, action_dim: {action_dim}, net_dimensions: {net_dimensions}")
+# logger.info for debugging
+logger = setup_logger()
+logger.info(f"Creating model with state_dim: {state_dim}, action_dim: {action_dim}, net_dimensions: {net_dimensions}")
 
 # ERL_PARAMS with updated net_dimensions
 ERL_PARAMS = {
@@ -1037,9 +1082,9 @@ data_url = 'wss://data.alpaca.markets'
 env = CryptoTradingEnv
 ticker_list = CRYPTO_TICKER
 action_dim = len(ticker_list) # for training 
-print(ticker_list)
-print(len(ticker_list))
-print(INDICATORS)
+logger.info(ticker_list)
+logger.info(len(ticker_list))
+logger.info(INDICATORS)
 #  1 Scaled Price: 1 dimension                                                                                                                                                                          
 #  2 Technical Indicators: len(INDICATORS) dimensions per ticker                                                                                                                                        
 #  3 Previous Step’s Percentage Change in Price: 1 dimension                                                                                                                                            
