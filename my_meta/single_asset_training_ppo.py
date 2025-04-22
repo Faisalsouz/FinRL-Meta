@@ -246,8 +246,8 @@ class AgentBase:
 
         self.states = None  # assert self.states == (1, state_dim)
         self.device = torch.device(f"cuda:{gpu_id}" if (torch.cuda.is_available() and (gpu_id >= 0)) else "cpu")
-        logger=setup_logger()
-        logger.info("Using device:", self.device)
+        logger = setup_logger()
+        logger.info(f"Using device: {self.device}")
 
         act_class = getattr(self, "act_class", None)
         cri_class = getattr(self, "cri_class", None)
@@ -696,7 +696,7 @@ def train(
     **kwargs,
 ):
     logger = setup_logger()
-    logger.info("Received kwargs:", kwargs)
+    logger.info(f"Received kwargs: {kwargs}")
     # download data
     dp = DataProcessor(data_source,start_date, end_date, time_interval)
     price_array, tech_array, turbulence_array, high_array, low_array, close_array = dp.run(
@@ -773,7 +773,7 @@ def test(
             • A filtered scatter plot showing only steps where trade events occurred.
     """
     logger = setup_logger()
-    logger.info("Received kwargs:", kwargs)
+    logger.info(f"Received kwargs: {kwargs}")
     
     from meta.data_processor import DataProcessor
     dp = DataProcessor(data_source, start_date, end_date, time_interval)
