@@ -76,7 +76,7 @@ def setup_logger(log_file_name="training.log", log_dir_name="papertrading_crypto
         logger.handlers.clear()
 
     # Set up file handler
-    handler = logging.FileHandler(log_dir, mode='w')  # Overwrite log on every run
+    handler = logging.FileHandler(log_dir, mode='a')  # Append logs during a session
     formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
     handler.setFormatter(formatter)
 
