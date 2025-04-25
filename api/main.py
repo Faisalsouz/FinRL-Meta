@@ -122,7 +122,7 @@ class TrainRequest(BaseModel):
 
 class PaperTradingRequest(BaseModel):
     ticker_list: list[str]      = Field(..., example=["BTCUSD","ETHUSD","SOLUSD"])
-    time_interval: str          = Field("5Min", example="5Min")
+    time_interval: str          = Field("5min", example="5min")
     drl_lib: str                = Field("elegantrl", example="elegantrl")
     agent: str                  = Field("ppo", example="ppo")
     net_dim: list[int]          = Field(..., example=[128,64]) 
@@ -130,6 +130,7 @@ class PaperTradingRequest(BaseModel):
     action_dim: int             = Field(3, example=3)
     API_KEY: str                = Field(..., example="PK...")
     API_SECRET: str             = Field(..., example="...")
+    cwd: str                   = Field(..., example="papertrading_crypto")
     API_BASE_URL: str           = Field("https://paper-api.alpaca.markets", example="https://paper-api.alpaca.markets")
     tech_indicator_list: list[str] = Field(..., example=["macd","rsi","cci","dx"])
     max_stock: float            = Field(100.0, example=100.0)
@@ -238,21 +239,32 @@ def paper_trade_endpoint(req: PaperTradingRequest):
     """
     Endpoint to start live paper trading on Alpaca with your DRL agent.
     """
-    logger.info("Received paper trading request")
-    logger.info(f"Request data: {req.dict()}")
-  
-    # Start paper trading in a separate thread
-    paper_trading_thread = threading.Thread(target=start_paper_trading, args=(req,))
-    paper_trading_thread.start()
+    logs = []
+    try:
+        logger.info("Received paper trading request")
+        logs.append("Received paper trading request")
+        logger.info(f"Request data: {req.dict()}")
+        logs.append(f"Request data: {req.dict()}")
 
-    return {
-        "message": "Paper trading started!",
-        "received": req.dict(),
-        "logs": [
-         
-            "Paper trading started successfully"
-        ]
-    }
+        # Start paper trading in a separate thread
+        paper_trading_thread = threading.Thread(target=start_paper_trading, args=(req,))
+        paper_trading_thread.start()
+
+        return {
+            "message": "Paper trading started!",
+            "received": req.dict(),
+            "logs": logs,
+            "error": None  # No error occurred
+        }
+    except Exception as e:
+        logger.error(f"Error occurred: {str(e)}")
+        logs.append(f"Error occurred: {str(e)}")
+        return {
+            "message": "Failed to start paper trading!",
+            "received": req.dict(),
+            "logs": logs,
+            "error": str(e)  # Include the error message
+        }
 
 ##########################
 # 3) Launch with uvicorn
