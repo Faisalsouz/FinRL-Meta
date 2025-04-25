@@ -20,6 +20,10 @@ export default function PaperTradingPage() {
   const [apiBaseUrl, setApiBaseUrl] = useState("https://paper-api.alpaca.markets");
   const [techIndicatorList, setTechIndicatorList] = useState("macd,rsi,cci,dx");  
   const [maxStock, setMaxStock] = useState(100.0);
+  const [tpMultiplier, setTpMultiplier] = useState(2);
+  const [slMultiplier, setSlMultiplier] = useState(5);
+  const [atrWindow, setAtrWindow] = useState(14);
+  const [maxTradeDuration, setMaxTradeDuration] = useState(20);
   const [logFilePath, setLogFilePath] = useState("/home/souz_wsl/finrl_proj/FinRL_Meta/api/papertrading_crypto/paper_trading.log");
 
   // Response & error
@@ -38,6 +42,25 @@ export default function PaperTradingPage() {
     const techArray = techIndicatorList.split(",").map((s) => s.trim());
 
     const payload = {
+      ticker_list: tickersArray,
+      time_interval: timeInterval,
+      drl_lib: drlLib,
+      agent: agent,
+      cwd: cwd,
+      net_dim: netDimArray,
+      state_dim: Number(stateDim),
+      action_dim: Number(actionDim),
+      API_KEY: apiKey,
+      API_SECRET: apiSecret,
+      API_BASE_URL: apiBaseUrl,
+      tech_indicator_list: techArray,
+      max_stock: Number(maxStock),
+      tp_multiplier: tpMultiplier,
+      sl_multiplier: slMultiplier,
+      atr_window: atrWindow,
+      max_trade_duration: maxTradeDuration,
+      log_file_path: logFilePath,
+    };
       ticker_list: tickersArray,
       time_interval: timeInterval,
       drl_lib: drlLib,
@@ -286,6 +309,48 @@ export default function PaperTradingPage() {
             value={maxStock}
             onChange={(e) => setMaxStock(e.target.value)}
             className="w-full rounded border border-gray-300 px-3 py-2 bg-white dark:bg-gray-800 text-black dark:text-white"
+          />
+        </div>
+
+        <div>
+          <label className="block font-medium mb-1">TP Multiplier</label>
+          <input
+            type="number"
+            step="0.1"
+            value={tpMultiplier}
+            onChange={(e) => setTpMultiplier(Number(e.target.value))}
+            className="w-full rounded border border-gray-300 px-3 py-2"
+          />
+        </div>
+
+        <div>
+          <label className="block font-medium mb-1">SL Multiplier</label>
+          <input
+            type="number"
+            step="0.1"
+            value={slMultiplier}
+            onChange={(e) => setSlMultiplier(Number(e.target.value))}
+            className="w-full rounded border border-gray-300 px-3 py-2"
+          />
+        </div>
+
+        <div>
+          <label className="block font-medium mb-1">ATR Window</label>
+          <input
+            type="number"
+            value={atrWindow}
+            onChange={(e) => setAtrWindow(Number(e.target.value))}
+            className="w-full rounded border border-gray-300 px-3 py-2"
+          />
+        </div>
+
+        <div>
+          <label className="block font-medium mb-1">Max Trade Duration</label>
+          <input
+            type="number"
+            value={maxTradeDuration}
+            onChange={(e) => setMaxTradeDuration(Number(e.target.value))}
+            className="w-full rounded border border-gray-300 px-3 py-2"
           />
         </div>
 

@@ -134,6 +134,10 @@ class PaperTradingRequest(BaseModel):
     API_BASE_URL: str           = Field("https://paper-api.alpaca.markets", example="https://paper-api.alpaca.markets")
     tech_indicator_list: list[str] = Field(..., example=["macd","rsi","cci","dx"])
     max_stock: float            = Field(100.0, example=100.0)
+    tp_multiplier: float        = Field(2, example=2)
+    sl_multiplier: float        = Field(5, example=5)
+    atr_window: int             = Field(14, example=14)
+    max_trade_duration: int     = Field(20, example=20)
 
 ##########################
 # 2) Endpoints
@@ -227,6 +231,10 @@ def start_paper_trading(req: PaperTradingRequest):
         API_BASE_URL=req.API_BASE_URL,
         tech_indicator_list=req.tech_indicator_list,
         max_stock=req.max_stock,
+        tp_multiplier=req.tp_multiplier,
+        sl_multiplier=req.sl_multiplier,
+        atr_window=req.atr_window,
+        max_trade_duration=req.max_trade_duration,
         log_file_path=cwd_path + "/paper_trading.log",
     )
     
