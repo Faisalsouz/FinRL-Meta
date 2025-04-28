@@ -10,7 +10,7 @@ from fastapi.middleware.cors import CORSMiddleware
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from my_meta.custom_crypto_paper_trading import AlpacaPaperTradingCryptoLive
-from my_meta.single_asset_training_ppo import train
+from my_meta.single_asset_training_ppo import train,test
 import logging
 from fastapi.responses import FileResponse
 
@@ -83,6 +83,15 @@ def fetch_logs_train():
     script_dir = os.path.dirname(os.path.abspath(__file__))
     
     log_file_path = script_dir + "/papertrading_crypto/training.log"
+    return FileResponse(log_file_path, media_type='text/plain')
+@app.get("/fetch_logs_test")
+def fetch_logs_train():
+    """
+    Endpoint to fetch the training log file contents.
+    """
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    
+    log_file_path = script_dir + "/papertrading_crypto/test.log"
     return FileResponse(log_file_path, media_type='text/plain')
 
 ##########################
@@ -188,7 +197,7 @@ def train_endpoint(req: TrainRequest):
         technical_indicator_list=req.technical_indicator_list,
         drl_lib=req.drl_lib,
         env=env_class,  # Pass the class object instead of a string
-        model_name=req.model,
+        model=req.model,
         erl_params=req.erl_params,  # Pass ERL parameters
         cwd=cwd_path,
         break_step=req.break_step,
@@ -273,6 +282,74 @@ def paper_trade_endpoint(req: PaperTradingRequest):
             "logs": logs,
             "error": str(e)  # Include the error message
         }
+        
+                                                                                                                                                                   
+class TestRequest(BaseModel):                                                                                                                                      
+    start_date: str  = Field(..., example="2024-10-25")                                                                                                            
+    end_date: str    = Field(..., example="2025-02-02")                                                                                                            
+    ticker_list: list[str] = Field(..., example=["BTCUSDT"])                                                                                                       
+    data_source: str  = Field("binance", example="binance")                                                                                                        
+    time_interval: str= Field("30m", example="30m")                                                                                                                
+    technical_indicator_list: list[str] = Field(..., example=["macd","rsi","cci","dx"])                                                                            
+    drl_lib: str      = Field("elegantrl", example="elegantrl")                                                                                                    
+    env: str          = Field("CryptoTradingEnv", example="CryptoTradingEnv")                                                                                      
+    model: str   = Field("ppo", example="ppo")                                                                                                                
+    net_dimension: list[int] = Field(..., example=[256, 128, 64, 32])                                                                                              
+    cwd: str                   = Field(..., example="papertrading_crypto")                                                                                       
+    initial_capital: float = Field(10000, example=10000)   
+    
+# Test endpoint to trigger the test function
+@app.post("/test")                                                                                                                                                 
+def test_endpoint(req: TestRequest):                                                                                                                               
+    logs = []                                                                                                                                                      
+                                                                                                                                                                   
+    logger.info("Received test request")                                                                                                                           
+    logs.append("Received test request")                                                                                                                           
+    logger.info(f"Request data: {req.dict()}")                                                                                                                     
+    logs.append(f"Request data: {req.dict()}")                                                                                                                     
+                                                                                                                                                                   
+    script_dir = os.path.dirname(os.path.abspath(__file__))                                                                                                        
+    cwd_path = script_dir + "/papertrading_crypto"                                                                                                                 
+    if not os.path.exists(cwd_path):                                                                                                                               
+        os.makedirs(cwd_path)                                                                                                                                      
+        logger.info(f"Created directory: {cwd_path}")                                                                                                              
+        logs.append(f"Created directory: {cwd_path}")                                                                                                              
+    else:                                                                                                                                                          
+        logger.info(f"Directory already exists: {cwd_path}")                                                                                                       
+        logs.append(f"Directory already exists: {cwd_path}")                                                                                                       
+                                                                                                                                                                   
+    env_class = ENV_CLASSES.get(req.env)                                                                                                                           
+    if env_class is None:                                                                                                                                          
+        logger.error(f"Environment class '{req.env}' not found")                                                                                                   
+        return {                                                                                                                                                   
+            "message": f"Environment class '{req.env}' not found!",                                                                                                
+            "logs": logs                                                                                                                                           
+        }                                                                                                                                                          
+                                                                                                                                                                   
+    test(                                                                                                                                                          
+        start_date=req.start_date,                                                                                                                                 
+        end_date=req.end_date,                                                                                                                                     
+        ticker_list=req.ticker_list,                                                                                                                               
+        data_source=req.data_source,                                                                                                                               
+        time_interval=req.time_interval,                                                                                                                           
+        technical_indicator_list=req.technical_indicator_list,                                                                                                     
+        drl_lib=req.drl_lib,                                                                                                                                       
+        env=env_class,                                                                                                                                             
+        model=req.model,                                                                                                                                 
+        net_dimension=req.net_dimension,                                                                                                                           
+        cwd=cwd_path,                                                                                                                                              
+        initial_capital=req.initial_capital,                                                                                                                       
+        log_file_path=f"{cwd_path}/test.log",                                                                                                                      
+    )                                                                                                                                                              
+                                                                                                                                                                   
+    logger.info("Test triggered")                                                                                                                                  
+    logs.append("Test triggered")                                                                                                                                  
+                                                                                                                                                                   
+    return {                                                                                                                                                       
+        "message": "Test triggered!",                                                                                                                              
+        "received": req.dict(),                                                                                                                                    
+        "logs": logs                                                                                                                                               
+    }                
 
 ##########################
 # 3) Launch with uvicorn

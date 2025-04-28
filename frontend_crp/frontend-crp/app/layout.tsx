@@ -49,6 +49,9 @@ import type { Metadata } from "next";
                </a>                                                                                                                                                                   
                <a href="/paper-trading" className="text-white hover:text-blue-300 transition duration-300 ease-in-out transform hover:scale-105">                                     
                  Paper Trade                                                                                                                                                          
+               </a>
+               <a href="/test" className="text-white hover:text-blue-300 transition duration-300 ease-in-out transform hover:scale-105">                                       
+                 Strategy Test
                </a>                                                                                                                                                                   
              </div>                                                                                                                                                                   
            </nav>                                                                                                                                                                     

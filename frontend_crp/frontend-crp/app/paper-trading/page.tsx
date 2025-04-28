@@ -61,22 +61,6 @@ export default function PaperTradingPage() {
       max_trade_duration: maxTradeDuration,
       log_file_path: logFilePath,
     };
-      ticker_list: tickersArray,
-      time_interval: timeInterval,
-      drl_lib: drlLib,
-      agent: agent,
-      cwd: cwd,
-      net_dim: netDimArray,
-      state_dim: Number(stateDim),
-      action_dim: Number(actionDim),
-      API_KEY: apiKey,
-      API_SECRET: apiSecret,
-      API_BASE_URL: apiBaseUrl,
-      tech_indicator_list: techArray,
-      max_stock: Number(maxStock),
-      log_file_path: logFilePath,  // Use logFilePath from state
-      
-    };
     console.log("The payload :", payload);
 
     try {

@@ -339,6 +339,7 @@ class AlpacaPaperTradingCryptoLive:
     def trade(self):
         """Fetch state, compute action, and place trades accordingly."""
         state = self.get_state()
+        self.logger.info(f"After get_state: self.stocks = {self.stocks}")
         if self.drl_lib == 'elegantrl':
             with torch.no_grad():
                 s_tensor = torch.as_tensor(state, dtype=torch.float32, device=self.device).unsqueeze(0)
@@ -386,6 +387,8 @@ class AlpacaPaperTradingCryptoLive:
                     if qty > 0:
                         respSO = []
                         self.submitOrder(qty, self.stockUniverse[0], 'buy', respSO)
+                        self.stocks[0] = qty
+                        self.logger.info(f"Buy order placed for {self.stocks[0]} of {self.stockUniverse[0]}")
                         self.stocks_cd[0] = 0
                         self.in_position = True
                         self.trade_entry_step = self.current_step
@@ -397,6 +400,7 @@ class AlpacaPaperTradingCryptoLive:
             current_price = self.price[0]
             self.logger.info(f"Trade open. Current price: {current_price}, TP: {self.target_price}, SL: {self.stop_loss_price}")
             # Manage open trade without recalculating target_price and stop_loss_price
+            self.logger.info(f"Checking exit: current_price={current_price:.2f}, "f"target={self.target_price:.2f}, qty={self.stocks[0]}")
             if current_price >= self.target_price:
                 qty = self.stocks[0]
                 if qty > 0:
@@ -448,12 +452,18 @@ class AlpacaPaperTradingCryptoLive:
 
         # Get current positions
         positions = self.alpaca.list_positions()
+        self.logger.info(f"Alpaca positions raw: {[ (p.symbol, p.qty) for p in positions ]}")
         stock_array = [0] * len(self.stockUniverse)
         for p in positions:
-            sym = p.symbol
-            if sym in self.stockUniverse:
-                idx = self.stockUniverse.index(sym)
-                stock_array[idx] = abs(int(float(p.qty)))
+            api_sym    = p.symbol            # e.g. "BTCUSD"
+            for idx, tic in enumerate(self.stockUniverse):
+                # tic is "BTC/USD"; drop non-alphas to compare
+                clean_api = api_sym.upper().replace("/", "").replace("-", "")
+                clean_tic = tic .upper().replace("/", "").replace("-", "")
+                if clean_api == clean_tic:
+                    stock_array[idx] = abs(float(p.qty))
+                    break
+
         self.stocks = np.array(stock_array, dtype=float)
         self.cash = float(self.alpaca.get_account().cash)
         self.price = price

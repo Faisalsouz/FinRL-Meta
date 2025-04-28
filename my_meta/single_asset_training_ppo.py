@@ -49,7 +49,7 @@ pio.renderers.default = "browser"  # or "notebook" for Jupyter
  # Load environment variables from .env file                                                                                                                                                          
 load_dotenv()  
 # logging utility
-def setup_logger(log_file_name="training.log", log_dir_name="papertrading_crypto"):
+def setup_logger(log_file_name="training.log", log_dir_name="papertrading_crypto",logger_name="train_logger"):
     """
     Sets up a logger that writes to a specified log file within a given directory.
     
@@ -68,7 +68,7 @@ def setup_logger(log_file_name="training.log", log_dir_name="papertrading_crypto
 
     
     # Configure the logger
-    logger = logging.getLogger("train_logger")
+    logger = logging.getLogger(logger_name)
     logger.setLevel(logging.INFO)
 
     # Avoid duplicate handlers during reloads
@@ -772,8 +772,8 @@ def test(
             • A grouped bar chart comparing predicted signal and realized trade return for each trade.
             • A filtered scatter plot showing only steps where trade events occurred.
     """
-    logger = setup_logger()
-    logger.info(f"Received kwargs: {kwargs}")
+    logger = setup_logger(log_file_name="test.log", log_dir_name="papertrading_crypto")                                                                            
+    logger.info(f"Received test parameters: {locals()}")  
     
     from meta.data_processor import DataProcessor
     dp = DataProcessor(data_source, start_date, end_date, time_interval)
