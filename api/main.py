@@ -197,7 +197,7 @@ def train_endpoint(req: TrainRequest):
         technical_indicator_list=req.technical_indicator_list,
         drl_lib=req.drl_lib,
         env=env_class,  # Pass the class object instead of a string
-        model=req.model,
+        model_name=req.model,
         erl_params=req.erl_params,  # Pass ERL parameters
         cwd=cwd_path,
         break_step=req.break_step,
@@ -338,7 +338,7 @@ def test_endpoint(req: TestRequest):
         technical_indicator_list=req.technical_indicator_list,
         drl_lib=req.drl_lib,
         env=env_class,
-        model=req.model,
+        model_name=req.model,
         net_dimension=req.net_dimension,
         cwd=cwd_path,
         initial_capital=req.initial_capital,
