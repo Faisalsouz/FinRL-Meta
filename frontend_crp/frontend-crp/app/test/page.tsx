@@ -21,6 +21,10 @@ export default function TestPage() {
   const [initialCapital, setInitialCapital] = useState(10000);                                                                                                                      
   const [netDimension, setNetDimension] = useState("256, 128, 64, 32");                                                                                                             
                                                                                                                                                                                     
+  const [atrWindow, setAtrWindow] = useState(14); // Default ATR window                                                                                                             
+  const [tpMultiplier, setTpMultiplier] = useState(2); // Default TP multiplier                                                                                                     
+  const [slMultiplier, setSlMultiplier] = useState(1); // Default SL multiplier                                                                                                     
+                                                                                                                                                                                    
   const [response, setResponse] = useState<any>(null);                                                                                                                              
   const [error, setError] = useState<string | null>(null);                                                                                                                          
                                                                                                                                                                                     
@@ -48,6 +52,9 @@ export default function TestPage() {
       cwd: cwd,                                                                                                                                                                     
       initial_capital: initialCapital,                                                                                                                                              
       net_dimension: netDimArray,                                                                                                                                                   
+      atr_window: atrWindow,           // Include ATR window                                                                                                                        
+      tp_multiplier: tpMultiplier,     // Include TP multiplier                                                                                                                    
+      sl_multiplier: slMultiplier,     // Include SL multiplier                                                                                                                    
     };                                                                                                                                                                              
                                                                                                                                                                                     
     try {                                                                                                                                                                           
@@ -220,6 +227,39 @@ export default function TestPage() {
                 value={netDimension}                                                                                                                                                
                 onChange={(e) => setNetDimension(e.target.value)}                                                                                                                   
                 required                                                                                                                                                            
+                className="w-full rounded border border-gray-300 px-3 py-2"                                                                                                         
+              />                                                                                                                                                                    
+            </div>                                                                                                                                                                  
+                                                                                                                                                                                    
+            {/* ATR Window */}                                                                                                                                                       
+            <div>                                                                                                                                                                   
+              <label className="block font-medium mb-1">ATR Window</label>                                                                                                          
+              <input                                                                                                                                                                
+                type="number"                                                                                                                                                       
+                value={atrWindow}                                                                                                                                                   
+                onChange={(e) => setAtrWindow(Number(e.target.value))}                                                                                                              
+                className="w-full rounded border border-gray-300 px-3 py-2"                                                                                                         
+              />                                                                                                                                                                    
+            </div>                                                                                                                                                                  
+                                                                                                                                                                                    
+            {/* TP Multiplier */}                                                                                                                                                    
+            <div>                                                                                                                                                                   
+              <label className="block font-medium mb-1">TP Multiplier</label>                                                                                                       
+              <input                                                                                                                                                                
+                type="number"                                                                                                                                                       
+                value={tpMultiplier}                                                                                                                                                
+                onChange={(e) => setTpMultiplier(Number(e.target.value))}                                                                                                           
+                className="w-full rounded border border-gray-300 px-3 py-2"                                                                                                         
+              />                                                                                                                                                                    
+            </div>                                                                                                                                                                  
+                                                                                                                                                                                    
+            {/* SL Multiplier */}                                                                                                                                                    
+            <div>                                                                                                                                                                   
+              <label className="block font-medium mb-1">SL Multiplier</label>                                                                                                       
+              <input                                                                                                                                                                
+                type="number"                                                                                                                                                       
+                value={slMultiplier}                                                                                                                                                
+                onChange={(e) => setSlMultiplier(Number(e.target.value))}                                                                                                           
                 className="w-full rounded border border-gray-300 px-3 py-2"                                                                                                         
               />                                                                                                                                                                    
             </div>                                                                                                                                                                  
