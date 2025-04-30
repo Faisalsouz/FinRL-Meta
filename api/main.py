@@ -84,6 +84,27 @@ def fetch_logs_train():
     
     log_file_path = script_dir + "/papertrading_crypto/training.log"
     return FileResponse(log_file_path, media_type='text/plain')
+@app.get("/list_artifacts")
+def list_artifacts():
+    """
+    Endpoint to list the contents of the papertrading_crypto directory.
+    """
+    directory_path = "/home/souz_wsl/finrl_proj/FinRL_Meta/api/papertrading_crypto"
+    try:
+        files = []
+        for filename in os.listdir(directory_path):
+            file_path = os.path.join(directory_path, filename)
+            if os.path.isfile(file_path):
+                files.append({
+                    "name": filename,
+                    "created_at": os.path.getctime(file_path),
+                    "modified_at": os.path.getmtime(file_path),
+                    "path": file_path
+                })
+        return {"files": files}
+    except Exception as e:
+        return {"error": str(e)}
+
 @app.get("/download_artifact")
 def download_artifact(path: str):
     """
