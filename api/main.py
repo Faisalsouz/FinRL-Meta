@@ -284,19 +284,22 @@ def paper_trade_endpoint(req: PaperTradingRequest):
         }
         
                                                                                                                                                                    
-class TestRequest(BaseModel):                                                                                                                                      
-    start_date: str  = Field(..., example="2024-10-25")                                                                                                            
-    end_date: str    = Field(..., example="2025-02-02")                                                                                                            
-    ticker_list: list[str] = Field(..., example=["BTCUSDT"])                                                                                                       
-    data_source: str  = Field("binance", example="binance")                                                                                                        
-    time_interval: str= Field("30m", example="30m")                                                                                                                
-    technical_indicator_list: list[str] = Field(..., example=["macd","rsi","cci","dx"])                                                                            
-    drl_lib: str      = Field("elegantrl", example="elegantrl")                                                                                                    
-    env: str          = Field("CryptoTradingEnv", example="CryptoTradingEnv")                                                                                      
-    model: str   = Field("ppo", example="ppo")                                                                                                                
-    net_dimension: list[int] = Field(..., example=[256, 128, 64, 32])                                                                                              
-    cwd: str                   = Field(..., example="papertrading_crypto")                                                                                       
-    initial_capital: float = Field(10000, example=10000)   
+class TestRequest(BaseModel):
+    start_date: str  = Field(..., example="2024-10-25")
+    end_date: str    = Field(..., example="2025-02-02")
+    ticker_list: list[str] = Field(..., example=["BTCUSDT"])
+    data_source: str  = Field("binance", example="binance")
+    time_interval: str= Field("30m", example="30m")
+    technical_indicator_list: list[str] = Field(..., example=["macd","rsi","cci","dx"])
+    drl_lib: str      = Field("elegantrl", example="elegantrl")
+    env: str          = Field("CryptoTradingEnv", example="CryptoTradingEnv")
+    model: str   = Field("ppo", example="ppo")
+    net_dimension: list[int] = Field(..., example=[256, 128, 64, 32])
+    cwd: str                   = Field(..., example="papertrading_crypto")
+    initial_capital: float = Field(10000, example=10000)
+    atr_window: int = Field(14, example=14)  # Add ATR window
+    tp_multiplier: float = Field(2, example=2)  # Add TP multiplier
+    sl_multiplier: float = Field(1, example=1)  # Add SL multiplier
     
 # Test endpoint to trigger the test function
 @app.post("/test")                                                                                                                                                 
@@ -326,20 +329,23 @@ def test_endpoint(req: TestRequest):
             "logs": logs                                                                                                                                           
         }                                                                                                                                                          
                                                                                                                                                                    
-    test(                                                                                                                                                          
-        start_date=req.start_date,                                                                                                                                 
-        end_date=req.end_date,                                                                                                                                     
-        ticker_list=req.ticker_list,                                                                                                                               
-        data_source=req.data_source,                                                                                                                               
-        time_interval=req.time_interval,                                                                                                                           
-        technical_indicator_list=req.technical_indicator_list,                                                                                                     
-        drl_lib=req.drl_lib,                                                                                                                                       
-        env=env_class,                                                                                                                                             
-        model=req.model,                                                                                                                                 
-        net_dimension=req.net_dimension,                                                                                                                           
-        cwd=cwd_path,                                                                                                                                              
-        initial_capital=req.initial_capital,                                                                                                                       
-        log_file_path=f"{cwd_path}/test.log",                                                                                                                      
+    test(
+        start_date=req.start_date,
+        end_date=req.end_date,
+        ticker_list=req.ticker_list,
+        data_source=req.data_source,
+        time_interval=req.time_interval,
+        technical_indicator_list=req.technical_indicator_list,
+        drl_lib=req.drl_lib,
+        env=env_class,
+        model=req.model,
+        net_dimension=req.net_dimension,
+        cwd=cwd_path,
+        initial_capital=req.initial_capital,
+        atr_window=req.atr_window,  # Pass ATR window
+        tp_multiplier=req.tp_multiplier,  # Pass TP multiplier
+        sl_multiplier=req.sl_multiplier,  # Pass SL multiplier
+        log_file_path=f"{cwd_path}/test.log",
     )                                                                                                                                                              
                                                                                                                                                                    
     logger.info("Test triggered")                                                                                                                                  
