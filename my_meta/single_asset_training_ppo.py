@@ -757,6 +757,9 @@ def test(
     env,
     model_name,
     if_vix=False,
+    atr_window=14,           # Default ATR window                                                                                                                                   
+    tp_multiplier=2,         # Default TP multiplier                                                                                                                                
+    sl_multiplier=1, 
     **kwargs,
 ):
     """
@@ -793,6 +796,9 @@ def test(
         "low_array": low_array,
         "close_array": close_array,
         "if_train": False,
+        "atr_window": atr_window,                                                                                                               
+        "tp_multiplier": tp_multiplier,                                                                                                            
+        "sl_multiplier": sl_multiplier,
         # Optionally, you can pass "max_trade_duration": 20 (or desired value) here.
     }
     env_instance = env(config=env_config)
