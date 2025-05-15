@@ -25,6 +25,11 @@ export default function HomePage() {
             Go to Paper Trading Form
           </Link>
         </li>
+        <li>
+          <Link href="/performance-analysis" className="text-blue-600 hover:underline">
+            Go to Performance Analysis
+          </Link>
+        </li>
       </ul>
     </div>
   );
