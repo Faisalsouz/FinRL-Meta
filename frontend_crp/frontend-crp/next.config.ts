@@ -8,7 +8,7 @@ const nextConfig: NextConfig = {
     }
     return config;
   },
-  turbopack: {
+  turbo: {
     // Example configuration for Turbopack
     root: __dirname,
     rules: {
