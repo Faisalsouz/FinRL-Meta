@@ -304,6 +304,11 @@ class AlpacaPaperTradingCryptoLive:
 
         self.stop_trading = False  # Flag to control the trading loop
         self.logger.info(f"PaperTradingCryptoLive with tickers: {ticker_list}")
+        
+        # Attributes for logging data
+        self.trade_logs = []
+        self.step_logs = []
+        self.log_file_path = log_file_path
         self.logger.info(f"Time interval = {self.time_interval}")
 
     def run(self):
@@ -335,6 +340,7 @@ class AlpacaPaperTradingCryptoLive:
     def stop(self):
         """Stop the trading loop."""
         self.stop_trading = True
+        self.save_logs_to_csv()
 
     def trade(self):
         """Fetch state, compute action, and place trades accordingly."""
@@ -393,8 +399,18 @@ class AlpacaPaperTradingCryptoLive:
                         self.in_position = True
                         self.trade_entry_step = self.current_step
                         self.logger.info(f"Trade initiated: Entry={self.entry_price}, TP={self.target_price}, SL={self.stop_loss_price}")
-                else:
-                    self.logger.info("Not enough historical data for ATR calculation.")
+                    # Log trade entry
+                    self.trade_logs.append({
+                        "step": self.current_step,
+                        "action": "buy",
+                        "price": self.entry_price,
+                        "quantity": qty,
+                        "target_price": self.target_price,
+                        "stop_loss_price": self.stop_loss_price,
+                        "atr": atr
+                    })
+            else:
+                self.logger.info("Not enough historical data for ATR calculation.")
         else:
             # Manage open trade
             current_price = self.price[0]
@@ -503,3 +519,22 @@ class AlpacaPaperTradingCryptoLive:
         else:
             self.logger.info(f"Quantity=0, skipping order for {symbol} ({side}).")
             resp.append(True)
+    def save_logs_to_csv(self):
+        """Save trade and step logs to CSV files."""
+        import csv
+        trade_log_path = self.log_file_path.replace(".log", "_trade_logs.csv")
+        step_log_path = self.log_file_path.replace(".log", "_step_logs.csv")
+        
+        # Save trade logs
+        with open(trade_log_path, mode='w', newline='') as file:
+            writer = csv.DictWriter(file, fieldnames=self.trade_logs[0].keys())
+            writer.writeheader()
+            writer.writerows(self.trade_logs)
+        
+        # Save step logs
+        with open(step_log_path, mode='w', newline='') as file:
+            writer = csv.DictWriter(file, fieldnames=self.step_logs[0].keys())
+            writer.writeheader()
+            writer.writerows(self.step_logs)
+        
+        self.logger.info(f"Logs saved to {trade_log_path} and {step_log_path}")
