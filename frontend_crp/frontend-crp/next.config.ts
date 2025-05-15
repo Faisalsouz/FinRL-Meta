@@ -7,21 +7,7 @@ const nextConfig: NextConfig = {
       config.devtool = 'source-map';
     }
     return config;
-  },
-  turbo: {
-    // Example configuration for Turbopack
-    root: __dirname,
-    rules: {
-      '*.svg': {
-        loaders: ['@svgr/webpack'],
-        as: '*.js',
-      },
-    },
-    resolveAlias: {
-      underscore: 'lodash',
-    },
-    resolveExtensions: ['.mdx', '.tsx', '.ts', '.jsx', '.js', '.mjs', '.json'],
-  },
+  }
 };
 
 export default nextConfig;
