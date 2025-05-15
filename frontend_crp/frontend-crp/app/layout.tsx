@@ -55,7 +55,10 @@ import type { Metadata } from "next";
                </a>
                <a href="/artifact" className="text-white hover:text-blue-300 transition duration-300 ease-in-out transform hover:scale-105">
                  Artifacts
-               </a>                                                                                                                                                                   
+               </a>  
+               <a href="/performance-analysis" className="text-white hover:text-blue-300 transition duration-300 ease-in-out transform hover:scale-105">
+                 Performance Analysis
+               </a>                                                                                                                                                                  
              </div>                                                                                                                                                                   
            </nav>                                                                                                                                                                     
          </header>                                                                                                                                                                    
