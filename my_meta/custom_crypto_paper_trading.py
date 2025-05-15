@@ -425,6 +425,14 @@ class AlpacaPaperTradingCryptoLive:
                     self.stocks_cd[0] = 0
                     self.in_position = False
                     self.logger.info(f"Take profit: Sold at {current_price}")
+                    # Log trade exit
+                    self.trade_logs.append({
+                        "step": self.current_step,
+                        "action": "sell",
+                        "price": current_price,
+                        "quantity": qty,
+                        "result": "TP Hit"
+                    })
             elif current_price <= self.stop_loss_price:
                 qty = self.stocks[0]
                 if qty > 0:
@@ -433,6 +441,14 @@ class AlpacaPaperTradingCryptoLive:
                     self.stocks_cd[0] = 0
                     self.in_position = False
                     self.logger.info(f"Stop loss: Sold at {current_price}")
+                    # Log trade exit
+                    self.trade_logs.append({
+                        "step": self.current_step,
+                        "action": "sell",
+                        "price": current_price,
+                        "quantity": qty,
+                        "result": "SL Hit"
+                    })
             elif (self.current_step - self.trade_entry_step) >= self.max_trade_duration:
                 qty = self.stocks[0]
                 if qty > 0:
@@ -441,8 +457,26 @@ class AlpacaPaperTradingCryptoLive:
                     self.stocks_cd[0] = 0
                     self.in_position = False
                     self.logger.info(f"Timeout exit: Sold at {current_price}")
+                    # Log trade exit
+                    self.trade_logs.append({
+                        "step": self.current_step,
+                        "action": "sell",
+                        "price": current_price,
+                        "quantity": qty,
+                        "result": "Timeout"
+                    })
 
         # Update cash balance
+        self.cash = float(self.alpaca.get_account().cash)
+        
+        # Log step data
+        self.step_logs.append({
+            "step": self.current_step,
+            "price": self.price[0],
+            "cash": self.cash,
+            "equity": self.cash + (self.price[0] * self.stocks[0]),
+            "in_position": self.in_position
+        })
         self.cash = float(self.alpaca.get_account().cash)
 
     def get_state(self):
