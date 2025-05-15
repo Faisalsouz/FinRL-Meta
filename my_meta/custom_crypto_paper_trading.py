@@ -572,3 +572,22 @@ class AlpacaPaperTradingCryptoLive:
             writer.writerows(self.step_logs)
         
         self.logger.info(f"Logs saved to {trade_log_path} and {step_log_path}")
+
+        # Save performance data to CSV
+        performance_csv_path = self.log_file_path.replace(".log", "_performance_data.csv")
+        performance_data = {
+            "atr_avg": self.calculate_atr_avg(),
+            "profit_loss": self.calculate_profit_loss(),
+            "equity_change": self.calculate_equity_change(),
+            "avg_trade_per_day": self.calculate_avg_trade_per_day(),
+            "win_trades": self.calculate_win_trades(),
+            "lost_trades": self.calculate_lost_trades(),
+            "timeout_trades": self.calculate_timeout_trades(),
+            "avg_win": self.calculate_avg_win(),
+            "avg_loss": self.calculate_avg_loss(),
+            "stop_loss_stats": self.calculate_stop_loss_stats()
+        }
+        with open(performance_csv_path, mode='w', newline='') as file:
+            writer = csv.DictWriter(file, fieldnames=performance_data.keys())
+            writer.writeheader()
+            writer.writerow(performance_data)

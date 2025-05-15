@@ -145,7 +145,7 @@ def fetch_performance_analysis(start_date: str = None, end_date: str = None):
         avg_loss = trade_df[trade_df['result'] == 'SL Hit']['price'].mean()
         stop_loss_stats = trade_df[trade_df['result'] == 'SL Hit']['price'].sum()
         
-        return {
+        performance_data = {
             "atr_avg": atr_avg,
             "profit_loss": profit_loss.to_dict(),
             "equity_change": equity_change,
@@ -157,6 +157,16 @@ def fetch_performance_analysis(start_date: str = None, end_date: str = None):
             "avg_loss": avg_loss,
             "stop_loss_stats": stop_loss_stats
         }
+
+        # Save performance data to CSV
+        performance_csv_path = script_dir + "/papertrading_crypto/performance_data.csv"
+        import csv
+        with open(performance_csv_path, mode='w', newline='') as file:
+            writer = csv.DictWriter(file, fieldnames=performance_data.keys())
+            writer.writeheader()
+            writer.writerow(performance_data)
+
+        return performance_data
     except Exception as e:
         return {"error": str(e)}
 
