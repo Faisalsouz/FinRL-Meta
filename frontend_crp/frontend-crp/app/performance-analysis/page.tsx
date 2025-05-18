@@ -15,14 +15,14 @@ interface PerformanceData {
   timeout_trades: number[];
   avg_win: number[];
   avg_loss: number[];
-  stop_loss_stats: string[];
+  stop_loss_stats: number[];
 }
 
 export default function PerformanceAnalysisPage() {
   const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
   const [performanceData, setPerformanceData] = useState<PerformanceData | null>(null);
-  const [startDate, setStartDate] = useState("2025-01-01");
-  const [endDate, setEndDate] = useState("2025-02-01");
+  const [startDate, setStartDate] = useState("2025-05-18");
+  const [endDate, setEndDate] = useState("2025-05-18");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -33,8 +33,10 @@ export default function PerformanceAnalysisPage() {
       const response = await axios.get(`${API_BASE_URL}/fetch_performance_analysis`, {
         params: { start_date: startDate, end_date: endDate }
       });
+      console.log("Performance data fetched:", response.data);  // Add logging
       setPerformanceData(response.data);
     } catch (error) {
+      console.error("Error fetching performance data:", error);
       setError("Error fetching performance data");
       setPerformanceData(null);
     } finally {
