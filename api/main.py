@@ -125,15 +125,12 @@ def fetch_performance_analysis(start_date: str = None, end_date: str = None):
     
     try:
         trade_df = pd.read_csv(trade_log_path)
-        step_df = pd.read_csv(step_log_path)
         performance_df = pd.read_csv(performance_csv_path)
         
         if start_date:
             trade_df = trade_df[trade_df['date'] >= start_date]
             step_df = step_df[step_df['date'] >= start_date]
-        if end_date:
             trade_df = trade_df[trade_df['date'] <= end_date]
-            step_df = step_df[step_df['date'] <= end_date]
         
         # Extract performance metrics from the performance CSV
         performance_data = performance_df.to_dict(orient='records')[0]

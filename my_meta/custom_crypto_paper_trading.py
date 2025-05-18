@@ -511,6 +511,7 @@ class AlpacaPaperTradingCryptoLive:
                         "quantity": qty,
                         "result": "TP Hit"
                     })
+            self.save_logs_to_csv()  # Save performance data when trade is closed
             elif current_price <= self.stop_loss_price:
                 qty = self.stocks[0]
                 if qty > 0:
@@ -527,6 +528,7 @@ class AlpacaPaperTradingCryptoLive:
                         "quantity": qty,
                         "result": "SL Hit"
                     })
+            self.save_logs_to_csv()  # Save performance data when trade is closed
             elif (self.current_step - self.trade_entry_step) >= self.max_trade_duration:
                 qty = self.stocks[0]
                 if qty > 0:
@@ -676,7 +678,8 @@ class AlpacaPaperTradingCryptoLive:
             "avg_loss": self.calculate_avg_loss(),
             "stop_loss_stats": self.calculate_stop_loss_stats()
         }
-        with open(performance_csv_path, mode='w', newline='') as file:
+        with open(performance_csv_path, mode='a', newline='') as file:  # 'a' mode to append
             writer = csv.DictWriter(file, fieldnames=performance_data.keys())
-            writer.writeheader()
+            if file.tell() == 0:  # Check if file is empty to write header
+                writer.writeheader()
             writer.writerow(performance_data)
