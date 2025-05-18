@@ -2672,3 +2672,354 @@
 
 # 2025-05-13 20:10:31.448223
 +/add my_meta/custom_crypto_paper_trading.py
+
+# 2025-05-13 20:15:42.543795
++Please see how test function is working in `single_asset_training_ppo`  to create performance graphs , which are very help full. I want to add same logic in side custome crpyto paper trading env which saves the csv or json in wording director and then I will later write the login at main to perfrom calcualtion from that collected data. and based on buttong or asked user perfromance trype it colcuate it shows on front end. please do not try to add every thing at onece due to model limit. give me step by step code. like frist step saving csv ; then next step adding main.py logic and then third adding front end button. 
+
+# 2025-05-13 20:16:01.793213
++n
+
+# 2025-05-15 19:24:35.363557
++hi
+
+# 2025-05-15 19:28:02.521103
++n
+
+# 2025-05-15 19:29:39.726885
++exit 
+
+# 2025-05-15 19:30:08.931893
++n
+
+# 2025-05-15 19:30:09.909834
++exit
+
+# 2025-05-15 19:31:28.959744
++/architect
+
+# 2025-05-15 19:32:35.113357
++/add my_meta/custom_crypto_paper_trading.py 
+
+# 2025-05-15 19:33:06.138230
++/add my_meta/single_asset_training_ppo.py 
+
+# 2025-05-15 20:30:40.422673
++Please don't suggest code, and it possible place to add. Do not wirte all code in onece rather in phases. OK here is what I want to acheive. I want to add papertarding performance indicator. very similar to test function in module `single_asset_training_ppo`. So. Using logs crate CSV or any structure formate to create; performance analysis.
++like, change in equity of overtime.
++Ability to filter with dates.
++endpoint to add and calculate [may be shown on frontend as well ] multiple diff charts;
++
++ATR average
++Profit and loss for given time windows.
++change in equity for given time
++Average trade in a days
++wind vs lost trade
++time out trades
++average win
++average loss
++stop loss stats.
++composite analysis like action value for each step i.e interval time , trade started . Trade open trade close , color codings. So here is plan. first give me code for writing csv or json during paper trading. phase two creating endpoint in api/main.py  third adding frontend page, with button or routes like pln chart , atr avergae chart, complete trade history, step wise. action values. chart. etc. 
+
+# 2025-05-15 20:30:45.951333
++yes
+
+# 2025-05-15 20:35:23.643369
++n
+
+# 2025-05-15 20:35:45.165477
++yes
+
+# 2025-05-15 20:42:35.997752
++proceed to phase two 
+
+# 2025-05-15 20:43:19.415309
++yes
+
+# 2025-05-15 20:43:45.570776
++proceed to phase 3
+
+# 2025-05-15 20:44:08.567791
++yes
+
+# 2025-05-15 20:47:47.910955
++please read the main.py and see if I have to give file path in papertrading route , where it should save the performance data into csv? also explain me how that that works. are you change logs some how as I need both logs and additionally performance analyisis data in csv. ?
+
+# 2025-05-15 20:47:54.053381
++n
+
+# 2025-05-15 20:55:30.556350
++why you are adding file_path with extention .log as it already used by writing logs function. which is already there to wirte the logs in file path. The csv director  path name I don't want to specify additionally  , it should be same as log path name api/papertrading crpyto [same for saving everythin, test result, logs etc. ]. However please add logic; if csv already not exist in log directory, create the peformance .csv. and then read it when you need to calcautle chart and analyis on frontend.  
+
+# 2025-05-15 20:58:26.163362
++yes
+
+# 2025-05-15 21:06:38.382075
++when I run npm run dev here is error I am getting > frontend-crp@0.1.0 dev
++> next dev --turbopack
++
++   ▲ Next.js 15.2.1 (Turbopack)
++   - Local:        http://localhost:3000
++   - Network:      http://10.255.255.254:3000
++   - Environments: .env.local
++
++ ✓ Starting...
++ ⚠ Invalid next.config.ts options detected: 
++ ⚠     Unrecognized key(s) in object: 'turbo'
++ ⚠ See more info here: https://nextjs.org/docs/messages/invalid-next-config
++ ✓ Ready in 907ms
++ ⚠ Webpack is configured while Turbopack is not, which may cause problems.
++ ⚠ See instructions if you need to configure Turbopack:
++  https://nextjs.org/docs/app/api-reference/next-config-js/turbo
+
+# 2025-05-15 21:06:49.577284
++yes
+
+# 2025-05-15 21:07:12.257140
++n
+
+# 2025-05-15 21:07:17.530066
++yes
+
+# 2025-05-15 21:10:24.514417
++still error persists > frontend-crp@0.1.0 dev
++> next dev --turbopack
++
++   ▲ Next.js 15.2.1 (Turbopack)
++   - Local:        http://localhost:3000
++   - Network:      http://10.255.255.254:3000
++   - Environments: .env.local
++
++ ✓ Starting...
++ ⚠ Invalid next.config.ts options detected: 
++ ⚠     Unrecognized key(s) in object: 'turbopack'
++ ⚠ See more info here: https://nextjs.org/docs/messages/invalid-next-config
++ ✓ Ready in 802ms
++ ⚠ Webpack is configured while Turbopack is not, which may cause problems.
++ ⚠ See instructions if you need to configure Turbopack:
++  https://nextjs.org/docs/app/api-reference/next-config-js/turbo
+
+# 2025-05-15 21:10:27.630487
++n
+
+# 2025-05-15 21:11:13.666172
++yes
+
+# 2025-05-15 21:12:19.407747
++both turbo and turpbopack are not valid object > frontend-crp@0.1.0 dev
++> next dev --turbopack
++
++   ▲ Next.js 15.2.1 (Turbopack)
++   - Local:        http://localhost:3000
++   - Network:      http://10.255.255.254:3000
++   - Environments: .env.local
++
++ ✓ Starting...
++ ⚠ Invalid next.config.ts options detected: 
++ ⚠     Unrecognized key(s) in object: 'turbo'
++ ⚠ See more info here: https://nextjs.org/docs/messages/invalid-next-config
++ ✓ Ready in 805ms
++ ⚠ Webpack is configured while Turbopack is not, which may cause problems.
++ ⚠ See instructions if you need to configure Turbopack:
++  https://nextjs.org/docs/app/api-reference/next-config-js/turbo
+
+# 2025-05-15 21:12:39.580538
++yes
+
+# 2025-05-15 21:14:43.535768
++server is not started and working but I still see following warnings. why these two things are needed adn what value they adds. webpack and turpo  ⚠ Webpack is configured while Turbopack is not, which may cause problems.
++ ⚠ See instructions if you need to configure Turbopack:
++  https://nextjs.org/docs/app/api-reference/next-config-js/turbo
+
+# 2025-05-15 21:16:31.211770
++n
+
+# 2025-05-15 21:18:33.142267
++I can see frontend_crp/frontend-crp/app/performance-analysis route but it is not visible on nevbar in layout page. can you confrim if it there already if not please add it. 
+
+# 2025-05-15 21:18:54.901580
++yes
+
+# 2025-05-15 21:20:30.521448
++here is error I see when I click route permance-analyis Error: ./app/performance-analysis/page.tsx:1:20
++Ecmascript file had an error
++[0m[31m[1m>[22m[39m[90m 1 |[39m [36mimport[39m { useState[33m,[39m useEffect } [36mfrom[39m [32m'react'[39m[33m;[39m[0m
++[0m [90m   |[39m                    [31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[0m
++[0m [90m 2 |[39m [36mimport[39m axios [36mfrom[39m [32m'axios'[39m[33m;[39m[0m
++[0m [90m 3 |[39m[0m
++[0m [90m 4 |[39m [36mexport[39m [36mdefault[39m [36mfunction[39m [33mPerformanceAnalysisPage[39m() {[0m
++
++You're importing a component that needs `useEffect`. This React hook only works in a client component. To fix, mark the file (or its parent) with the `"use client"` directive.
++
++ Learn more: https://nextjs.org/docs/app/api-reference/directives/use-client
++    at BuildError (http://localhost:3000/_next/static/chunks/%5Broot%20of%20the%20server%5D__344122cf._.js:20850:41)
++    at react-stack-bottom-frame (http://localhost:3000/_next/static/chunks/node_modules_react-dom_82bb97c6._.js:12388:24)
++    at renderWithHooks (http://localhost:3000/_next/static/chunks/node_modules_react-dom_82bb97c6._.js:3402:24)
++    at updateFunctionComponent (http://localhost:3000/_next/static/chunks/node_modules_react-dom_82bb97c6._.js:4726:21)
++    at beginWork (http://localhost:3000/_next/static/chunks/node_modules_react-dom_82bb97c6._.js:5358:24)
++    at runWithFiberInDEV (http://localhost:3000/_next/static/chunks/node_modules_react-dom_82bb97c6._.js:631:20)
++    at performUnitOfWork (http://localhost:3000/_next/static/chunks/node_modules_react-dom_82bb97c6._.js:7947:97)
++    at workLoopSync (http://localhost:3000/_next/static/chunks/node_modules_react-dom_82bb97c6._.js:7840:40)
++    at renderRootSync (http://localhost:3000/_next/static/chunks/node_modules_react-dom_82bb97c6._.js:7823:13)
++    at performWorkOnRoot (http://localhost:3000/_next/static/chunks/node_modules_react-dom_82bb97c6._.js:7558:211)
++    at performWorkOnRootViaSchedulerTask (http://localhost:3000/_next/static/chunks/node_modules_react-dom_82bb97c6._.js:8386:9)
++    at MessagePort.performWorkUntilDeadline (http://localhost:3000/_next/static/chunks/node_modules_beb00741._.js:1462:64)
+
+# 2025-05-15 21:20:38.918440
++n
+
+# 2025-05-15 21:20:53.970990
++S
+
+# 2025-05-15 21:21:21.517277
++yes
+
+# 2025-05-15 21:22:25.252283
++now here is erro Error: ./app/performance-analysis/page.tsx:4:1
++[1m[31mModule not found[39m[22m: Can't resolve [32m'axios'[39m
++[0m [90m 2 |[39m[0m
++[0m [90m 3 |[39m [36mimport[39m { useState[33m,[39m useEffect } [36mfrom[39m [32m'react'[39m[33m;[39m[0m
++[0m[31m[1m>[22m[39m[90m 4 |[39m [36mimport[39m axios [36mfrom[39m [32m'axios'[39m[33m;[39m[0m
++[0m [90m   |[39m [31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[0m
++[0m [90m 5 |[39m[0m
++[0m [90m 6 |[39m [36mexport[39m [36mdefault[39m [36mfunction[39m [33mPerformanceAnalysisPage[39m() {[0m
++[0m [90m 7 |[39m   [36mconst[39m [33mAPI_BASE_URL[39m [33m=[39m process[33m.[39menv[33m.[39m[33mNEXT_PUBLIC_API_BASE_URL[39m[33m;[39m[0m
++
++https://nextjs.org/docs/messages/module-not-found
++    at BuildError (http://localhost:3000/_next/static/chunks/%5Broot%20of%20the%20server%5D__344122cf._.js:20850:41)
++    at react-stack-bottom-frame (http://localhost:3000/_next/static/chunks/node_modules_react-dom_82bb97c6._.js:12388:24)
++    at renderWithHooks (http://localhost:3000/_next/static/chunks/node_modules_react-dom_82bb97c6._.js:3402:24)
++    at updateFunctionComponent (http://localhost:3000/_next/static/chunks/node_modules_react-dom_82bb97c6._.js:4726:21)
++    at beginWork (http://localhost:3000/_next/static/chunks/node_modules_react-dom_82bb97c6._.js:5358:24)
++    at runWithFiberInDEV (http://localhost:3000/_next/static/chunks/node_modules_react-dom_82bb97c6._.js:631:20)
++    at performUnitOfWork (http://localhost:3000/_next/static/chunks/node_modules_react-dom_82bb97c6._.js:7947:97)
++    at workLoopSync (http://localhost:3000/_next/static/chunks/node_modules_react-dom_82bb97c6._.js:7840:40)
++    at renderRootSync (http://localhost:3000/_next/static/chunks/node_modules_react-dom_82bb97c6._.js:7823:13)
++    at performWorkOnRoot (http://localhost:3000/_next/static/chunks/node_modules_react-dom_82bb97c6._.js:7558:211)
++    at performWorkOnRootViaSchedulerTask (http://localhost:3000/_next/static/chunks/node_modules_react-dom_82bb97c6._.js:8386:9)
++    at MessagePort.performWorkUntilDeadline (http://localhost:3000/_next/static/chunks/node_modules_beb00741._.js:1462:64)
+
+# 2025-05-15 21:22:29.906885
++S
+
+# 2025-05-15 21:22:53.779962
++yes
+
+# 2025-05-18 15:26:39.960352
++/architect
+
+# 2025-05-18 15:26:47.973659
++/add api/main.py
+
+# 2025-05-18 15:27:01.490754
++/add my_meta/custom_crypto_env.py
+
+# 2025-05-18 16:02:41.152965
++please parse everything with respect to logs. in `custom_crypto_paper_trading` , like where logs are being saved and in which format they are save. second question. where does and how csv file for perforce data is being saved and when and how. I have initiated paper trading which ran sucussuflly for fist step . trade is still open and i cannot see csv for performacne data. So Iam bit confused how logs are saved and how csv file is being saved. do detail analyisis .please do not commit. changes. 
+
+# 2025-05-18 16:03:00.715035
++n
+
+# 2025-05-18 16:12:54.228656
++here is what i see. in `fetch_performance_analysis` function the endpoint look for following two already formated files. trade_log_path = script_dir + "/papertrading_crypto/paper_trading_trade_logs.csv"
++    step_log_path = script_dir + "/papertrading_crypto/paper_trading_step_logs.csv" and try to computer perfromacne. these two file are logicall should come form custom_crypto_paper_trading.py file when paper trading is initiated. my questio is that give me piece of code whwhere these function are called to create these csv file. what file path logic they are using. please give me correct code why should create these performance in csv during paper trading and if file is already not there in `log_file_path` folder. it should create reasonable name .csv. to write these two files. 
+
+# 2025-05-18 16:13:00.086372
++yes
+
+# 2025-05-18 16:18:29.180138
++next question is that the endpoint `fetch_performance_analysis` in main.py is using date filter start data and end date. so the saved csv does contain these dates of not. ?
+
+# 2025-05-18 16:18:31.269674
++n
+
+# 2025-05-18 16:19:15.391977
++yes
+
+# 2025-05-18 16:25:11.991295
++here is current error please investigate the issue. Traceback (most recent call last):
++  File "/home/souz_wsl/.pyenv/versions/3.10.0/lib/python3.10/threading.py", line 1009, in _bootstrap_inner
++    self.run()
++  File "/home/souz_wsl/.pyenv/versions/3.10.0/lib/python3.10/threading.py", line 946, in run
++    self._target(*self._args, **self._kwargs)
++  File "/home/souz_wsl/finrl_proj/FinRL_Meta/api/main.py", line 315, in start_paper_trading
++    crp_paper_trading = AlpacaPaperTradingCryptoLive(
++  File "/home/souz_wsl/finrl_proj/FinRL_Meta/my_meta/custom_crypto_paper_trading.py", line 315, in __init__
++    self.save_logs_to_csv()
++  File "/home/souz_wsl/finrl_proj/FinRL_Meta/my_meta/custom_crypto_paper_trading.py", line 575, in save_logs_to_csv
++    writer = csv.DictWriter(file, fieldnames=self.trade_logs[0].keys())
++IndexError: list index out of range
++
+
+# 2025-05-18 16:25:48.583323
++yes
+
+# 2025-05-18 16:27:08.204417
++here is current error Exception in thread Thread-1 (start_paper_trading):
++Traceback (most recent call last):
++  File "/home/souz_wsl/.pyenv/versions/3.10.0/lib/python3.10/threading.py", line 1009, in _bootstrap_inner
++    self.run()
++  File "/home/souz_wsl/.pyenv/versions/3.10.0/lib/python3.10/threading.py", line 946, in run
++    self._target(*self._args, **self._kwargs)
++  File "/home/souz_wsl/finrl_proj/FinRL_Meta/api/main.py", line 315, in start_paper_trading
++    crp_paper_trading = AlpacaPaperTradingCryptoLive(
++  File "/home/souz_wsl/finrl_proj/FinRL_Meta/my_meta/custom_crypto_paper_trading.py", line 315, in __init__
++    self.save_logs_to_csv()
++  File "/home/souz_wsl/finrl_proj/FinRL_Meta/my_meta/custom_crypto_paper_trading.py", line 596, in save_logs_to_csv
++    "atr_avg": self.calculate_atr_avg(),
++AttributeError: 'AlpacaPaperTradingCryptoLive' object has no attribute 'calculate_atr_avg'
++
+
+# 2025-05-18 16:27:52.791791
++yes
+
+# 2025-05-18 16:37:32.048747
++on additional question in both csv file of `performance_data` is there any code there which includes action value like what was value of probablity of each step like value of action. if not please add it. in perfromacne analyiss csv too. 
+
+# 2025-05-18 16:37:57.183589
++yes
+
+# 2025-05-18 16:41:51.966091
++here is current error Traceback (most recent call last):
++  File "/home/souz_wsl/.pyenv/versions/3.10.0/lib/python3.10/threading.py", line 1009, in _bootstrap_inner
++    self.run()
++  File "/home/souz_wsl/.pyenv/versions/3.10.0/lib/python3.10/threading.py", line 946, in run
++    self._target(*self._args, **self._kwargs)
++  File "/home/souz_wsl/finrl_proj/FinRL_Meta/api/main.py", line 337, in start_paper_trading
++    crp_paper_trading.run()
++  File "/home/souz_wsl/finrl_proj/FinRL_Meta/my_meta/custom_crypto_paper_trading.py", line 398, in run
++    self.trade()
++  File "/home/souz_wsl/finrl_proj/FinRL_Meta/my_meta/custom_crypto_paper_trading.py", line 563, in trade
++    self.save_logs_to_csv()
++  File "/home/souz_wsl/finrl_proj/FinRL_Meta/my_meta/custom_crypto_paper_trading.py", line 678, in save_logs_to_csv
++    "action_values": [log['action_value'] for log in self.trade_logs]
++  File "/home/souz_wsl/finrl_proj/FinRL_Meta/my_meta/custom_crypto_paper_trading.py", line 678, in <listcomp>
++    "action_values": [log['action_value'] for log in self.trade_logs]
++KeyError: 'action_value'
+
+# 2025-05-18 16:42:32.004964
++yes
+
+# 2025-05-18 16:46:37.873695
++still getting this error Exception in thread Thread-1 (start_paper_trading):
++Traceback (most recent call last):
++  File "/home/souz_wsl/.pyenv/versions/3.10.0/lib/python3.10/threading.py", line 1009, in _bootstrap_inner
++    self.run()
++  File "/home/souz_wsl/.pyenv/versions/3.10.0/lib/python3.10/threading.py", line 946, in run
++    self._target(*self._args, **self._kwargs)
++  File "/home/souz_wsl/finrl_proj/FinRL_Meta/api/main.py", line 337, in start_paper_trading
++    crp_paper_trading.run()
++  File "/home/souz_wsl/finrl_proj/FinRL_Meta/my_meta/custom_crypto_paper_trading.py", line 398, in run
++    self.trade()
++  File "/home/souz_wsl/finrl_proj/FinRL_Meta/my_meta/custom_crypto_paper_trading.py", line 563, in trade
++    self.save_logs_to_csv()
++  File "/home/souz_wsl/finrl_proj/FinRL_Meta/my_meta/custom_crypto_paper_trading.py", line 678, in save_logs_to_csv
++    "action_values": [log['action_value'] for log in self.trade_logs]
++  File "/home/souz_wsl/finrl_proj/FinRL_Meta/my_meta/custom_crypto_paper_trading.py", line 678, in <listcomp>
++    "action_values": [log['action_value'] for log in self.trade_logs]
++KeyError: 'action_value'
+
+# 2025-05-18 16:47:05.931213
++yes
+
+# 2025-05-18 16:49:25.499454
++/undo
