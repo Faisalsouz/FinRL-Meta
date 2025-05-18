@@ -512,7 +512,7 @@ class AlpacaPaperTradingCryptoLive:
                         "result": "TP Hit"
                     })
             self.save_logs_to_csv()  # Save performance data when trade is closed
-        elif current_price <= self.stop_loss_price:
+            elif current_price <= self.stop_loss_price:
                 qty = self.stocks[0]
                 if qty > 0:
                     respSO = []
