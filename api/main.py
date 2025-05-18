@@ -3,6 +3,7 @@ import os
 import sys
 from fastapi import FastAPI, Body
 import threading
+import pandas as pd
 import os
 from pydantic import BaseModel, Field
 import uvicorn
@@ -78,10 +79,6 @@ def fetch_logs():
         trade_df = pd.read_csv(trade_log_path)
         performance_df = pd.read_csv(performance_csv_path)
         
-        if start_date:
-            trade_df = trade_df[trade_df['date'] >= start_date]
-        if end_date:
-            trade_df = trade_df[trade_df['date'] <= end_date]
         
         # Extract performance metrics from the performance CSV
         performance_data = performance_df.to_dict(orient='records')[0]
