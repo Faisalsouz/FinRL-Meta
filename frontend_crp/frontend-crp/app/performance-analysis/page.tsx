@@ -49,9 +49,7 @@ export default function PerformanceAnalysisPage() {
         <button type="submit" className="px-4 py-2 bg-blue-500 text-white rounded">Fetch Data</button>
       </form>
       {error && <div>Error: {error}</div>}
-      {!performanceData ? (
-        <div>Loading...</div>
-      ) : (
+      {performanceData ? (
         <table className="min-w-full bg-white dark:bg-gray-800">
           <thead>
             <tr>
@@ -69,7 +67,7 @@ export default function PerformanceAnalysisPage() {
             </tr>
           </thead>
           <tbody>
-            {performanceData && performanceData.dates && performanceData.dates.map((date, index) => (
+            {performanceData.dates.map((date, index) => (
               <tr key={index}>
                 <td className="border px-4 py-2">{date}</td>
                 <td className="border px-4 py-2">{performanceData.atr_avg[index]}</td>
@@ -86,6 +84,8 @@ export default function PerformanceAnalysisPage() {
             ))}
           </tbody>
         </table>
+      ) : (
+        <div>Loading...</div>
       )}
     </div>
   );
