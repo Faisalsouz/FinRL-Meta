@@ -71,6 +71,36 @@ def fetch_logs():
     Endpoint to fetch the log file contents.
     """
     script_dir = os.path.dirname(os.path.abspath(__file__))
+    trade_log_path = script_dir + "/papertrading_crypto/paper_trading_trade_logs.csv"
+    performance_csv_path = script_dir + "/papertrading_crypto/performance_data.csv"
+    
+    try:
+        trade_df = pd.read_csv(trade_log_path)
+        performance_df = pd.read_csv(performance_csv_path)
+        
+        if start_date:
+            trade_df = trade_df[trade_df['date'] >= start_date]
+        if end_date:
+            trade_df = trade_df[trade_df['date'] <= end_date]
+        
+        # Extract performance metrics from the performance CSV
+        performance_data = performance_df.to_dict(orient='records')[0]
+
+        return {
+            "date": performance_data.get("date", ""),
+            "atr_avg": performance_data.get("atr_avg", 0.0),
+            "profit_loss": performance_data.get("profit_loss", 0.0),
+            "equity_change": performance_data.get("equity_change", 0.0),
+            "avg_trade_per_day": performance_data.get("avg_trade_per_day", 0.0),
+            "win_trades": performance_data.get("win_trades", 0),
+            "lost_trades": performance_data.get("lost_trades", 0),
+            "timeout_trades": performance_data.get("timeout_trades", 0),
+            "avg_win": performance_data.get("avg_win", 0.0),
+            "avg_loss": performance_data.get("avg_loss", 0.0),
+            "stop_loss_stats": performance_data.get("stop_loss_stats", 0.0)
+        }
+    except Exception as e:
+        return {"error": str(e)}
     
     log_file_path = script_dir + "/papertrading_crypto/paper_trading.log"
     return FileResponse(log_file_path, media_type='text/plain')

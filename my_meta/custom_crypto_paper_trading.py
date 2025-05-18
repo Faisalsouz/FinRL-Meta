@@ -639,6 +639,25 @@ class AlpacaPaperTradingCryptoLive:
     def save_logs_to_csv(self):
         """Save trade and step logs to CSV files."""
         import csv
+        performance_csv_path = self.log_file_path.replace(".log", "_performance_data.csv")
+        performance_data = {
+            "date": dt.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "atr_avg": self.calculate_atr_avg(),
+            "profit_loss": self.calculate_profit_loss(),
+            "equity_change": self.calculate_equity_change(),
+            "avg_trade_per_day": self.calculate_avg_trade_per_day(),
+            "win_trades": self.calculate_win_trades(),
+            "lost_trades": self.calculate_lost_trades(),
+            "timeout_trades": self.calculate_timeout_trades(),
+            "avg_win": self.calculate_avg_win(),
+            "avg_loss": self.calculate_avg_loss(),
+            "stop_loss_stats": self.calculate_stop_loss_stats()
+        }
+        with open(performance_csv_path, mode='a', newline='') as file:  # 'a' mode to append
+            writer = csv.DictWriter(file, fieldnames=performance_data.keys())
+            if file.tell() == 0:  # Check if file is empty to write header
+                writer.writeheader()
+            writer.writerow(performance_data)
         import csv
         trade_log_path = self.log_file_path.replace(".log", "_trade_logs.csv")
         step_log_path = self.log_file_path.replace(".log", "_step_logs.csv")
