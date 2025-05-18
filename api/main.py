@@ -121,50 +121,22 @@ def fetch_performance_analysis(start_date: str = None, end_date: str = None):
     script_dir = os.path.dirname(os.path.abspath(__file__))
     trade_log_path = script_dir + "/papertrading_crypto/paper_trading_trade_logs.csv"
     step_log_path = script_dir + "/papertrading_crypto/paper_trading_step_logs.csv"
+    performance_csv_path = script_dir + "/papertrading_crypto/performance_data.csv"
     
     try:
         trade_df = pd.read_csv(trade_log_path)
         step_df = pd.read_csv(step_log_path)
+        performance_df = pd.read_csv(performance_csv_path)
         
         if start_date:
-            trade_df = trade_df[trade_df['step'] >= int(start_date)]
-            step_df = step_df[step_df['step'] >= int(start_date)]
+            trade_df = trade_df[trade_df['date'] >= start_date]
+            step_df = step_df[step_df['date'] >= start_date]
         if end_date:
-            trade_df = trade_df[trade_df['step'] <= int(end_date)]
-            step_df = step_df[step_df['step'] <= int(end_date)]
+            trade_df = trade_df[trade_df['date'] <= end_date]
+            step_df = step_df[step_df['date'] <= end_date]
         
-        # Calculate performance metrics
-        atr_avg = trade_df['atr'].mean()
-        profit_loss = trade_df.groupby('result')['price'].sum()
-        equity_change = step_df['equity'].diff().sum()
-        avg_trade_per_day = trade_df.groupby(trade_df['step'] // (24 * 60)).size().mean()
-        win_trades = trade_df[trade_df['result'] == 'TP Hit'].shape[0]
-        lost_trades = trade_df[trade_df['result'] == 'SL Hit'].shape[0]
-        timeout_trades = trade_df[trade_df['result'] == 'Timeout'].shape[0]
-        avg_win = trade_df[trade_df['result'] == 'TP Hit']['price'].mean()
-        avg_loss = trade_df[trade_df['result'] == 'SL Hit']['price'].mean()
-        stop_loss_stats = trade_df[trade_df['result'] == 'SL Hit']['price'].sum()
-        
-        performance_data = {
-            "atr_avg": atr_avg,
-            "profit_loss": profit_loss.to_dict(),
-            "equity_change": equity_change,
-            "avg_trade_per_day": avg_trade_per_day,
-            "win_trades": win_trades,
-            "lost_trades": lost_trades,
-            "timeout_trades": timeout_trades,
-            "avg_win": avg_win,
-            "avg_loss": avg_loss,
-            "stop_loss_stats": stop_loss_stats
-        }
-
-        # Save performance data to CSV
-        performance_csv_path = script_dir + "/papertrading_crypto/performance_data.csv"
-        import csv
-        with open(performance_csv_path, mode='w', newline='') as file:
-            writer = csv.DictWriter(file, fieldnames=performance_data.keys())
-            writer.writeheader()
-            writer.writerow(performance_data)
+        # Extract performance metrics from the performance CSV
+        performance_data = performance_df.to_dict(orient='records')[0]
 
         return performance_data
     except Exception as e:
