@@ -21,8 +21,8 @@ interface PerformanceData {
 export default function PerformanceAnalysisPage() {
   const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
   const [performanceData, setPerformanceData] = useState<PerformanceData | null>(null);
-  const [startDate, setStartDate] = useState("2025-05-18");
-  const [endDate, setEndDate] = useState("2025-05-18");
+  const [startDate, setStartDate] = useState("2025-05-18T17:00");
+  const [endDate, setEndDate] = useState("2025-05-18T18:00");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -49,18 +49,18 @@ export default function PerformanceAnalysisPage() {
       <h1 className="text-2xl font-bold mb-4">Performance Analysis</h1>
       <form onSubmit={(e) => { e.preventDefault(); fetchPerformanceData(); }} className="space-y-4">
         <div>
-          <label className="block font-medium mb-1">Start Date</label>
+          <label className="block font-medium mb-1">Start Date and Time</label>
           <input
-            type="date"
+            type="datetime-local"
             value={startDate}
             onChange={(e) => setStartDate(e.target.value)}
             className="w-full rounded border border-gray-300 px-3 py-2 bg-white dark:bg-gray-800 text-black dark:text-white"
           />
         </div>
         <div>
-          <label className="block font-medium mb-1">End Date</label>
+          <label className="block font-medium mb-1">End Date and Time</label>
           <input
-            type="date"
+            type="datetime-local"
             value={endDate}
             onChange={(e) => setEndDate(e.target.value)}
             className="w-full rounded border border-gray-300 px-3 py-2 bg-white dark:bg-gray-800 text-black dark:text-white"
