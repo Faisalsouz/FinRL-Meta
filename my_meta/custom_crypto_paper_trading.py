@@ -304,12 +304,15 @@ class AlpacaPaperTradingCryptoLive:
 
         self.stop_trading = False  # Flag to control the trading loop
         self.logger.info(f"PaperTradingCryptoLive with tickers: {ticker_list}")
-        
+
         # Attributes for logging data
         self.trade_logs = []
         self.step_logs = []
         self.log_file_path = log_file_path
         self.logger.info(f"Time interval = {self.time_interval}")
+
+        # Save logs to CSV when stopping the trading loop
+        self.save_logs_to_csv()
 
     def run(self):
         """Main loop: fetch data, trade, etc. (crypto is 24/7)."""
@@ -478,6 +481,9 @@ class AlpacaPaperTradingCryptoLive:
             "in_position": self.in_position
         })
         self.cash = float(self.alpaca.get_account().cash)
+
+        # Save logs to CSV after each trade step
+        self.save_logs_to_csv()
 
     def get_state(self):
         """
