@@ -1,5 +1,6 @@
 "use client";
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
+import axios from 'axios';
 import { Tooltip } from "react-tooltip";
 import 'react-tooltip/dist/react-tooltip.css';
 
@@ -116,7 +117,67 @@ export default function PaperTradingPage() {
     return () => clearInterval(interval); // Cleanup interval on component unmount
   }, []);
 
+  const [performanceData, setPerformanceData] = useState(null);
+  const [error, setError] = useState(null);
+
+  const fetchPerformanceData = async (startDate, endDate) => {
+    try {
+      const response = await axios.get(`${API_BASE_URL}/fetch_performance_analysis`, {
+        params: { start_date: startDate, end_date: endDate }
+      });
+      setPerformanceData(response.data);
+    } catch (err) {
+      setError(err.message);
+    }
+  };
+
+  useEffect(() => {
+    fetchPerformanceData("2025-01-01", "2025-02-01");
+  }, []);
+
   return (
+    <div>
+      <h1>Performance Analysis</h1>
+      {error && <div>Error: {error}</div>}
+      {!performanceData ? (
+        <div>Loading...</div>
+      ) : (
+        <table>
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>ATR Average</th>
+              <th>Profit/Loss</th>
+              <th>Equity Change</th>
+              <th>Average Trade Per Day</th>
+              <th>Winning Trades</th>
+              <th>Lost Trades</th>
+              <th>Timeout Trades</th>
+              <th>Average Win</th>
+              <th>Average Loss</th>
+              <th>Stop Loss Stats</th>
+            </tr>
+          </thead>
+          <tbody>
+            {performanceData.dates.map((date, index) => (
+              <tr key={index}>
+                <td>{date}</td>
+                <td>{performanceData.atr_avg[index]}</td>
+                <td>{performanceData.profit_loss[index]}</td>
+                <td>{performanceData.equity_change[index]}</td>
+                <td>{performanceData.avg_trade_per_day[index]}</td>
+                <td>{performanceData.win_trades[index]}</td>
+                <td>{performanceData.lost_trades[index]}</td>
+                <td>{performanceData.timeout_trades[index]}</td>
+                <td>{performanceData.avg_win[index]}</td>
+                <td>{performanceData.avg_loss[index]}</td>
+                <td>{performanceData.stop_loss_stats[index]}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+    </div>
     <div>
       <h1 className="text-2xl font-bold mb-4">Paper Trading Form</h1>
       <form onSubmit={handleSubmit} className="space-y-4">
