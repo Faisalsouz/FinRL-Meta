@@ -129,8 +129,6 @@ def fetch_performance_analysis(start_date: str = None, end_date: str = None):
         
         if start_date:
             trade_df = trade_df[trade_df['date'] >= start_date]
-            step_df = step_df[step_df['date'] >= start_date]
-            trade_df = trade_df[trade_df['date'] <= end_date]
         
         # Extract performance metrics from the performance CSV
         performance_data = performance_df.to_dict(orient='records')[0]
