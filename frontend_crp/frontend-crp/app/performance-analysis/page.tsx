@@ -1,26 +1,44 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import axios from 'axios';
+
+// Define the expected structure of performance data
+interface PerformanceData {
+  dates: string[];
+  atr_avg: number[];
+  profit_loss: number[];
+  equity_change: number[];
+  avg_trade_per_day: number[];
+  win_trades: number[];
+  lost_trades: number[];
+  timeout_trades: number[];
+  avg_win: number[];
+  avg_loss: number[];
+  stop_loss_stats: string[];
+}
 
 export default function PerformanceAnalysisPage() {
   const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
-  const [performanceData, setPerformanceData] = useState(null);
+  const [performanceData, setPerformanceData] = useState<PerformanceData | null>(null);
   const [startDate, setStartDate] = useState("2025-01-01");
   const [endDate, setEndDate] = useState("2025-02-01");
-  const [error, setError] = useState(null);
-
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
 
   const fetchPerformanceData = async () => {
+    setLoading(true);
+    setError(null);
     try {
       const response = await axios.get(`${API_BASE_URL}/fetch_performance_analysis`, {
         params: { start_date: startDate, end_date: endDate }
       });
-      console.log("Performance data fetched:", response.data);  // Add logging
       setPerformanceData(response.data);
     } catch (error) {
-      console.error("Error fetching performance data:", error);
       setError("Error fetching performance data");
+      setPerformanceData(null);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -49,7 +67,8 @@ export default function PerformanceAnalysisPage() {
         <button type="submit" className="px-4 py-2 bg-blue-500 text-white rounded">Fetch Data</button>
       </form>
       {error && <div>Error: {error}</div>}
-      {performanceData ? (
+      {loading && <div>Loading...</div>}
+      {performanceData && !loading && (
         <table className="min-w-full bg-white dark:bg-gray-800">
           <thead>
             <tr>
@@ -84,8 +103,6 @@ export default function PerformanceAnalysisPage() {
             ))}
           </tbody>
         </table>
-      ) : (
-        <div>Loading...</div>
       )}
     </div>
   );
