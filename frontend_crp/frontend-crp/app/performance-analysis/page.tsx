@@ -16,9 +16,11 @@ export default function PerformanceAnalysisPage() {
       const response = await axios.get(`${API_BASE_URL}/fetch_performance_analysis`, {
         params: { start_date: startDate, end_date: endDate }
       });
+      console.log("Performance data fetched:", response.data);  // Add logging
       setPerformanceData(response.data);
     } catch (error) {
       console.error("Error fetching performance data:", error);
+      setError("Error fetching performance data");
     }
   };
 

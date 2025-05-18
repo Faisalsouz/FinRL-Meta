@@ -201,8 +201,10 @@ def fetch_performance_analysis(start_date: str = None, end_date: str = None):
             "stop_loss_stats": stop_loss_stats_list
         }
 
+        logger.info(f"Performance data response: {response}")  # Add logging
         return response
     except Exception as e:
+        logger.error(f"Error fetching performance data: {str(e)}")  # Add logging
         return {"error": str(e)}
 
 @app.get("/fetch_logs_test")
