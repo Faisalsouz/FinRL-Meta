@@ -340,6 +340,9 @@ class AlpacaPaperTradingCryptoLive:
             self.logger.info(f"Next bar data will be fetched in {sleep_time // 60} minutes.")
             time.sleep(sleep_time)
 
+        # Save logs to CSV when stopping the trading loop
+        self.save_logs_to_csv()
+
     def stop(self):
         """Stop the trading loop."""
         self.stop_trading = True
