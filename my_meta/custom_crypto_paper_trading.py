@@ -311,6 +311,77 @@ class AlpacaPaperTradingCryptoLive:
         self.log_file_path = log_file_path
         self.logger.info(f"Time interval = {self.time_interval}")
 
+    def calculate_atr_avg(self):
+        """Calculate the average ATR from trade logs."""
+        if not self.trade_logs:
+            return 0.0
+        atr_values = [log['atr'] for log in self.trade_logs if 'atr' in log]
+        return np.mean(atr_values) if atr_values else 0.0
+
+    def calculate_profit_loss(self):
+        """Calculate the profit/loss from trade logs."""
+        if not self.trade_logs:
+            return 0.0
+        profit_loss = 0.0
+        for log in self.trade_logs:
+            if log['action'] == 'sell':
+                entry_log = next((l for l in self.trade_logs if l['step'] == log['step'] and l['action'] == 'buy'), None)
+                if entry_log:
+                    profit_loss += (log['price'] - entry_log['price']) * log['quantity']
+        return profit_loss
+
+    def calculate_equity_change(self):
+        """Calculate the change in equity from step logs."""
+        if not self.step_logs:
+            return 0.0
+        equity_values = [log['equity'] for log in self.step_logs if 'equity' in log]
+        return equity_values[-1] - equity_values[0] if equity_values else 0.0
+
+    def calculate_avg_trade_per_day(self):
+        """Calculate the average number of trades per day."""
+        if not self.trade_logs:
+            return 0.0
+        trade_days = set(log['date'].split()[0] for log in self.trade_logs)
+        return len(self.trade_logs) / len(trade_days) if trade_days else 0.0
+
+    def calculate_win_trades(self):
+        """Calculate the number of winning trades."""
+        if not self.trade_logs:
+            return 0
+        return sum(1 for log in self.trade_logs if log.get('result') == 'TP Hit')
+
+    def calculate_lost_trades(self):
+        """Calculate the number of lost trades."""
+        if not self.trade_logs:
+            return 0
+        return sum(1 for log in self.trade_logs if log.get('result') == 'SL Hit')
+
+    def calculate_timeout_trades(self):
+        """Calculate the number of timeout trades."""
+        if not self.trade_logs:
+            return 0
+        return sum(1 for log in self.trade_logs if log.get('result') == 'Timeout')
+
+    def calculate_avg_win(self):
+        """Calculate the average win amount."""
+        if not self.trade_logs:
+            return 0.0
+        win_prices = [log['price'] for log in self.trade_logs if log.get('result') == 'TP Hit']
+        return np.mean(win_prices) if win_prices else 0.0
+
+    def calculate_avg_loss(self):
+        """Calculate the average loss amount."""
+        if not self.trade_logs:
+            return 0.0
+        loss_prices = [log['price'] for log in self.trade_logs if log.get('result') == 'SL Hit']
+        return np.mean(loss_prices) if loss_prices else 0.0
+
+    def calculate_stop_loss_stats(self):
+        """Calculate the total stop loss amount."""
+        if not self.trade_logs:
+            return 0.0
+        return sum(log['price'] for log in self.trade_logs if log.get('result') == 'SL Hit')
+
         # Save logs to CSV when stopping the trading loop
         self.save_logs_to_csv()
 
