@@ -664,6 +664,7 @@ class AlpacaPaperTradingCryptoLive:
         # Save performance data to CSV
         performance_csv_path = self.log_file_path.replace(".log", "_performance_data.csv")
         performance_data = {
+            "date": dt.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
             "atr_avg": self.calculate_atr_avg(),
             "profit_loss": self.calculate_profit_loss(),
             "equity_change": self.calculate_equity_change(),
