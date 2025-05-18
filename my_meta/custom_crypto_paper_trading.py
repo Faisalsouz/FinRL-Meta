@@ -571,16 +571,22 @@ class AlpacaPaperTradingCryptoLive:
         step_log_path = self.log_file_path.replace(".log", "_step_logs.csv")
         
         # Save trade logs
-        with open(trade_log_path, mode='w', newline='') as file:
-            writer = csv.DictWriter(file, fieldnames=self.trade_logs[0].keys())
-            writer.writeheader()
-            writer.writerows(self.trade_logs)
+        if self.trade_logs:
+            with open(trade_log_path, mode='w', newline='') as file:
+                writer = csv.DictWriter(file, fieldnames=self.trade_logs[0].keys())
+                writer.writeheader()
+                writer.writerows(self.trade_logs)
+        else:
+            self.logger.info("No trade logs to save.")
         
         # Save step logs
-        with open(step_log_path, mode='w', newline='') as file:
-            writer = csv.DictWriter(file, fieldnames=self.step_logs[0].keys())
-            writer.writeheader()
-            writer.writerows(self.step_logs)
+        if self.step_logs:
+            with open(step_log_path, mode='w', newline='') as file:
+                writer = csv.DictWriter(file, fieldnames=self.step_logs[0].keys())
+                writer.writeheader()
+                writer.writerows(self.step_logs)
+        else:
+            self.logger.info("No step logs to save.")
         
         self.logger.info(f"Logs saved to {trade_log_path} and {step_log_path}")
 
