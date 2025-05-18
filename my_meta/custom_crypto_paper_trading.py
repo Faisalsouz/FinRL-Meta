@@ -408,6 +408,7 @@ class AlpacaPaperTradingCryptoLive:
                     # Log trade entry
                     self.trade_logs.append({
                         "step": self.current_step,
+                        "date": dt.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
                         "action": "buy",
                         "price": self.entry_price,
                         "quantity": qty,
@@ -564,6 +565,7 @@ class AlpacaPaperTradingCryptoLive:
             resp.append(True)
     def save_logs_to_csv(self):
         """Save trade and step logs to CSV files."""
+        import csv
         import csv
         trade_log_path = self.log_file_path.replace(".log", "_trade_logs.csv")
         step_log_path = self.log_file_path.replace(".log", "_step_logs.csv")
