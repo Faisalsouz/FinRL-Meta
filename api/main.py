@@ -146,33 +146,62 @@ def fetch_performance_analysis(start_date: str = None, end_date: str = None):
     """
     import pandas as pd
     script_dir = os.path.dirname(os.path.abspath(__file__))
-    trade_log_path = script_dir + "/papertrading_crypto/paper_trading_trade_logs.csv"
-    step_log_path = script_dir + "/papertrading_crypto/paper_trading_step_logs.csv"
     performance_csv_path = script_dir + "/papertrading_crypto/performance_data.csv"
     
     try:
-        trade_df = pd.read_csv(trade_log_path)
         performance_df = pd.read_csv(performance_csv_path)
         
         if start_date:
-            trade_df = trade_df[trade_df['date'] >= start_date]
+            performance_df = performance_df[performance_df['date'] >= start_date]
+        if end_date:
+            performance_df = performance_df[performance_df['date'] <= end_date]
         
-        # Extract performance metrics from the performance CSV
-        performance_data = performance_df.to_dict(orient='records')[0]
+        # Extract performance metrics from the filtered performance CSV
+        performance_data = performance_df.to_dict(orient='records')
 
-        return {
-            "date": performance_data.get("date", ""),
-            "atr_avg": performance_data.get("atr_avg", 0.0),
-            "profit_loss": performance_data.get("profit_loss", 0.0),
-            "equity_change": performance_data.get("equity_change", 0.0),
-            "avg_trade_per_day": performance_data.get("avg_trade_per_day", 0.0),
-            "win_trades": performance_data.get("win_trades", 0),
-            "lost_trades": performance_data.get("lost_trades", 0),
-            "timeout_trades": performance_data.get("timeout_trades", 0),
-            "avg_win": performance_data.get("avg_win", 0.0),
-            "avg_loss": performance_data.get("avg_loss", 0.0),
-            "stop_loss_stats": performance_data.get("stop_loss_stats", 0.0)
+        # Initialize lists for each metric
+        dates = []
+        atr_avg_list = []
+        profit_loss_list = []
+        equity_change_list = []
+        avg_trade_per_day_list = []
+        win_trades_list = []
+        lost_trades_list = []
+        timeout_trades_list = []
+        avg_win_list = []
+        avg_loss_list = []
+        stop_loss_stats_list = []
+
+        # Populate lists with values from the filtered data
+        for data in performance_data:
+            dates.append(data.get("date", ""))
+            atr_avg_list.append(data.get("atr_avg", 0.0))
+            profit_loss_list.append(data.get("profit_loss", 0.0))
+            equity_change_list.append(data.get("equity_change", 0.0))
+            avg_trade_per_day_list.append(data.get("avg_trade_per_day", 0.0))
+            win_trades_list.append(data.get("win_trades", 0))
+            lost_trades_list.append(data.get("lost_trades", 0))
+            timeout_trades_list.append(data.get("timeout_trades", 0))
+            avg_win_list.append(data.get("avg_win", 0.0))
+            avg_loss_list.append(data.get("avg_loss", 0.0))
+            stop_loss_stats_list.append(data.get("stop_loss_stats", 0.0))
+
+        # Format the response for the frontend
+        response = {
+            "dates": dates,
+            "atr_avg": atr_avg_list,
+            "profit_loss": profit_loss_list,
+            "equity_change": equity_change_list,
+            "avg_trade_per_day": avg_trade_per_day_list,
+            "win_trades": win_trades_list,
+            "lost_trades": lost_trades_list,
+            "timeout_trades": timeout_trades_list,
+            "avg_win": avg_win_list,
+            "avg_loss": avg_loss_list,
+            "stop_loss_stats": stop_loss_stats_list
         }
+
+        return response
     except Exception as e:
         return {"error": str(e)}
 
