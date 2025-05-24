@@ -3023,3 +3023,192 @@
 
 # 2025-05-18 16:49:25.499454
 +/undo
+
+# 2025-05-18 16:56:12.643292
++OK. I have removed action value logs. it seems its bit complex for now. next please see `fetch_performance_analysis` endpiont in api/main.py and try to align it with new calculation. In new calcualtion all performacne  metrics are already present in csv file and only needed to show on frontend. So I believe only parsing the two files annd showing them. is sufficent for now based on time filter. 
+
+# 2025-05-18 16:56:29.437634
++yes
+
+# 2025-05-18 16:59:40.318812
++on api logs the call to the backend function fetch performance  analysis was successfull , here INFO:     127.0.0.1:49866 - "GET /fetch_performance_analysis?start_date=2025-05-17&end_date=2025-05-18 HTTP/1.1" 200 OK , but on frontend in page of perfromance-analysis metrics are empty. can you fix that. 
+
+# 2025-05-18 17:00:18.097681
++yes
+
+# 2025-05-18 17:12:26.477375
++in folowing file api/papertrading_crypto/paper_trading_performance_data.csv, when calculating performnce metiric I want to add date of recording the performance. 
+
+# 2025-05-18 17:12:38.146834
++yes
+
+# 2025-05-18 17:17:49.855104
++will the existing code. write perfromacne date in csv on every time_interval does that append the record or overwrite. I want that it wriperfromance snapshot every time tade closed , with date and time. moreover, please remove step date check from date true false logic in pfetch performance endpoint in api . 
+
+# 2025-05-18 17:18:58.361624
++yes
+
+# 2025-05-18 17:22:05.754911
++some error has happend in previous commmit . please verify the implement code again 
+
+# 2025-05-18 17:22:35.143406
++yes
+
+# 2025-05-18 17:58:14.192543
++in following block please use start date and end date based on perfromance_data.csv as now we have date there. and its easier. if state date => to userinput date calcaulte the show the performnce indicator maby be in list as there could be multiple values for each metrics. datewise right. ?
+
+# 2025-05-18 17:59:36.516072
++n
+
+# 2025-05-18 17:59:53.997599
++return to frontend is missing form the function. again return the data as well. 
+
+# 2025-05-18 18:00:22.295178
++n
+
+# 2025-05-18 18:00:48.820196
++I mean return to  frontend which will be shown on frontend page in the end. like that return {
++            "date": performance_data.get("date", ""),
++            "atr_avg": performance_data.get("atr_avg", 0.0),
++            "profit_loss": performance_data.get("profit_loss", 0.0),
++            "equity_change": performance_data.get("equity_change", 0.0),
++            "avg_trade_per_day": performance_data.get("avg_trade_per_day", 0.0),
++            "win_trades": performance_data.get("win_trades", 0),
++            "lost_trades": performance_data.get("lost_trades", 0),
++            "timeout_trades": performance_data.get("timeout_trades", 0),
++            "avg_win": performance_data.get("avg_win", 0.0),
++            "avg_loss": performance_data.get("avg_loss", 0.0),
++            "stop_loss_stats": performance_data.get("stop_loss_stats", 0.0)
++        }
+
+# 2025-05-18 18:01:28.855443
++n
+
+# 2025-05-18 18:02:23.436936
++does each value can hold list of value as well. in return block ? if yes then is great. frontend should also be confirmed to receved the list of metric and show it. 
+
+# 2025-05-18 18:03:12.379464
++ yes
+
+# 2025-05-18 18:03:20.782564
++yes
+
+# 2025-05-18 18:07:40.058678
++in frontend, please show html  table derived form the  given date windows.  rather then just showing list. 
+
+# 2025-05-18 18:07:51.742060
++yes
+
+# 2025-05-18 18:08:49.281126
++n
+
+# 2025-05-18 18:09:15.496372
++/add frontend_crp/frontend-crp/app/paper-trading/page.tsx
+
+# 2025-05-18 18:09:53.179864
++in frontend, please show html  table derived form the  given date windows ,when I fetch /fetch_performance_analysis .  rather then just showing list. 
+
+# 2025-05-18 18:10:09.973697
++yes
+
+# 2025-05-18 18:10:30.909088
++here is error Error: ./app/paper-trading/page.tsx:183:13
++Parsing ecmascript source code failed
++[0m [90m 181 |[39m     [33m<[39m[33mdiv[39m[33m>[39m[0m
++[0m [90m 182 |[39m       [33m<[39m[33mh1[39m className[33m=[39m[32m"text-2xl font-bold mb-4"[39m[33m>[39m[33mPaper[39m [33mTrading[39m [33mForm[39m[33m<[39m[33m/[39m[33mh1[39m[33m>[39m[0m
++[0m[31m[1m>[22m[39m[90m 183 |[39m       [33m<[39m[33mform[39m onSubmit[33m=[39m{handleSubmit} className[33m=[39m[32m"space-y-4"[39m[33m>[39m[0m
++[0m [90m     |[39m             [31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[0m
++[0m [90m 184 |[39m         {[90m/* Ticker List */[39m}[0m
++[0m [90m 185 |[39m         [33m<[39m[33mdiv[39m[33m>[39m[0m
++[0m [90m 186 |[39m           [33m<[39m[33mlabel[39m className[33m=[39m[32m"block font-medium mb-1"[39m[33m>[39m[0m
++
++Expected ',', got 'onSubmit'
++    at BuildError (http://localhost:3000/_next/static/chunks/node_modules_next_dist_client_c24f7707._.js:13575:41)
++    at react-stack-bottom-frame (http://localhost:3000/_next/static/chunks/node_modules_next_dist_compiled_react-dom_1f56dc06._.js:13668:24)
++    at renderWithHooksAgain (http://localhost:3000/_next/static/chunks/node_modules_next_dist_compiled_react-dom_1f56dc06._.js:3351:24)
++    at renderWithHooks (http://localhost:3000/_next/static/chunks/node_modules_next_dist_compiled_react-dom_1f56dc06._.js:3302:28)
++    at updateFunctionComponent (http://localhost:3000/_next/static/chunks/node_modules_next_dist_compiled_react-dom_1f56dc06._.js:4998:21)
++    at beginWork (http://localhost:3000/_next/static/chunks/node_modules_next_dist_compiled_react-dom_1f56dc06._.js:5589:24)
++    at runWithFiberInDEV (http://localhost:3000/_next/static/chunks/node_modules_next_dist_compiled_react-dom_1f56dc06._.js:1326:74)
++    at performUnitOfWork (http://localhost:3000/_next/static/chunks/node_modules_next_dist_compiled_react-dom_1f56dc06._.js:7987:97)
++    at workLoopSync (http://localhost:3000/_next/static/chunks/node_modules_next_dist_compiled_react-dom_1f56dc06._.js:7879:40)
++    at renderRootSync (http://localhost:3000/_next/static/chunks/node_modules_next_dist_compiled_react-dom_1f56dc06._.js:7862:13)
++    at performWorkOnRoot (http://localhost:3000/_next/static/chunks/node_modules_next_dist_compiled_react-dom_1f56dc06._.js:7603:212)
++    at performWorkOnRootViaSchedulerTask (http://localhost:3000/_next/static/chunks/node_modules_next_dist_compiled_react-dom_1f56dc06._.js:8630:9)
++    at MessagePort.performWorkUntilDeadline (http://localhost:3000/_next/static/chunks/node_modules_next_dist_compiled_38d265cf._.js:1956:64)
+
+# 2025-05-18 18:10:33.735884
++n
+
+# 2025-05-18 18:10:35.368870
++S
+
+# 2025-05-18 18:11:41.111115
++n
+
+# 2025-05-18 18:12:04.668601
++please change following page under perfromance_analysis/page.tsx
+
+# 2025-05-18 18:12:28.316403
++yes
+
+# 2025-05-18 18:20:45.478838
++here is erro TypeError: Cannot read properties of undefined (reading 'map')
++    at PerformanceAnalysisPage (http://localhost:3000/_next/static/chunks/app_performance-analysis_page_tsx_1756954d._.js:246:57)
++    at ClientPageRoot (http://localhost:3000/_next/static/chunks/node_modules_next_dist_1a6ee436._.js:2053:50)
+
+# 2025-05-18 18:20:48.494785
++S
+
+# 2025-05-18 18:21:09.730570
++yes
+
+# 2025-05-18 18:25:35.617417
++following are csv record in my file paper_treading_perfromacne_data.csv. but frontend page performance-analysis just shows. table header but not data. can you investigate why?.  
+
+# 2025-05-18 18:26:09.100101
++yes
+
+# 2025-05-18 22:20:21.222469
++/architect
+
+# 2025-05-18 22:21:06.074913
++/add app/perfromance-analyis/page.tsx
+
+# 2025-05-18 22:21:38.842940
++n
+
+# 2025-05-18 22:22:22.634567
++/add /home/souz_wsl/finrl_proj/FinRL_Meta/frontend_crp/frontend-crp/app/performance-analysis/page.tsx
+
+# 2025-05-18 22:24:01.285816
++my csv file api/papertrading_crypto/paper_trading_performance_data.csv look like below. on my perfrommacne-analysis/page.tsx I can see table header but not data pasred from csv file metrics. which should show the data. please modify the code. date,atr_avg,profit_loss,equity_change,avg_trade_per_day,win_trades,lost_trades,timeout_trades,avg_win,avg_loss,stop_loss_stats
++2025-05-18 17:29:49,162.95319564554,0.0,0.0,1.0,0,0,0,0.0,0.0,0
++2025-05-18 17:29:49,162.95319564554,0.0,0.0,1.0,0,0,0,0.0,0.0,0
++2025-05-18 17:58:10,162.95319564554,0.0,69873.78497873436,1.0,0,0,0,0.0,0.0,0
++2025-05-18 17:58:10,162.95319564554,0.0,69873.78497873436,1.0,0,0,0,0.0,0.0,0
++2025-05-18 17:59:52,162.95319564554,0.0,69873.78497873436,1.0,0,0,0,0.0,0.0,0
++2025-05-18 17:59:52,162.95319564554,0.0,69873.78497873436,1.0,0,0,0,0.0,0.0,0
++
+
+# 2025-05-18 22:24:06.590352
++yes
+
+# 2025-05-18 22:43:26.092379
++still I see empty table on front end and also on backend dictionary is empty. might be the reason is date range logic is not working correctly , or not enough dates date avialbe to be desplayed in table. please verify the date filer logic as well as why metircs dictionary pasrsed as empty. NFO:main:Performance data response: {'dates': [], 'atr_avg': [], 'profit_loss': [], 'equity_change': [], 'avg_trade_per_day': [], 'win_trades': [], 'lost_trades': [], 'timeout_trades': [], 'avg_win': [], 'avg_loss': [], 'stop_loss_stats': []}
++INFO:     127.0.0.1:39914 - "GET /fetch_performance_analysis?start_date=2025-05-18&end_date=2025-05-18 HTTP/1.1" 200 OK
+
+# 2025-05-18 22:44:40.741547
++yes
+
+# 2025-05-18 22:44:55.000286
++no
+
+# 2025-05-18 22:53:31.536134
++can you add more complete date and time on user input. in performacne/ page  so that date could be compared at mintues level if you need to change date the time in date and time str please do so . so that realy condition of comparison could inplace other wise dictionry of date will alway be empty. 
+
+# 2025-05-18 22:54:25.529816
++yes
+
+# 2025-05-18 22:54:38.659693
++no

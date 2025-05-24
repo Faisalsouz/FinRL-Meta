@@ -146,7 +146,7 @@ def fetch_performance_analysis(start_date: str = None, end_date: str = None):
     """
     import pandas as pd
     script_dir = os.path.dirname(os.path.abspath(__file__))
-    performance_csv_path = script_dir + "/papertrading_crypto/performance_data.csv"
+    performance_csv_path = script_dir + "/papertrading_crypto/paper_trading_performance_data.csv"
     
     try:
         performance_df = pd.read_csv(performance_csv_path)
@@ -158,6 +158,7 @@ def fetch_performance_analysis(start_date: str = None, end_date: str = None):
         
         # Extract performance metrics from the filtered performance CSV
         performance_data = performance_df.to_dict(orient='records')
+        print(performance_data)  # Debugging line to check the data structure
 
         # Initialize lists for each metric
         dates = []

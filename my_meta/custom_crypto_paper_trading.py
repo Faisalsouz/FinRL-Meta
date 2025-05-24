@@ -494,7 +494,7 @@ class AlpacaPaperTradingCryptoLive:
             current_price = self.price[0]
             self.logger.info(f"Trade open. Current price: {current_price}, TP: {self.target_price}, SL: {self.stop_loss_price}")
             # Manage open trade without recalculating target_price and stop_loss_price
-            self.logger.info(f"Checking exit: current_price={current_price:.2f}, "f"target={self.target_price:.2f}, qty={self.stocks[0]}")
+            self.logger.info(f"Checking exit: current_price={current_price:.2f}, target={self.target_price:.2f}, qty={self.stocks[0]}")
             if current_price >= self.target_price:
                 qty = self.stocks[0]
                 if qty > 0:
@@ -511,8 +511,9 @@ class AlpacaPaperTradingCryptoLive:
                         "quantity": qty,
                         "result": "TP Hit"
                     })
-            self.save_logs_to_csv()  # Save performance data when trade is closed
-        elif current_price <= self.stop_loss_price:
+                self.save_logs_to_csv()  # Save performance data when trade is closed
+
+            elif current_price <= self.stop_loss_price:
                 qty = self.stocks[0]
                 if qty > 0:
                     respSO = []
@@ -528,7 +529,8 @@ class AlpacaPaperTradingCryptoLive:
                         "quantity": qty,
                         "result": "SL Hit"
                     })
-            self.save_logs_to_csv()  # Save performance data when trade is closed
+                self.save_logs_to_csv()  # Save performance data when trade is closed
+
             elif (self.current_step - self.trade_entry_step) >= self.max_trade_duration:
                 qty = self.stocks[0]
                 if qty > 0:
@@ -545,7 +547,7 @@ class AlpacaPaperTradingCryptoLive:
                         "quantity": qty,
                         "result": "Timeout"
                     })
-
+                self.save_logs_to_csv()  # Save performance data when trade is closed
         # Update cash balance
         self.cash = float(self.alpaca.get_account().cash)
         
