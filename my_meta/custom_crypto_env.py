@@ -103,7 +103,7 @@ class CryptoTradingEnv(gym.Env):
             pct_change,
             in_trade_flag
         ]).astype(np.float32)
-        print(f"State at step {self.current_step}: {state}")
+        # print(f"State at step {self.current_step}: {state}")
         return state
 
 
