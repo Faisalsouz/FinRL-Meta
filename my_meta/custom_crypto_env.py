@@ -87,6 +87,7 @@ class CryptoTradingEnv(gym.Env):
         self.target_price = None
         self.stop_loss_price = None
         self.trade_entry_step = None
+        print(f"Resetting environment. Initial price: {self.initial_price}")
         return self._get_state(), {}
 
     def _get_state(self):
@@ -96,12 +97,14 @@ class CryptoTradingEnv(gym.Env):
         tech_features = np.array(self.tech_ary[self.current_step], dtype=np.float32).flatten()
         pct_change = np.array([self.last_pct_change], dtype=np.float32).flatten()
         in_trade_flag = np.array([1.0], dtype=np.float32) if self.in_position else np.array([0.0], dtype=np.float32)
-        return np.hstack([
+        state = np.hstack([
             np.array([scaled_price], dtype=np.float32).flatten(),
             tech_features,
             pct_change,
             in_trade_flag
         ]).astype(np.float32)
+        print(f"State at step {self.current_step}: {state}")
+        return state
 
 
     def step(self, action):
