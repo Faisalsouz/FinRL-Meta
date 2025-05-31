@@ -1001,7 +1001,7 @@ def test(
             "\n=== Performance Summary ===",
             f"Net Profit: {float(net_profit)*100:.2f}%",
             f"Number of Trades: {total_trades}",
-            f"Correct Trades: {correct_trades} ({(correct_trades/total_trades*100):.2f}%)",
+            f"Correct Trades: {correct_trades} ({(correct_trades/total_trades*100):.2f}%)" if total_trades > 0 else "Correct Trades: N/A",
         ]
 
         for line in summary_lines:
