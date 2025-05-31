@@ -805,6 +805,7 @@ def test(
     
     net_dimension = kwargs.get("net_dimension", [64, 32])
     cwd = kwargs.get("cwd", f"./{model_name}")
+    model_path = kwargs.get("actor_filename", "best_actor.pth")
     
     if drl_lib == "elegantrl":
         import torch
@@ -813,7 +814,7 @@ def test(
         agent = AgentPPO(net_dimension, env_instance.state_dim, env_instance.action_dim, gpu_id=0)
         
         logger.info("\nModel verification:")
-        model_path = f"{cwd}/latest_actor.pth"
+        model_path = f"{cwd}/{model_path}"
         logger.info(f"Loading model from: {model_path}")
         state_dict = torch.load(model_path, map_location=device)
         agent.act.load_state_dict(state_dict)
@@ -832,14 +833,21 @@ def test(
         trade_pred_signals = []
         trade_returns = []
         trade_types = []
+        atr_values = []
+        tp_mult_values = []
+        sl_mult_values = []
+        trade_entry_prices = []
+        trade_exit_prices = []
         
         state, _ = env_instance.reset()
         step_idx = 0
         
         while True:
             s_tensor = torch.as_tensor((state,), device=device)
-            action = agent.act(s_tensor).detach().cpu().numpy()
-            predicted_signal = action[0]
+            action_tensor = agent.act(s_tensor)
+            action_bounded = torch.tanh(action_tensor)  # bounds the output to [-1, 1]
+            action = action_bounded.detach().cpu().numpy()
+            predicted_signal = float(action[0])
             signals.append(predicted_signal)
             
             # Use current price from the environment.
@@ -853,14 +861,18 @@ def test(
             next_state, reward, done, _, info = env_instance.step(action)
             rewards.append(reward)
             
-            if "trade" in info:
-                trade_entry_steps.append(step_idx)
-                trade_pred_signals.append(predicted_signal)
-                current_status = "Trade initiated"
             if "trade_result" in info:
                 trade_exit_steps.append(step_idx)
                 res_str = info["trade_result"]
-                # Update conditions to match ATR-based messages.
+
+                entry_price = info.get("entry_price", current_price)
+                exit_price = info.get("exit_price", current_price)
+                atr = info.get("atr", None)
+                tp_mult = info.get("tp_mult", None)
+                sl_mult = info.get("sl_mult", None)
+
+                trade_return_pct = ((exit_price - entry_price) / entry_price) * 100
+
                 if "TP Hit" in res_str:
                     trade_types.append("TP Hit")
                 elif "SL Hit" in res_str:
@@ -869,9 +881,15 @@ def test(
                     trade_types.append("Timeout")
                 else:
                     trade_types.append("Closed")
-                trade_returns.append(reward)
-                current_status = "Trade closed"
-            
+
+                trade_returns.append(trade_return_pct)
+                trade_entry_prices.append(entry_price)
+                trade_exit_prices.append(exit_price)
+                atr_values.append(atr)
+                tp_mult_values.append(tp_mult)
+                sl_mult_values.append(sl_mult)
+
+            current_status = "Trade closed"
             step_status.append(current_status)
             state = next_state
             step_idx += 1
@@ -886,10 +904,15 @@ def test(
         trade_df = pd.DataFrame({
             "Entry Step": trade_entry_steps[:min_length],
             "Exit Step": trade_exit_steps[:min_length],
+            "Entry Price": trade_entry_prices[:min_length],
+            "Exit Price": trade_exit_prices[:min_length],
+            "ATR": atr_values[:min_length],
+            "TP Mult": tp_mult_values[:min_length],
+            "SL Mult": sl_mult_values[:min_length],
             "Predicted Signal": trade_pred_signals[:min_length],
-            "Trade Return": trade_returns[:min_length],
+            "Trade Return (%)": trade_returns[:min_length],
             "Trade Type": trade_types[:min_length]
-        })
+            })
         trade_df.to_csv(f"{cwd}/trade_details.csv", index=False)
         
         x_axis = list(range(len(prices)))
@@ -964,6 +987,16 @@ def test(
             logger.info(f"Correct Trades: {correct_trades} ({(correct_trades/total_trades*100):.2f}%)")
         else:
             logger.info("No trades executed.")
+        summary_lines = [
+            "\n=== Performance Summary ===",
+            f"Net Profit: {float(net_profit)*100:.2f}%",
+            f"Number of Trades: {total_trades}",
+            f"Correct Trades: {correct_trades} ({(correct_trades/total_trades*100):.2f}%)",
+        ]
+
+        for line in summary_lines:
+            print(line)
+            logger.info(line)
         
         return {
             'prices': prices,
