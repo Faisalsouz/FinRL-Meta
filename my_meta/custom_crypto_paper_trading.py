@@ -227,7 +227,9 @@ class AlpacaPaperTradingCryptoLive:
         atr_window=14,         # ATR window (in bars)
         max_trade_duration=20, # Max trade duration in steps
         initial_capital=10000, # Initial capital for paper trading
-        log_file_path=None     # Path to the log file
+        log_file_path=None,
+        actor_filename = "best_actor.pth"  # Name of the actor file to load
+
     ):
         # Set up logging
         self.logger = logging.getLogger(__name__)
@@ -249,6 +251,7 @@ class AlpacaPaperTradingCryptoLive:
         self.API_SECRET = API_SECRET
         self.API_KEY = API_KEY
         self.API_BASE_URL = API_BASE_URL
+        self.actor_filename = actor_filename  
 
         # 1) Load the trained PPO actor (example using elegantrl)
         self.drl_lib = drl_lib
@@ -259,7 +262,9 @@ class AlpacaPaperTradingCryptoLive:
                 tmp_agent = AgentPPO(net_dim, state_dim, action_dim)
                 actor = tmp_agent.act
                 try:
-                    actor_path = f"{cwd}/best_actor.pth"
+                    actor_path = f"{cwd}/{self.actor_filename}"  # instead of hardcoding best_actor.pth
+
+                    # actor_path = f"{cwd}/best_actor.pth"
                     self.logger.info(f"| loading actor from: {actor_path}")
                     actor.load_state_dict(load(actor_path, map_location='cpu'))
                     self.act = actor

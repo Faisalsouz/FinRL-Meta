@@ -159,20 +159,38 @@ class CryptoTradingEnv(gym.Env):
                 # 1. Take Profit Hit
                 if exit_price >= self.target_price:
                     reward = (self.target_price - self.entry_price) / self.entry_price
-                    self._close_trade("TP hit", self.target_price)
                     info["trade_result"] = f"TP Hit: return={reward:.4f}"
+                    info["exit_price"] = self.target_price
+                    info["entry_price"] = self.entry_price
+                    info["atr"] = self.atr_ary[self.current_step]
+                    info["tp_mult"] = self.tp_multiplier
+                    info["sl_mult"] = self.sl_multiplier
+                    self._close_trade("TP hit", self.target_price)
+      
                 
                 # 2. Stop Loss Hit
                 elif exit_price <= self.stop_loss_price:
                     reward = (self.stop_loss_price - self.entry_price) / self.entry_price
-                    self._close_trade("SL hit", self.stop_loss_price)
                     info["trade_result"] = f"SL Hit: return={reward:.4f}"
+                    info["exit_price"] = self.stop_loss_price
+                    info["entry_price"] = self.entry_price
+                    info["atr"] = self.atr_ary[self.current_step]
+                    info["tp_mult"] = self.tp_multiplier
+                    info["sl_mult"] = self.sl_multiplier
+                    self._close_trade("SL hit", self.stop_loss_price)
+                
                 
                 # 3. Timeout Exit
                 elif (self.current_step - self.trade_entry_step) >= self.max_trade_duration:
                     reward = current_return
-                    self._close_trade("timeout", exit_price)
                     info["trade_result"] = f"Timeout: return={reward:.4f}"
+                    info["exit_price"] = exit_price
+                    info["entry_price"] = self.entry_price
+                    info["atr"] = self.atr_ary[self.current_step]
+                    info["tp_mult"] = self.tp_multiplier
+                    info["sl_mult"] = self.sl_multiplier
+                    self._close_trade("timeout", exit_price)
+      
                 
                 # 4. Trade remains open
                 else:
