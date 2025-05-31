@@ -135,6 +135,7 @@ class CryptoTradingEnv(gym.Env):
                     f"TP={self.target_price:.2f} (+{self.tp_multiplier}ATR), "
                     f"SL={self.stop_loss_price:.2f} (-{self.sl_multiplier}ATR)"
                 )
+                print(info["trade"])  # Debug print
             else:
                 # No trade opened
                 if self.current_step < self.timestep - 1:
