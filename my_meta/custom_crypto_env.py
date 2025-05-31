@@ -159,6 +159,8 @@ class CryptoTradingEnv(gym.Env):
                 exit_price = self.price_ary[self.current_step, 0]
                 current_return = (exit_price - self.entry_price) / self.entry_price
 
+                print(f"Exit Price: {exit_price}, Target Price: {self.target_price}, Stop Loss Price: {self.stop_loss_price}")  # Debug print
+
                 # ========== CHECK EXIT CONDITIONS ========== #
                 # 1. Take Profit Hit
                 if exit_price >= self.target_price:
