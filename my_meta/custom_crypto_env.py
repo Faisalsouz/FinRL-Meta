@@ -22,7 +22,7 @@ class CryptoTradingEnv(gym.Env):
                maximum trade duration, the trade is forced to exit (a "timeout" exit).
     """
 
-    def __init__(self, config, initial_account=10000, atr_window=14, tp_multiplier=2, sl_multiplier=1):
+    def __init__(self, config, initial_account=10000):
         """
         Parameters:
           config: dict with keys:
@@ -32,6 +32,9 @@ class CryptoTradingEnv(gym.Env):
              - Optionally, "max_trade_duration": int (max number of bars an open trade is allowed to remain open)
           initial_account: starting cash in dollars.
         """
+        atr_window = config.get("atr_window", 14)
+        tp_multiplier = config.get("tp_multiplier", 2)
+        sl_multiplier = config.get("sl_multiplier", 1)
         # Load data.
         self.price_ary = config["price_array"].astype(np.float32)
         self.tech_ary = config["tech_array"].astype(np.float32)
@@ -72,6 +75,7 @@ class CryptoTradingEnv(gym.Env):
         self.target_price = None
         self.stop_loss_price = None
         self.trade_entry_step = None  # New: record the step when trade is initiated
+        self.trade_log = []
 
         self.observation_space = gym.spaces.Box(
             low=-np.inf, high=np.inf, shape=(self.state_dim,), dtype=np.float32)
@@ -119,15 +123,15 @@ class CryptoTradingEnv(gym.Env):
             if signal > 0:
                 # ========== ATR-BASED TP/SL SETUP ========== #
                 current_atr = self.atr_ary[self.current_step]
-            
+
                 # Calculate TP/SL using multipliers
                 self.entry_price = current_price
                 self.target_price = self.entry_price + self.tp_multiplier * current_atr
                 self.stop_loss_price = self.entry_price - self.sl_multiplier * current_atr
-            
+
                 # Validate prices aren't negative (important for crypto)
                 self.stop_loss_price = max(self.stop_loss_price, 0.01)  # Prevent negative SL
-            
+
                 self.in_position = True
                 self.trade_entry_step = self.current_step
                 info["trade"] = (
@@ -147,58 +151,46 @@ class CryptoTradingEnv(gym.Env):
                     done = True
         else:
             # Trade is active - check exit conditions
-            self.current_step += 1
-        
-            if self.current_step >= self.timestep:
-                # End of data - force exit
+            next_step = self.current_step + 1
+            if next_step >= self.timestep:
                 exit_price = self.price_ary[-1, 0]
                 reward = (exit_price - self.entry_price) / self.entry_price
                 self._close_trade("forced exit (data end)", exit_price)
                 done = True
             else:
-                exit_price = self.price_ary[self.current_step, 0]
+                exit_price = self.price_ary[next_step, 0]
                 current_return = (exit_price - self.entry_price) / self.entry_price
 
-                print(f"Exit Price: {exit_price}, Target Price: {self.target_price}, Stop Loss Price: {self.stop_loss_price}")  # Debug print
-
-                # ========== CHECK EXIT CONDITIONS ========== #
-                # 1. Take Profit Hit
                 if exit_price >= self.target_price:
                     reward = (self.target_price - self.entry_price) / self.entry_price
                     info["trade_result"] = f"TP Hit: return={reward:.4f}"
                     info["exit_price"] = self.target_price
                     info["entry_price"] = self.entry_price
-                    info["atr"] = self.atr_ary[self.current_step]
+                    info["atr"] = self.atr_ary[next_step]
                     info["tp_mult"] = self.tp_multiplier
                     info["sl_mult"] = self.sl_multiplier
                     self._close_trade("TP hit", self.target_price)
-  
-            
-                # 2. Stop Loss Hit
+
                 elif exit_price <= self.stop_loss_price:
                     reward = (self.stop_loss_price - self.entry_price) / self.entry_price
                     info["trade_result"] = f"SL Hit: return={reward:.4f}"
                     info["exit_price"] = self.stop_loss_price
                     info["entry_price"] = self.entry_price
-                    info["atr"] = self.atr_ary[self.current_step]
+                    info["atr"] = self.atr_ary[next_step]
                     info["tp_mult"] = self.tp_multiplier
                     info["sl_mult"] = self.sl_multiplier
                     self._close_trade("SL hit", self.stop_loss_price)
-            
-            
-                # 3. Timeout Exit
-                elif (self.current_step - self.trade_entry_step) >= self.max_trade_duration:
+
+                elif (next_step - self.trade_entry_step) >= self.max_trade_duration:
                     reward = current_return
                     info["trade_result"] = f"Timeout: return={reward:.4f}"
                     info["exit_price"] = exit_price
                     info["entry_price"] = self.entry_price
-                    info["atr"] = self.atr_ary[self.current_step]
+                    info["atr"] = self.atr_ary[next_step]
                     info["tp_mult"] = self.tp_multiplier
                     info["sl_mult"] = self.sl_multiplier
                     self._close_trade("timeout", exit_price)
-  
-            
-                # 4. Trade remains open
+
                 else:
                     reward = current_return
                     info["trade_status"] = (
@@ -207,22 +199,46 @@ class CryptoTradingEnv(gym.Env):
                         f"TP Remaining={self.target_price - exit_price:.2f}"
                     )
 
-        # Episode termination check
+                self.current_step = next_step  # ✅ Always increment after checking exit logic
+
+        # Final termination check
         if self.current_step >= self.timestep - 1:
             done = True
 
         next_state = self._get_state()
         return next_state, reward, done, False, info
 
+
+
+
     def _close_trade(self, reason, exit_price):
         """Helper to reset trade-related variables"""
+        # Compute last pct change before resetting entry_price
+        if self.entry_price:
+            self.last_pct_change = (exit_price - self.entry_price) / self.entry_price
+        else:
+            self.last_pct_change = 0.0
+
+        print(f"Closed: Reason={reason}, Exit={exit_price:.2f}, Change={self.last_pct_change:.4f}")  # Optional
+
+        # Reset position
         self.in_position = False
         self.entry_price = None
         self.target_price = None
         self.stop_loss_price = None
         self.trade_entry_step = None
-        self.last_pct_change = (exit_price - self.entry_price) / self.entry_price if self.entry_price else 0.0
-        
+        self.trade_log.append({
+        "Entry Step": self.trade_entry_step if self.trade_entry_step is not None else -1,
+        "Exit Step": self.current_step,
+        "Entry Price": round(self.entry_price, 3) if self.entry_price is not None else 0.0,
+        "Exit Price": round(exit_price, 3),
+        "ATR": round(self.atr_ary[self.current_step], 3),
+        "TP Mult": round(self.tp_multiplier, 3),
+        "SL Mult": round(self.sl_multiplier, 3),
+        "Trade Return (%)": round(self.last_pct_change * 100, 3),
+        "Trade Type": reason
+        })
+            
     def _calculate_atr(self, window: int) -> np.ndarray:
         """Compute ATR for each timestep using a rolling window."""
         # Flatten the close, high, and low arrays to ensure they are 1D.

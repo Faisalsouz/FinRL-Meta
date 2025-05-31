@@ -20,7 +20,7 @@ export default function TestPage() {
   const [cwd, setCwd] = useState("papertrading_crypto");                                                                                                                          
   const [initialCapital, setInitialCapital] = useState(10000);                                                                                                                      
   const [netDimension, setNetDimension] = useState("256, 128, 64, 32");                                                                                                             
-                                                                                                                                                                                    
+  const [actorFilename, setActorFilename] = useState("best_actor.pth");                                                                                                                                                                            
   const [atrWindow, setAtrWindow] = useState(14); // Default ATR window                                                                                                             
   const [tpMultiplier, setTpMultiplier] = useState(2); // Default TP multiplier                                                                                                     
   const [slMultiplier, setSlMultiplier] = useState(1); // Default SL multiplier                                                                                                     
@@ -54,7 +54,8 @@ export default function TestPage() {
       net_dimension: netDimArray,                                                                                                                                                   
       atr_window: atrWindow,           // Include ATR window                                                                                                                        
       tp_multiplier: tpMultiplier,     // Include TP multiplier                                                                                                                    
-      sl_multiplier: slMultiplier,     // Include SL multiplier                                                                                                                    
+      sl_multiplier: slMultiplier,     // Include SL multiplier 
+      actor_filename: actorFilename,                                                                                                                   
     };                                                                                                                                                                              
                                                                                                                                                                                     
     try {                                                                                                                                                                           
@@ -262,6 +263,18 @@ export default function TestPage() {
                 onChange={(e) => setSlMultiplier(Number(e.target.value))}                                                                                                           
                 className="w-full rounded border border-gray-300 px-3 py-2"                                                                                                         
               />                                                                                                                                                                    
+            </div>
+            {/* action filename */}
+            <div>
+            <label className="block font-medium mb-1">Actor Filename
+            <span data-tooltip-id="actor-tooltip" data-tooltip-content="The filename of the actor model to be used for paper trading" className="ml-2 text-blue-500 cursor-pointer">i</span>
+            </label>
+            <input
+              type="text"
+              value={actorFilename}
+              onChange={(e) => setActorFilename(e.target.value)}
+              className="w-full rounded border border-gray-300 px-3 py-2 bg-white dark:bg-gray-800 text-black dark:text-white"
+            />            
             </div>                                                                                                                                                                  
           </div>                                                                                                                                                                    
         </div>                                                                                                                                                                      

@@ -25,7 +25,9 @@ export default function PaperTradingPage() {
   const [slMultiplier, setSlMultiplier] = useState(5);
   const [atrWindow, setAtrWindow] = useState(14);
   const [maxTradeDuration, setMaxTradeDuration] = useState(20);
-  const [logFilePath, setLogFilePath] = useState("/home/souz_wsl/finrl_proj/FinRL_Meta/api/papertrading_crypto/paper_trading.log");
+  const [logFilePath, setLogFilePath] = useState("api/papertrading_crypto/paper_trading.log");
+  const [actorFilename, setActorFilename] = useState("best_actor.pth");
+
 
   // Response & error
   const [response, setResponse] = useState<any>(null);
@@ -61,6 +63,7 @@ export default function PaperTradingPage() {
       atr_window: atrWindow,
       max_trade_duration: maxTradeDuration,
       log_file_path: logFilePath,
+      actor_filename: actorFilename,
     };
     console.log("The payload :", payload);
 
@@ -106,7 +109,7 @@ export default function PaperTradingPage() {
         throw new Error(`HTTP error! status: ${res.status}`);
       }
       const data = await res.text();
-      setLogs(data);
+      setLogs(data.split('\n').reverse().join('\n'));
     } catch (err: any) {
       setError(err.message);
     }
@@ -189,6 +192,19 @@ export default function PaperTradingPage() {
             className="w-full rounded border border-gray-300 px-3 py-2 bg-white dark:bg-gray-800 text-black dark:text-white"
           />
         </div>
+        {/* action filename */}
+        <div>
+          <label className="block font-medium mb-1">Actor Filename
+          <span data-tooltip-id="actor-tooltip" data-tooltip-content="The filename of the actor model to be used for paper trading" className="ml-2 text-blue-500 cursor-pointer">i</span>
+          </label>
+          <input
+            type="text"
+            value={actorFilename}
+            onChange={(e) => setActorFilename(e.target.value)}
+            className="w-full rounded border border-gray-300 px-3 py-2 bg-white dark:bg-gray-800 text-black dark:text-white"
+          />
+        </div>
+        
 
         {/* Net Dim */}
         <div>
@@ -215,7 +231,7 @@ export default function PaperTradingPage() {
           <input
             type="number"
             value={stateDim}
-            onChange={(e) => setStateDim(e.target.value)}
+            onChange={(e) => setStateDim(Number(e.target.value))}
             className="w-full rounded border border-gray-300 px-3 py-2 bg-white dark:bg-gray-800 text-black dark:text-white"
           />
         </div>
@@ -230,7 +246,7 @@ export default function PaperTradingPage() {
           <input
             type="number"
             value={actionDim}
-            onChange={(e) => setActionDim(e.target.value)}
+            onChange={(e) => setActionDim(Number(e.target.value))}
             className="w-full rounded border border-gray-300 px-3 py-2 bg-white dark:bg-gray-800 text-black dark:text-white"
           />
         </div>
@@ -292,7 +308,7 @@ export default function PaperTradingPage() {
           <input
             type="number"
             value={maxStock}
-            onChange={(e) => setMaxStock(e.target.value)}
+            onChange={(e) => setMaxStock(Number(e.target.value))}
             className="w-full rounded border border-gray-300 px-3 py-2 bg-white dark:bg-gray-800 text-black dark:text-white"
           />
         </div>

@@ -25,7 +25,8 @@ logger = logging.getLogger(__name__)
 app = FastAPI()
 # Configure CORS
 origins = [
-    "http://localhost:3000",  # Add your frontend URL here
+    "http://localhost:3000",
+    "https://af46-77-22-186-73.ngrok-free.app" # Add your frontend URL here
 ]
 
 app.add_middleware(
@@ -271,6 +272,7 @@ class PaperTradingRequest(BaseModel):
     sl_multiplier: float        = Field(5, example=5)
     atr_window: int             = Field(14, example=14)
     max_trade_duration: int     = Field(20, example=20)
+    actor_filename: str = Field("best_actor.pth", example="best_actor.pth or latest_actor.pth or ...")
 
 ##########################
 # 2) Endpoints
@@ -369,6 +371,7 @@ def start_paper_trading(req: PaperTradingRequest):
         atr_window=req.atr_window,
         max_trade_duration=req.max_trade_duration,
         log_file_path=cwd_path + "/paper_trading.log",
+        actor_filename=req.actor_filename  
     )
     
     logger.info("Starting paper trading")
@@ -424,6 +427,8 @@ class TestRequest(BaseModel):
     atr_window: int = Field(14, example=14)  # Add ATR window
     tp_multiplier: float = Field(2, example=2)  # Add TP multiplier
     sl_multiplier: float = Field(1, example=1)  # Add SL multiplier
+    actor_filename: str = Field("best_actor.pth", example="best_actor.pth or latest_actor.pth or ...")
+    
     
 # Test endpoint to trigger the test function
 @app.post("/test")                                                                                                                                                 
@@ -470,6 +475,7 @@ def test_endpoint(req: TestRequest):
         tp_multiplier=req.tp_multiplier,  # Pass TP multiplier
         sl_multiplier=req.sl_multiplier,  # Pass SL multiplier
         log_file_path=f"{cwd_path}/test.log",
+        actor_filename=req.actor_filename,  
     )                                                                                                                                                              
                                                                                                                                                                    
     logger.info("Test triggered")                                                                                                                                  

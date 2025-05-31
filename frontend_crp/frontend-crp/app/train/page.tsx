@@ -113,7 +113,7 @@ export default function TrainPage() {
         throw new Error(`HTTP error! status: ${res.status}`);
       }
       const data = await res.text();
-      setLogs(data);
+      setLogs(data.split('\n').reverse().join('\n'));
     } catch (err: any) {
       setError(err.message);
     }

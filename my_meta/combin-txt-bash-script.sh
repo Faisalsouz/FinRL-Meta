@@ -1,44 +1,69 @@
 #!/bin/bash
 
-# Fixed file paths to check
+# ===== USER CONFIGURATION =====
 FILE_PATHS=(
-    "/home/souz_wsl/finrl_proj/FinRL_Meta/my_meta"         
-    "/home/souz_wsl/finrl_proj/FinRL_Meta/frontend_crp/frontend-crp/app" 
-    "api"      
+    "/home/souz_wsl/finrl_proj/FinRL_Meta/my_meta"
+    "/home/souz_wsl/finrl_proj/FinRL_Meta/frontend_crp/frontend-crp/app"
+    "/home/souz_wsl/finrl_proj/FinRL_Meta/api"
 )
 
-# Allowed file extensions (case-insensitive)
 ALLOWED_EXTENSIONS=("py" "log" "tsx" "md" "yml" "css" "ts")  # Add more if needed
 
-# Backup directory (will be created if it doesn't exist)
 BACKUP_DIR="$HOME/text-backup-crypto-api"
 mkdir -p "$BACKUP_DIR"
+OUTPUT_FILE="$BACKUP_DIR/repo_summary_$(date +'%Y-%m-%d_%H-%M-%S').md"
 
-# Output filename with current date
-OUTPUT_FILE="$BACKUP_DIR/backup_$(date +'%Y-%m-%d_%H-%M-%S').txt"
+echo "Creating Markdown summary at: $OUTPUT_FILE"
+echo -e "# 🧠 Combined Source File Summary\n\n" > "$OUTPUT_FILE"
 
-# Loop through each file path
-for file_path in "${FILE_PATHS[@]}"; do
-    if [[ -f "$file_path" ]]; then  # Check if file exists
-        # Extract file extension (case-insensitive check)
-        file_ext="${file_path##*.}"
+# ===== FUNCTION TO HANDLE A DIRECTORY =====
+process_directory() {
+    local DIR="$1"
+    local BASE_DIR=$(realpath "$DIR")
+
+    find "$DIR" -type f | while read -r file; do
+        file_ext="${file##*.}"
         file_ext_lower=$(echo "$file_ext" | tr '[:upper:]' '[:lower:]')
 
-        # Check if extension is allowed
         if [[ " ${ALLOWED_EXTENSIONS[*]} " =~ " $file_ext_lower " ]]; then
-            # Write filename (with extension) first
-            echo "=== FILE: $(basename "$file_path") ===" >> "$OUTPUT_FILE"
-            # Write file content
-            cat "$file_path" >> "$OUTPUT_FILE"
-            # Add 2 newlines for spacing
-            echo -e "\n\n" >> "$OUTPUT_FILE"
-            echo "Copied: $file_path"
+            rel_path=$(realpath --relative-to="$BASE_DIR" "$file")
+            echo -e "## 📄 \`$DIR/$rel_path\`\n" >> "$OUTPUT_FILE"
+            echo -e '```' >> "$OUTPUT_FILE"
+            cat "$file" >> "$OUTPUT_FILE"
+            echo -e '\n```\n' >> "$OUTPUT_FILE"
+            echo "✔ Processed: $file"
         else
-            echo "Skipped (invalid extension): $file_path"
+            echo "✘ Skipped (extension): $file"
         fi
+    done
+}
+
+# ===== LOOP THROUGH PROVIDED PATHS =====
+for file_path in "${FILE_PATHS[@]}"; do
+    if [[ -f "$file_path" ]]; then
+        echo -e "## 📄 \`$file_path\`\n" >> "$OUTPUT_FILE"
+        echo -e '```' >> "$OUTPUT_FILE"
+        cat "$file_path" >> "$OUTPUT_FILE"
+        echo -e '\n```\n' >> "$OUTPUT_FILE"
+        echo "✔ Processed file: $file_path"
+    elif [[ -d "$file_path" ]]; then
+        process_directory "$file_path"
     else
-        echo "Not found: $file_path"
+        echo "⚠ Not found: $file_path"
     fi
 done
 
-echo "Backup completed! Output: $OUTPUT_FILE"
+# ===== APPEND DIRECTORY TREE AT THE END =====
+TREE_PATHS=("/home/souz_wsl/finrl_proj/FinRL_Meta")
+echo "Appending repo structure map..."
+echo -e "\n\n# 🗂 Repo Structure Map\n" >> "$OUTPUT_FILE"
+for dir in "${TREE_PATHS[@]}"; do
+    if [[ -d "$dir" ]]; then
+        echo -e "### 📁 \`$dir\`\n\`\`\`\n" >> "$OUTPUT_FILE"
+        tree "$dir" -a -I '.git|node_modules|__pycache__|.next' >> "$OUTPUT_FILE"
+        echo -e "\n\`\`\`\n" >> "$OUTPUT_FILE"
+    fi
+done
+
+echo "✅ Markdown summary created!"
+echo "📄 Output saved to: $OUTPUT_FILE"

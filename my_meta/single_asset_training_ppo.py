@@ -757,38 +757,26 @@ def test(
     env,
     model_name,
     if_vix=False,
-    atr_window=14,           # Default ATR window                                                                                                                                   
-    tp_multiplier=2,         # Default TP multiplier                                                                                                                                
-    sl_multiplier=1, 
+    atr_window=14,
+    tp_multiplier=2,
+    sl_multiplier=1,
     **kwargs,
 ):
-    """
-    Enhanced test function for the new ATR-based crypto environment with trade timeout.
 
-    This function:
-      - Loads data via DataProcessor.
-      - Builds the environment (which now includes max_trade_duration and ATR-based TP/SL).
-      - Loads the trained policy.
-      - Runs a test episode while recording per-step details and complete trade events.
-      - Saves two CSV files: one with complete trade events and one with step-by-step details.
-      - Generates graphs:
-            • A grouped bar chart comparing predicted signal and realized trade return for each trade.
-            • A filtered scatter plot showing only steps where trade events occurred.
-    """
-    logger = setup_logger(log_file_name="test.log", log_dir_name="papertrading_crypto")                                                                            
-    logger.info(f"Received test parameters: {locals()}")  
-    
+
     from meta.data_processor import DataProcessor
+
+    logger = setup_logger(log_file_name="test.log", log_dir_name="papertrading_crypto")
+    logger.info(f"Received test parameters: {locals()}")
+
     dp = DataProcessor(data_source, start_date, end_date, time_interval)
-    
-    # Expect dp.run() to return the extra arrays for ATR calculations.
     price_array, tech_array, turbulence_array, high_array, low_array, close_array = dp.run(
         ticker_list=ticker_list,
         technical_indicator_list=technical_indicator_list,
         if_vix=if_vix,
         cache=True
     )
-    
+
     env_config = {
         "price_array": price_array,
         "tech_array": tech_array,
@@ -796,234 +784,108 @@ def test(
         "low_array": low_array,
         "close_array": close_array,
         "if_train": False,
-        "atr_window": atr_window,                                                                                                               
-        "tp_multiplier": tp_multiplier,                                                                                                            
-        "sl_multiplier": sl_multiplier,
-        # Optionally, you can pass "max_trade_duration": 20 (or desired value) here.
+        "atr_window": atr_window,
+        "tp_multiplier": tp_multiplier,
+        "sl_multiplier": sl_multiplier
     }
+
     env_instance = env(config=env_config)
-    
     net_dimension = kwargs.get("net_dimension", [64, 32])
     cwd = kwargs.get("cwd", f"./{model_name}")
     model_path = kwargs.get("actor_filename", "best_actor.pth")
-    
-    if drl_lib == "elegantrl":
-        import torch
-        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
- 
-        agent = AgentPPO(net_dimension, env_instance.state_dim, env_instance.action_dim, gpu_id=0)
-        
-        logger.info("\nModel verification:")
-        model_path = f"{cwd}/{model_path}"
-        logger.info(f"Loading model from: {model_path}")
-        state_dict = torch.load(model_path, map_location=device)
-        agent.act.load_state_dict(state_dict)
-        
-        test_state = torch.zeros((1, env_instance.state_dim), device=device)
-        test_action = agent.act(test_state)
-        logger.info(f"Test action output: {test_action.detach().cpu().numpy()}")
-        
-        prices = []
-        signals = []
-        rewards = []
-        step_status = []
-        
-        trade_entry_steps = []
-        trade_exit_steps = []
-        trade_pred_signals = []
-        trade_returns = []
-        trade_types = []
-        atr_values = []
-        tp_mult_values = []
-        sl_mult_values = []
-        trade_entry_prices = []
-        trade_exit_prices = []
-        
-        state, _ = env_instance.reset()
-        step_idx = 0
-        
-        while True:
-            s_tensor = torch.as_tensor((state,), device=device)
-            action_tensor = agent.act(s_tensor)
-            action_bounded = torch.tanh(action_tensor)  # bounds the output to [-1, 1]
-            action = action_bounded.detach().cpu().numpy()
-            predicted_signal = float(action[0])
-            signals.append(predicted_signal)
 
-            # Use current price from the environment.
-            current_price = env_instance.price_ary[env_instance.current_step, 0]
-            prices.append(current_price)
+    if drl_lib != "elegantrl":
+        raise NotImplementedError("Only 'elegantrl' is supported.")
 
-            current_status = "No trade"
-            if env_instance.in_position:
-                current_status = "Trade open"
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    agent = AgentPPO(net_dimension, env_instance.state_dim, env_instance.action_dim, gpu_id=0)
 
-            next_state, reward, done, _, info = env_instance.step(action)
-            rewards.append(reward)
+    model_full_path = f"{cwd}/{model_path}"
+    logger.info(f"Loading model from: {model_full_path}")
+    state_dict = torch.load(model_full_path, map_location=device)
+    agent.act.load_state_dict(state_dict)
 
-            if "trade_result" in info:
-                trade_exit_steps.append(step_idx)
-                res_str = info["trade_result"]
+    state, _ = env_instance.reset()
+    step_idx = 0
+    prices, signals, rewards, step_status = [], [], [], []
 
-                entry_price = info.get("entry_price", current_price)
-                exit_price = info.get("exit_price", current_price)
-                atr = info.get("atr", None)
-                tp_mult = info.get("tp_mult", None)
-                sl_mult = info.get("sl_mult", None)
+    while True:
+        s_tensor = torch.as_tensor((state,), device=device)
+        action_tensor = agent.act(s_tensor)
+        action_bounded = torch.tanh(action_tensor)
+        action = action_bounded.detach().cpu().numpy()
+        predicted_signal = float(action[0])
 
-                trade_return_pct = ((exit_price - entry_price) / entry_price) * 100
+        signals.append(predicted_signal)
+        current_price = env_instance.price_ary[env_instance.current_step, 0]
+        prices.append(current_price)
 
-                if "TP Hit" in res_str:
-                    trade_types.append("TP Hit")
-                elif "SL Hit" in res_str:
-                    trade_types.append("SL Hit")
-                elif "Timeout" in res_str:
-                    trade_types.append("Timeout")
-                else:
-                    trade_types.append("Closed")
+        current_status = "Trade open" if env_instance.in_position else "No trade"
+        step_status.append(current_status)
 
-                trade_returns.append(trade_return_pct)
-                trade_entry_prices.append(entry_price)
-                trade_exit_prices.append(exit_price)
-                atr_values.append(atr)
-                tp_mult_values.append(tp_mult)
-                sl_mult_values.append(sl_mult)
+        next_state, reward, done, _, _ = env_instance.step(action)
+        rewards.append(reward)
+        state = next_state
+        step_idx += 1
 
-            current_status = "Trade closed"
-            step_status.append(current_status)
-            state = next_state
-            step_idx += 1
-            if done:
-                break
+        if done:
+            break
 
-        import pandas as pd
-        # Ensure all lists have the same length by filling missing values with zeros or placeholders
-        min_length = min(len(trade_entry_steps), len(trade_exit_steps), len(trade_pred_signals), len(trade_returns), len(trade_types))
-        trade_entry_steps = trade_entry_steps[:min_length]
-        trade_exit_steps = trade_exit_steps[:min_length]
-        trade_pred_signals = trade_pred_signals[:min_length]
-        trade_returns = trade_returns[:min_length]
-        trade_types = trade_types[:min_length]
-        atr_values = atr_values[:min_length]
-        tp_mult_values = tp_mult_values[:min_length]
-        sl_mult_values = sl_mult_values[:min_length]
-        trade_entry_prices = trade_entry_prices[:min_length]
-        trade_exit_prices = trade_exit_prices[:min_length]
+    # Export step-by-step detail CSV
+    step_df = pd.DataFrame({
+        "Step": list(range(len(prices))),
+        "Price": prices,
+        "Predicted Signal": signals,
+        "Step Return": rewards,
+        "Trade Status": step_status
+    })
+    step_df.to_csv(f"{cwd}/step_by_step_details.csv", index=False)
 
-        # Construct the DataFrame
-        trade_df = pd.DataFrame({
-            "Entry Step": trade_entry_steps,
-            "Exit Step": trade_exit_steps,
-            "Entry Price": trade_entry_prices,
-            "Exit Price": trade_exit_prices,
-            "ATR": atr_values,
-            "TP Mult": tp_mult_values,
-            "SL Mult": sl_mult_values,
-            "Predicted Signal": trade_pred_signals,
-            "Trade Return (%)": trade_returns,
-            "Trade Type": trade_types
-        })
-        trade_df.to_csv(f"{cwd}/trade_details.csv", index=False)
-        
-        x_axis = list(range(len(prices)))
-        step_df = pd.DataFrame({
-            "Step": x_axis,
-            "Price": prices,
-            "Predicted Signal": signals,
-            "Step Return": rewards,
-            "Trade Status": step_status
-        })
-        step_df.to_csv(f"{cwd}/step_by_step_details.csv", index=False)
-        
-        # Graph 1: Grouped Bar Chart for Trade Events.
-        from plotly.graph_objects import Figure, Bar
-        trade_idx = list(range(min_length))
-        fig_trade = Figure(data=[
-            Bar(
-                x=trade_idx,
-                y=[float(x) for x in trade_pred_signals[:min_length]],
-                name="Predicted Signal",
-                marker_color="blue"
-            ),
-            Bar(
-                x=trade_idx,
-                y=[float(x) for x in trade_returns[:min_length]],
-                name="Trade Return",
-                marker_color=[
-                    "green" if t == "TP Hit" else "red" if t == "SL Hit" else "orange" for t in trade_types[:min_length]
-                ]
-            )
-        ])
-        fig_trade.update_layout(
-            title="Trade Events: Predicted Signal vs. Realized Trade Return",
-            xaxis_title="Trade Event Index",
-            yaxis_title="Return (fraction)",
-            barmode="group"
-        )
-        fig_trade.write_html(f"{cwd}/trade_events_comparison.html")
+    # Export trade-level log from environment
+    trade_df = pd.DataFrame(env_instance.trade_log)
+    trade_df.to_csv(f"{cwd}/trade_details.csv", index=False,float_format="%.3f")
 
-        # Graph 2: Filtered Scatter Plot for Trade Events.
-        # Filter steps with trade events.
-        import plotly.express as px
-        trade_steps_df = step_df[step_df["Trade Status"] != "No trade"]
-        fig_filtered = px.scatter(
-            trade_steps_df,
-            x="Step",
-            y="Price",
-            color="Trade Status",
-            hover_data=["Predicted Signal", "Step Return"],
-            title="Filtered Trade Events: Price with Predicted Signal and Step Return"
-        )
-        fig_filtered.update_traces(marker=dict(size=10))
-        fig_filtered.write_html(f"{cwd}/filtered_trade_details.html")
-
-        logger.info(f"\nTest completed. Plots and CSV files saved to {cwd}/")
-        logger.info("\n=== Performance Summary ===")
-        if len(trade_returns) > 0:
-            cumulative_trade_return = np.prod(1 + np.array([float(r) for r in trade_returns])) - 1
-        else:
-            cumulative_trade_return = 0.0
-
-        # Calculate net profit (sum of all trade returns)
+    # Compute and log performance summary
+    if not trade_df.empty:
+        trade_returns = trade_df["Trade Return (%)"].astype(float).tolist()
+        cumulative_trade_return = np.prod([1 + r / 100 for r in trade_returns]) - 1
         net_profit = sum(trade_returns)
-
-        logger.info(f"Cumulative Trade Return (complete trades): {float(cumulative_trade_return)*100:.2f}%")
-        logger.info(f"Net Profit (sum of all trade returns): {float(net_profit)*100:.2f}%")
-
         total_trades = len(trade_returns)
         correct_trades = sum(1 for r in trade_returns if r > 0)
-        logger.info(f"Number of Trades: {total_trades}")
-        if total_trades > 0:
-            logger.info(f"Correct Trades: {correct_trades} ({(correct_trades/total_trades*100):.2f}%)")
-        else:
-            logger.info("No trades executed.")
-        summary_lines = [
-            "\n=== Performance Summary ===",
-            f"Net Profit: {float(net_profit)*100:.2f}%",
-            f"Number of Trades: {total_trades}",
-            f"Correct Trades: {correct_trades} ({(correct_trades/total_trades*100):.2f}%)" if total_trades > 0 else "Correct Trades: N/A",
-        ]
-
-        for line in summary_lines:
-            print(line)
-            logger.info(line)
-
-        return {
-            'prices': prices,
-            'signals': signals,
-            'rewards': rewards,
-            'trade_details': trade_df,
-            'step_details': step_df,
-            'summary': {
-                'cumulative_trade_return': cumulative_trade_return,
-                'net_profit': net_profit,
-                'total_trades': total_trades,
-                'correct_trades': correct_trades,
-                'correct_trade_pct': (correct_trades/total_trades*100) if total_trades > 0 else 0
-            }
-        }
     else:
-        raise NotImplementedError("Currently only 'elegantrl' is integrated.")
+        trade_returns = []
+        cumulative_trade_return = 0.0
+        net_profit = 0.0
+        total_trades = 0
+        correct_trades = 0
+
+    logger.info("\nTest completed. Plots and CSV files saved to %s", cwd)
+    logger.info("\n=== Performance Summary ===")
+    logger.info(f"Cumulative Trade Return: {cumulative_trade_return * 100:.2f}%")
+    logger.info(f"Net Profit: {net_profit:.2f}%")
+    logger.info(f"Number of Trades: {total_trades}")
+    if total_trades > 0:
+        logger.info(f"Correct Trades: {correct_trades} ({(correct_trades / total_trades) * 100:.2f}%)")
+    else:
+        logger.info("Correct Trades: N/A")
+
+    return {
+        'prices': prices,
+        'signals': signals,
+        'rewards': rewards,
+        'trade_details': trade_df,
+        'step_details': step_df,
+        'summary': {
+            'cumulative_trade_return': cumulative_trade_return,
+            'net_profit': net_profit,
+            'total_trades': total_trades,
+            'correct_trades': correct_trades,
+            'correct_trade_pct': (correct_trades / total_trades * 100) if total_trades > 0 else 0
+        }
+    }
+
+    # else:
+    #     raise NotImplementedError("Currently only 'elegantrl' is integrated.")
 
 
 
