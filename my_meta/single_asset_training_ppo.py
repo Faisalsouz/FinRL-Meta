@@ -849,18 +849,18 @@ def test(
             action = action_bounded.detach().cpu().numpy()
             predicted_signal = float(action[0])
             signals.append(predicted_signal)
-            
+
             # Use current price from the environment.
             current_price = env_instance.price_ary[env_instance.current_step, 0]
             prices.append(current_price)
-            
+
             current_status = "No trade"
             if env_instance.in_position:
                 current_status = "Trade open"
-            
+
             next_state, reward, done, _, info = env_instance.step(action)
             rewards.append(reward)
-            
+
             if "trade_result" in info:
                 trade_exit_steps.append(step_idx)
                 res_str = info["trade_result"]
@@ -895,24 +895,34 @@ def test(
             step_idx += 1
             if done:
                 break
-        
+
         import pandas as pd
+        # Ensure all lists have the same length by filling missing values with zeros or placeholders
         min_length = min(len(trade_entry_steps), len(trade_exit_steps), len(trade_pred_signals), len(trade_returns), len(trade_types))
-        if not (len(trade_entry_steps) == len(trade_exit_steps) ==
-                len(trade_pred_signals) == len(trade_returns) == len(trade_types)):
-            logger.info("Warning: Some trade events were incomplete. Only complete trade pairs will be recorded.")
+        trade_entry_steps = trade_entry_steps[:min_length]
+        trade_exit_steps = trade_exit_steps[:min_length]
+        trade_pred_signals = trade_pred_signals[:min_length]
+        trade_returns = trade_returns[:min_length]
+        trade_types = trade_types[:min_length]
+        atr_values = atr_values[:min_length]
+        tp_mult_values = tp_mult_values[:min_length]
+        sl_mult_values = sl_mult_values[:min_length]
+        trade_entry_prices = trade_entry_prices[:min_length]
+        trade_exit_prices = trade_exit_prices[:min_length]
+
+        # Construct the DataFrame
         trade_df = pd.DataFrame({
-            "Entry Step": trade_entry_steps[:min_length],
-            "Exit Step": trade_exit_steps[:min_length],
-            "Entry Price": trade_entry_prices[:min_length],
-            "Exit Price": trade_exit_prices[:min_length],
-            "ATR": atr_values[:min_length],
-            "TP Mult": tp_mult_values[:min_length],
-            "SL Mult": sl_mult_values[:min_length],
-            "Predicted Signal": trade_pred_signals[:min_length],
-            "Trade Return (%)": trade_returns[:min_length],
-            "Trade Type": trade_types[:min_length]
-            })
+            "Entry Step": trade_entry_steps,
+            "Exit Step": trade_exit_steps,
+            "Entry Price": trade_entry_prices,
+            "Exit Price": trade_exit_prices,
+            "ATR": atr_values,
+            "TP Mult": tp_mult_values,
+            "SL Mult": sl_mult_values,
+            "Predicted Signal": trade_pred_signals,
+            "Trade Return (%)": trade_returns,
+            "Trade Type": trade_types
+        })
         trade_df.to_csv(f"{cwd}/trade_details.csv", index=False)
         
         x_axis = list(range(len(prices)))
@@ -951,7 +961,7 @@ def test(
             barmode="group"
         )
         fig_trade.write_html(f"{cwd}/trade_events_comparison.html")
-        
+
         # Graph 2: Filtered Scatter Plot for Trade Events.
         # Filter steps with trade events.
         import plotly.express as px
@@ -966,20 +976,20 @@ def test(
         )
         fig_filtered.update_traces(marker=dict(size=10))
         fig_filtered.write_html(f"{cwd}/filtered_trade_details.html")
-        
+
         logger.info(f"\nTest completed. Plots and CSV files saved to {cwd}/")
         logger.info("\n=== Performance Summary ===")
         if len(trade_returns) > 0:
             cumulative_trade_return = np.prod(1 + np.array([float(r) for r in trade_returns])) - 1
         else:
             cumulative_trade_return = 0.0
-        
+
         # Calculate net profit (sum of all trade returns)
         net_profit = sum(trade_returns)
-        
+
         logger.info(f"Cumulative Trade Return (complete trades): {float(cumulative_trade_return)*100:.2f}%")
         logger.info(f"Net Profit (sum of all trade returns): {float(net_profit)*100:.2f}%")
-        
+
         total_trades = len(trade_returns)
         correct_trades = sum(1 for r in trade_returns if r > 0)
         logger.info(f"Number of Trades: {total_trades}")
@@ -997,7 +1007,7 @@ def test(
         for line in summary_lines:
             print(line)
             logger.info(line)
-        
+
         return {
             'prices': prices,
             'signals': signals,
