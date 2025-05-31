@@ -119,15 +119,15 @@ class CryptoTradingEnv(gym.Env):
             if signal > 0:
                 # ========== ATR-BASED TP/SL SETUP ========== #
                 current_atr = self.atr_ary[self.current_step]
-                
+            
                 # Calculate TP/SL using multipliers
                 self.entry_price = current_price
                 self.target_price = self.entry_price + self.tp_multiplier * current_atr
                 self.stop_loss_price = self.entry_price - self.sl_multiplier * current_atr
-                
+            
                 # Validate prices aren't negative (important for crypto)
                 self.stop_loss_price = max(self.stop_loss_price, 0.01)  # Prevent negative SL
-                
+            
                 self.in_position = True
                 self.trade_entry_step = self.current_step
                 info["trade"] = (
@@ -148,7 +148,7 @@ class CryptoTradingEnv(gym.Env):
         else:
             # Trade is active - check exit conditions
             self.current_step += 1
-            
+        
             if self.current_step >= self.timestep:
                 # End of data - force exit
                 exit_price = self.price_ary[-1, 0]
@@ -172,8 +172,8 @@ class CryptoTradingEnv(gym.Env):
                     info["tp_mult"] = self.tp_multiplier
                     info["sl_mult"] = self.sl_multiplier
                     self._close_trade("TP hit", self.target_price)
-      
-                
+  
+            
                 # 2. Stop Loss Hit
                 elif exit_price <= self.stop_loss_price:
                     reward = (self.stop_loss_price - self.entry_price) / self.entry_price
@@ -184,8 +184,8 @@ class CryptoTradingEnv(gym.Env):
                     info["tp_mult"] = self.tp_multiplier
                     info["sl_mult"] = self.sl_multiplier
                     self._close_trade("SL hit", self.stop_loss_price)
-                
-                
+            
+            
                 # 3. Timeout Exit
                 elif (self.current_step - self.trade_entry_step) >= self.max_trade_duration:
                     reward = current_return
@@ -196,8 +196,8 @@ class CryptoTradingEnv(gym.Env):
                     info["tp_mult"] = self.tp_multiplier
                     info["sl_mult"] = self.sl_multiplier
                     self._close_trade("timeout", exit_price)
-      
-                
+  
+            
                 # 4. Trade remains open
                 else:
                     reward = current_return
