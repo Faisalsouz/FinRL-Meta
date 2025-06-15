@@ -26,7 +26,7 @@ app = FastAPI()
 # Configure CORS
 origins = [
     "http://localhost:3000",
-    "https://af46-77-22-186-73.ngrok-free.app" # Add your frontend URL here
+    "https://3ee4-77-22-186-73.ngrok-free.app" # Add your frontend URL here
 ]
 
 app.add_middleware(
@@ -427,6 +427,7 @@ class TestRequest(BaseModel):
     atr_window: int = Field(14, example=14)  # Add ATR window
     tp_multiplier: float = Field(2, example=2)  # Add TP multiplier
     sl_multiplier: float = Field(1, example=1)  # Add SL multiplier
+    max_trade_duration: int = Field(20, example=20)
     actor_filename: str = Field("best_actor.pth", example="best_actor.pth or latest_actor.pth or ...")
     
     
@@ -475,7 +476,9 @@ def test_endpoint(req: TestRequest):
         tp_multiplier=req.tp_multiplier,  # Pass TP multiplier
         sl_multiplier=req.sl_multiplier,  # Pass SL multiplier
         log_file_path=f"{cwd_path}/test.log",
-        actor_filename=req.actor_filename,  
+        actor_filename=req.actor_filename,
+        max_trade_duration=req.max_trade_duration,
+          
     )                                                                                                                                                              
                                                                                                                                                                    
     logger.info("Test triggered")                                                                                                                                  

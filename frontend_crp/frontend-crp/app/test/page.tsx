@@ -24,7 +24,8 @@ export default function TestPage() {
   const [atrWindow, setAtrWindow] = useState(14); // Default ATR window                                                                                                             
   const [tpMultiplier, setTpMultiplier] = useState(2); // Default TP multiplier                                                                                                     
   const [slMultiplier, setSlMultiplier] = useState(1); // Default SL multiplier                                                                                                     
-                                                                                                                                                                                    
+  const [maxTradeDuration, setMaxTradeDuration] = useState(20); // Default 20 bars
+                                                                                                                                                                                   
   const [response, setResponse] = useState<any>(null);                                                                                                                              
   const [error, setError] = useState<string | null>(null);                                                                                                                          
                                                                                                                                                                                     
@@ -55,7 +56,8 @@ export default function TestPage() {
       atr_window: atrWindow,           // Include ATR window                                                                                                                        
       tp_multiplier: tpMultiplier,     // Include TP multiplier                                                                                                                    
       sl_multiplier: slMultiplier,     // Include SL multiplier 
-      actor_filename: actorFilename,                                                                                                                   
+      actor_filename: actorFilename,
+      max_trade_duration: maxTradeDuration,                                                                                                                   
     };                                                                                                                                                                              
                                                                                                                                                                                     
     try {                                                                                                                                                                           
@@ -263,6 +265,16 @@ export default function TestPage() {
                 onChange={(e) => setSlMultiplier(Number(e.target.value))}                                                                                                           
                 className="w-full rounded border border-gray-300 px-3 py-2"                                                                                                         
               />                                                                                                                                                                    
+            </div>
+            {/* Max Trade Duration */}
+            <div>
+              <label className="block font-medium mb-1">Max Trade Duration</label>
+              <input
+                type="number"
+                value={maxTradeDuration}
+                onChange={(e) => setMaxTradeDuration(Number(e.target.value))}
+                className="w-full rounded border border-gray-300 px-3 py-2"
+              />
             </div>
             {/* action filename */}
             <div>

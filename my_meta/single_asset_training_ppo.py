@@ -98,9 +98,9 @@ def setup_logger(log_file_name="training.log", log_dir_name="papertrading_crypto
 # from finrl.meta.data_processors.processor_alpaca import AlpacaProcessor
 
 
-CRYPTO_TICKER = ["BTCUSDT"]  # Single asset
-ticker_list = CRYPTO_TICKER
-INDICATORS = ['macd', 'rsi', 'cci', 'dx']
+# CRYPTO_TICKER = ["BTCUSDT"]  # Single asset
+# ticker_list = CRYPTO_TICKER
+# INDICATORS = ['macd', 'rsi', 'cci', 'dx']
 
 
 
@@ -579,23 +579,29 @@ class DRLAgent:
             make a prediction in a test dataset and get results
     """
 
-    def __init__(self, env, price_array, tech_array, high_array, low_array, close_array):
+    def __init__(self, env, price_array, tech_array, high_array, low_array, close_array, env_config=None):
         self.env = env
         self.price_array = price_array
         self.tech_array = tech_array
         self.high_array = high_array
         self.low_array = low_array
         self.close_array = close_array
+        self.env_config = env_config
 
     def get_model(self, model_name, model_kwargs):
-        env_config = {
-        "price_array": self.price_array,
-        "tech_array": self.tech_array,
-        "high_array": self.high_array,
-        "low_array": self.low_array,
-        "close_array": self.close_array,
-        "if_train": True,
-    }
+        env_config = self.env_config.copy()
+    #     env_config = {
+    #     "price_array": self.price_array,
+    #     "tech_array": self.tech_array,
+    #     "high_array": self.high_array,
+    #     "low_array": self.low_array,
+    #     "close_array": self.close_array,
+    #     "if_train": True,
+    #     "atr_window": model_kwargs.get("atr_window", 14),
+    #     "tp_multiplier": model_kwargs.get("tp_multiplier", 2),
+    #     "sl_multiplier": model_kwargs.get("sl_multiplier", 1),
+    #     "max_trade_duration": model_kwargs.get("max_trade_duration", 20)
+    # }
         environment = self.env(config=env_config)
         env_args = {'config': env_config,
               'env_name': environment.env_name,
@@ -722,7 +728,7 @@ def train(
         "tp_multiplier": tp_multiplier,         # TP = Entry + 2*ATR
         "sl_multiplier": sl_multiplier,         # SL = Entry - 1*ATR
     }
-    env_instance = env(config=env_config)
+    # env_instance = env(config=env_config)
 
     # read parameters
     cwd = kwargs.get("cwd", "./" + str(model_name))
@@ -737,7 +743,8 @@ def train(
             tech_array=tech_array,
             high_array=high_array,
             low_array=low_array,
-            close_array=close_array
+            close_array=close_array,
+            env_config=env_config 
         )
 
         model = agent.get_model(model_name, model_kwargs=erl_params)
@@ -760,6 +767,7 @@ def test(
     atr_window=14,
     tp_multiplier=2,
     sl_multiplier=1,
+    max_trade_duration=20,
     **kwargs,
 ):
 
@@ -786,7 +794,8 @@ def test(
         "if_train": False,
         "atr_window": atr_window,
         "tp_multiplier": tp_multiplier,
-        "sl_multiplier": sl_multiplier
+        "sl_multiplier": sl_multiplier,
+        "max_trade_duration": max_trade_duration
     }
 
     env_instance = env(config=env_config)
@@ -991,11 +1000,11 @@ ERL_PARAMS = {
 ############################################
 data_url = 'wss://data.alpaca.markets'
 env = CryptoTradingEnv
-ticker_list = CRYPTO_TICKER
-action_dim = len(ticker_list) # for training 
-logger.info(ticker_list)
-logger.info(len(ticker_list))
-logger.info(INDICATORS)
+# ticker_list = CRYPTO_TICKER
+# action_dim = len(ticker_list) # for training 
+# logger.info(ticker_list)
+# logger.info(len(ticker_list))
+# logger.info(INDICATORS)
 #  1 Scaled Price: 1 dimension                                                                                                                                                                          
 #  2 Technical Indicators: len(INDICATORS) dimensions per ticker                                                                                                                                        
 #  3 Previous Step’s Percentage Change in Price: 1 dimension                                                                                                                                            
