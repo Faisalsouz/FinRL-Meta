@@ -9002,3 +9002,44 @@
 
 # 2025-05-31 11:24:14.777380
 +/undo
+
+# 2025-06-25 19:14:29.481150
++/ask
+
+# 2025-06-25 19:14:37.972319
++/add api/main.py
+
+# 2025-06-25 19:14:48.083050
++/add my_meta/single_asset_training_ppo.py
+
+# 2025-06-25 19:16:51.522401
++in my `single_asset_training_ppo` I have test function. this take values from main.py to save test.logs in directory and in the end. it should save the tetest logs in that file. in my test.logs I can only see recevied parameter dictionary but not following block logger.info("\nTest completed. Plots and CSV files saved to %s", cwd)
++    logger.info("\n=== Performance Summary ===")
++    logger.info(f"Cumulative Trade Return: {cumulative_trade_return * 100:.2f}%")
++    logger.info(f"Net Profit: {net_profit:.2f}%")
++    logger.info(f"Number of Trades: {total_trades}")
++    if total_trades > 0: which is kind of important to see the perfromance summary. 
+
+# 2025-06-25 19:17:00.605056
++n
+
+# 2025-06-25 19:30:33.273002
++another thing logs should in latest to oldest time stmaps in my frontend page in test/page.tsx
+
+# 2025-06-25 19:31:26.840587
++/code
+
+# 2025-06-25 19:31:38.991015
++go ahead and implement logs in reverser order. 
+
+# 2025-06-25 19:32:26.936957
++yes
+
+# 2025-06-25 19:32:54.482301
++Go ahead
+
+# 2025-06-25 19:33:14.859812
++n
+
+# 2025-06-25 19:34:21.219912
++/undo

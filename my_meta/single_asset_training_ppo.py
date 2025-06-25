@@ -774,7 +774,7 @@ def test(
 
     from meta.data_processor import DataProcessor
 
-    logger = setup_logger(log_file_name="test.log", log_dir_name="papertrading_crypto")
+    logger = setup_logger(log_file_name="test.log", log_dir_name="papertrading_crypto",logger_name="test_logger")
     logger.info(f"Received test parameters: {locals()}")
 
     dp = DataProcessor(data_source, start_date, end_date, time_interval)

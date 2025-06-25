@@ -209,16 +209,22 @@ def fetch_performance_analysis(start_date: str = None, end_date: str = None):
         logger.error(f"Error fetching performance data: {str(e)}")  # Add logging
         return {"error": str(e)}
 
-@app.get("/fetch_logs_test")
-def fetch_logs_test():
-    """
-    Endpoint to fetch the training log file contents.
-    """
-    script_dir = os.path.dirname(os.path.abspath(__file__))
-    
-    log_file_path = script_dir + "/papertrading_crypto/test.log"
-    return FileResponse(log_file_path, media_type='text/plain')
-
+@app.get("/fetch_logs_test")                                                                                                                                   
+def fetch_logs_test():                                                                                                                                         
+    """                                                                                                                                                        
+    Endpoint to fetch the test log file contents.                                                                                                              
+    """                                                                                                                                                        
+    script_dir = os.path.dirname(os.path.abspath(__file__))                                                                                                    
+    log_file_path = script_dir + "/papertrading_crypto/test.log"                                                                                               
+                                                                                                                                                               
+    try:                                                                                                                                                       
+        with open(log_file_path, 'r') as file:                                                                                                                 
+            logs = file.readlines()                                                                                                                            
+        # Reverse the logs to show latest first                                                                                                                
+        logs.reverse()                                                                                                                                         
+        return {"logs": logs}                                                                                                                                  
+    except Exception as e:                                                                                                                                     
+        return {"error": str(e)}   
 ##########################
 # 1) Pydantic models for input
 ##########################
