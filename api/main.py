@@ -26,7 +26,7 @@ app = FastAPI()
 # Configure CORS
 origins = [
     "http://localhost:3000",
-    "https://3ee4-77-22-186-73.ngrok-free.app" # Add your frontend URL here
+    "https://b17a-77-22-186-73.ngrok-free.app" # Add your frontend URL here
 ]
 
 app.add_middleware(
