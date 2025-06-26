@@ -90,3 +90,20 @@ def _calculate_indicators_generic(
     df.reset_index(drop=True, inplace=True)
     df = df.dropna(axis=0, how='any').reset_index(drop=True)
     return df
+def submitOrder(self, qty, symbol, side, resp):
+    """Place a MARKET order via Binance testnet."""
+    if qty > 0:
+        try:
+            order = self.binance.order_market(
+                symbol=symbol,
+                side=side.upper(),
+                quantity=qty
+            )
+            self.logger.info(f"{side.upper()} {qty} {symbol} completed.")
+            resp.append(True)
+        except Exception as e:
+            self.logger.error(f"{side.upper()} {qty} {symbol} failed. Error: {e}")
+            resp.append(False)
+    else:
+        self.logger.info(f"Quantity=0, skipping order for {symbol} ({side}).")
+        resp.append(True)
