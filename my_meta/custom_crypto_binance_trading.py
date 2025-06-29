@@ -285,6 +285,7 @@ class BinancePaperTradingCryptoLive:
         self.log_file_path = log_file_path or "binance_paper_trading.log"
 
     # ─────────────────────────── filter helper ─────────────────────────────
+    @staticmethod
     def _get_filter(filters: list[dict], *types: str) -> dict | None:
         """Return the first filter whose type matches one of *types*."""
         return next((f for f in filters if f["filterType"] in types), None)
@@ -450,8 +451,8 @@ class BinancePaperTradingCryptoLive:
             self.logger.debug("CASH free USDT = %.2f", self.cash)
 
             info       = self.binance.get_symbol_info(symbol)
-            lot        = self._get_filter(info["filters"], "LOT_SIZE")
-            notional_f = self._get_filter(info["filters"], "MIN_NOTIONAL", "NOTIONAL")
+            lot        = BinancePaperTradingCryptoLive._get_filter(info["filters"], "LOT_SIZE")
+            notional_f = BinancePaperTradingCryptoLive._get_filter(info["filters"], "MIN_NOTIONAL", "NOTIONAL")
 
             if lot is None or notional_f is None:
                 raise RuntimeError(
