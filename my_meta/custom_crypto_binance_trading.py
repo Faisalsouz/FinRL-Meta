@@ -246,6 +246,7 @@ class BinancePaperTradingCryptoLive:
             raise ValueError("Only PPO from ElegantRL is supported currently.")
         tmp_agent = AgentPPO(net_dim, state_dim, action_dim)
         tmp_agent.act.load_state_dict(torch.load(f"{cwd}/{actor_filename}", map_location="cpu"))
+        self.logger.info(f"Successfully loaded PPO agent from {cwd}/{actor_filename}")
         self.act = tmp_agent.act
         self.device = tmp_agent.device
 
@@ -394,6 +395,8 @@ class BinancePaperTradingCryptoLive:
                         "SELL %.6f %s @ %.3f – %s",
                         executed_qty, self.ticker_list[0], current_price, result,
                     )
+            else:
+                self.logger.info(f"STEP {self.current_step} | Waiting for trade to close. Current price: {current_price:.3f}")
 
         # update latest price & equity
         self.price = fetch_latest_data_binance(
