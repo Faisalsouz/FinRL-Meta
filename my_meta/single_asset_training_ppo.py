@@ -5,8 +5,6 @@ import logging
 # from finrl.config import INDICATORS
 # from finrl.meta.env_stock_trading.env_stocktrading_np import StockTradingEnv
 from my_meta.custom_crypto_env import CryptoTradingEnv
-# from my_meta.custom_crypto_paper_trading import AlpacaPaperTradingCryptoLive
-from my_meta.custom_crypto_env import CryptoTradingEnv
 # from finrl.meta.env_stock_trading.env_stock_papertrading import AlpacaPaperTrading
 #from finrl.meta.data_processor import DataProcessor
 from meta.data_processor import DataProcessor
@@ -931,19 +929,24 @@ class StockEnvEmpty(gym.Env):
         return
 
 
-ERL_PARAMS = {
-    "learning_rate": 3e-6,         # Increased learning rate for faster convergence
-    "batch_size": 512,             # Batch size remains the same (adjust as needed)
-    "gamma": 0.99,                 # Use same discount as in the environment
-    "seed": 312,
-    "net_dimension": [256, 128, 64, 32], #[512, 256, 128],  # You can experiment with these sizes
-    "target_step": 5000,           # More frequent updates might help
-    "eval_gap": 30,
-    "eval_times": 1,
-    "ratio_clip": 0.5,            # PPO clipping parameter (unchanged)
-    "lambda_gae_adv": 0.95,        # GAE lambda remains the same
-    "lambda_entropy": 0.01         # Entropy bonus to encourage exploration
-}
+
+
+
+
+
+# ERL_PARAMS = {
+#     "learning_rate": 3e-6,         # Increased learning rate for faster convergence
+#     "batch_size": 512,             # Batch size remains the same (adjust as needed)
+#     "gamma": 0.99,                 # Use same discount as in the environment
+#     "seed": 312,
+#     "net_dimension": [256, 128, 64, 32], #[512, 256, 128],  # You can experiment with these sizes
+#     "target_step": 5000,           # More frequent updates might help
+#     "eval_gap": 30,
+#     "eval_times": 1,
+#     "ratio_clip": 0.5,            # PPO clipping parameter (unchanged)
+#     "lambda_gae_adv": 0.95,        # GAE lambda remains the same
+#     "lambda_entropy": 0.01         # Entropy bonus to encourage exploration
+# }
 # logger.info(f"Creating model with state_dim: {state_dim}, action_dim: {action_dim}")  # Debug logger.info
 #############################
 # end of the parameters
@@ -952,54 +955,54 @@ ERL_PARAMS = {
 
 # runing the paper trading:
 
-CRYPTO_TICKER_PT = ["BTC/USD"]  # For paper trading
-CRYPTO_TICKER_TR = ['BTCUSDT']  # For training
-INDICATORS = ["macd","rsi","cci","dx"]
-API_KEY = os.getenv("API_KEY")
-API_SECRET = os.getenv("API_SECRET")
+# CRYPTO_TICKER_PT = ["BTC/USD"]  # For paper trading
+# CRYPTO_TICKER_TR = ['BTCUSDT']  # For training
+# INDICATORS = ["macd","rsi","cci","dx"]
+# API_KEY = os.getenv("API_KEY")
+# API_SECRET = os.getenv("API_SECRET")
 
-API_BASE_URL = "https://paper-api.alpaca.markets" #new url for crpto wss://stream.data.alpaca.markets/v1beta3/crypto/us
-agent_cwd = "/home/souz_wsl/finrl_proj/FinRL_Meta/papertrading_crypto"  # folder containing actor.pth from training
+# API_BASE_URL = "https://paper-api.alpaca.markets" #new url for crpto wss://stream.data.alpaca.markets/v1beta3/crypto/us
+# agent_cwd = "/home/souz_wsl/finrl_proj/FinRL_Meta/papertrading_crypto"  # folder containing actor.pth from training
 
 # Calculate state dimension components:
 # 1 (scaled price) + 
 # len(INDICATORS) (technical indicators) + 
 # 1 (previous step’s percentage change in price) + 
 # 1 (in-trade flag)
-state_dim = 1 + len(INDICATORS) + 1 + 1
+# state_dim = 1 + len(INDICATORS) + 1 + 1
 
 # Define network dimensions
-net_dimensions = [256, 128, 64, 32]
+# net_dimensions = [256, 128, 64, 32]
 
 # Calculate action dimension
-action_dim = len(CRYPTO_TICKER_PT)
+# action_dim = len(CRYPTO_TICKER_PT)
 
 # logger.info for debugging
-logger = setup_logger()
-logger.info(f"Creating model with state_dim: {state_dim}, action_dim: {action_dim}, net_dimensions: {net_dimensions}")
+# logger = setup_logger()
+# logger.info(f"Creating model with state_dim: {state_dim}, action_dim: {action_dim}, net_dimensions: {net_dimensions}")
 
 # ERL_PARAMS with updated net_dimensions
-ERL_PARAMS = {
-    "learning_rate": 3e-6,         # Increased learning rate for faster convergence
-    "batch_size": 512,             # Batch size remains the same (adjust as needed)
-    "gamma": 0.99,                 # Use same discount as in the environment
-    "seed": 312,
-    "net_dimension": net_dimensions,  # Updated net dimensions
-    "target_step": 5000,           # More frequent updates might help
-    "eval_gap": 30,
-    "eval_times": 1,
-    "ratio_clip": 0.5,            # PPO clipping parameter (unchanged)
-    "lambda_gae_adv": 0.95,        # GAE lambda remains the same
-    "lambda_entropy": 0.01         # Entropy bonus to encourage exploration
-}
+# ERL_PARAMS = {
+#     "learning_rate": 3e-6,         # Increased learning rate for faster convergence
+#     "batch_size": 512,             # Batch size remains the same (adjust as needed)
+#     "gamma": 0.99,                 # Use same discount as in the environment
+#     "seed": 312,
+#     "net_dimension": net_dimensions,  # Updated net dimensions
+#     "target_step": 5000,           # More frequent updates might help
+#     "eval_gap": 30,
+#     "eval_times": 1,
+#     "ratio_clip": 0.5,            # PPO clipping parameter (unchanged)
+#     "lambda_gae_adv": 0.95,        # GAE lambda remains the same
+#     "lambda_entropy": 0.01         # Entropy bonus to encourage exploration
+# }
 
 ################ uncomment to run the paper trading ################
 ##################################################################
 ############################################
 # parameters for training and paper trading.
 ############################################
-data_url = 'wss://data.alpaca.markets'
-env = CryptoTradingEnv
+# data_url = 'wss://data.alpaca.markets'
+# env = CryptoTradingEnv
 # ticker_list = CRYPTO_TICKER
 # action_dim = len(ticker_list) # for training 
 # logger.info(ticker_list)
@@ -1010,70 +1013,5 @@ env = CryptoTradingEnv
 #  3 Previous Step’s Percentage Change in Price: 1 dimension                                                                                                                                            
 #  4 In-trade Flag: 1 dimension           
 
-state_dim = 1 + len(INDICATORS) + 1 + 1 
+# state_dim = 1 + len(INDICATORS) + 1 + 1 
 
-# crp_paper_trading = AlpacaPaperTradingCryptoLive(
-#         ticker_list=CRYPTO_TICKER_PT,
-#         time_interval='30min',
-#         drl_lib='elegantrl',
-#         agent='ppo',
-#         cwd=agent_cwd,
-#         net_dim=ERL_PARAMS['net_dimension'],
-#         state_dim=state_dim,
-#         action_dim=action_dim,
-#         API_KEY=API_KEY,
-#         API_SECRET=API_SECRET,
-#         API_BASE_URL=API_BASE_URL,
-#         tech_indicator_list=INDICATORS,
-       
-#         max_stock=12
-#     )
-# crp_paper_trading.run()
-
-
-
-##################################
-# start training. function
-##################################
-
-# train(
-#     start_date='2024-01-01',
-#     end_date='2024-10-24',
-#     ticker_list=CRYPTO_TICKER_TR, 
-#     data_source='binance',
-#     time_interval='30m',
-#     technical_indicator_list=INDICATORS,
-#     drl_lib='elegantrl',
-#     env=CryptoTradingEnv,
-#     model_name='ppo',
-
-#     erl_params=ERL_PARAMS,
-#     cwd=agent_cwd,
-#     break_step=4e5,
-#     gpu_id=0,
-#     initial_capital=10000,  # Set to 10K
-
-#     tp_multiplier=2,         # Default TP multiplier
-#     sl_multiplier=5,         # Default SL multiplier
-#     atr_window=14,           # Default ATR window
-#     max_trade_duration=20    # Default max trade duration
-# )
-
-
-
-#########calling test function################
-###############################################
-# episode_assets = test(
-#         start_date="2024-10-25",
-#         end_date="2025-02-02",
-#         ticker_list=CRYPTO_TICKER_TR,  # Single asset
-#         data_source="binance",
-#         time_interval="30m",
-#         technical_indicator_list=["macd", "rsi", "cci", "dx"],
-#         drl_lib="elegantrl",
-#         env=CryptoTradingEnv,
-#         model_name="ppo",
-#         net_dimension=ERL_PARAMS['net_dimension'],  # Updated net dimensions
-#         cwd=agent_cwd,   # folder that has 'actor.pth'
-#         initial_capital=10000  # Set to 10K
-#     )

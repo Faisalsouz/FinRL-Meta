@@ -9043,3 +9043,976 @@
 
 # 2025-06-25 19:34:21.219912
 +/undo
+
+# 2025-06-25 19:56:05.795820
++/architect
+
+# 2025-06-25 19:57:06.392058
++logs on my frontend page test/page.tsx are show in dictionlary and now in proper format. like this {"logs":["2025-06-25 19:48:38,465 - INFO - Correct Trades: 136 (38.42%)\n","2025-06-25 19:48:38,46 can you change forntend so that logs are shown in proper format. 
+
+# 2025-06-25 19:57:49.221546
++yes
+
+# 2025-06-26 13:50:21.646871
++ask; under my_meta/ same directory level want to create another pythong module, similar logic wise to paper trading setup. but which taslk to actual binance api. to place actual order on binace instread of alpaca trading api. additioanlly please suggest me way out to test with paper trading rather than actual order on biance . deos binance give paper trading or not. 
+
+# 2025-06-26 13:50:33.213321
++yes
+
+# 2025-06-26 13:54:08.664613
++n
+
+# 2025-06-26 13:54:21.669012
++token limit hit give me plan in multiple steps
+
+# 2025-06-26 13:54:45.425175
++yes
+
+# 2025-06-26 13:56:01.407338
++go ahead an no implement logic in custom crpyto trading module for place orders 
+
+# 2025-06-26 13:58:23.845813
++/ask 
+
+# 2025-06-26 14:02:05.749544
++here is how alpac trading look like match binance trading logics with it and give me working code import time
++import threading
++import datetime as dt
++import numpy as np
++import pandas as pd
++import torch
++import alpaca_trade_api as tradeapi
++import gym
++import stockstats
++import talib
++import logging
++from my_meta.single_asset_training_ppo import AgentPPO  # Adjust the import as needed
++
++def convert_time_interval_to_timedelta(time_interval: str) -> dt.timedelta:
++    """Convert a time_interval string (e.g., '1Day', '5Min', '15Min', '30s') into a timedelta."""
++    time_interval = time_interval.lower()
++    if time_interval.endswith('day'):
++        value = int(time_interval.replace('day', ''))
++        return dt.timedelta(days=value)
++    elif time_interval.endswith('hour'):
++        value = int(time_interval.replace('hour', ''))
++        return dt.timedelta(hours=value)
++    elif time_interval.endswith('min'):
++        value = int(time_interval.replace('min', ''))
++        return dt.timedelta(minutes=value)
++    elif time_interval.endswith('s'):
++        value = int(time_interval.replace('s', ''))
++        return dt.timedelta(seconds=value)
++    else:
++        raise ValueError(f"Unsupported time_interval: {time_interval}")
++
++def _calculate_indicators_generic(
++    df: pd.DataFrame,
++    data_source: str,
++    tech_indicator_list: list,
++    select_stockstats_talib=0
++) -> pd.DataFrame:
++    """
++    Helper function to compute technical indicators using either stockstats or TA‑Lib.
++    Expects columns: ['time','tic','open','high','low','close','volume'].
++    """
++    df.sort_values(by=['time','tic'], inplace=True)
++    df.reset_index(drop=True, inplace=True)
++
++    if select_stockstats_talib == 0:
++        # Stockstats approach
++        stock = stockstats.StockDataFrame.retype(df.copy(deep=True))
++        unique_tic = stock['tic'].unique()
++        for indicator in tech_indicator_list:
++            indicator_df = pd.DataFrame()
++            for tic in unique_tic:
++                sub_df = stock[stock['tic'] == tic]
++                if indicator not in sub_df.columns:
++                    continue
++                temp_vals = sub_df[indicator]
++                tmp2 = pd.DataFrame({
++                    'time': sub_df['time'],
++                    'tic': tic,
++                    indicator: temp_vals
++                })
++                indicator_df = pd.concat([indicator_df, tmp2], ignore_index=True)
++            if not indicator_df.empty:
++                df = df.merge(indicator_df, on=['time','tic'], how='left')
++    else:
++        # TA‑Lib approach
++        final_df = pd.DataFrame()
++        for tic_val in df['tic'].unique():
++            tic_df = df[df['tic'] == tic_val].copy()
++            if 'macd' in tech_indicator_list or 'macd_signal' in tech_indicator_list or 'macd_hist' in tech_indicator_list:
++                macd, macd_signal, macd_hist = talib.MACD(
++                    tic_df['close'], fastperiod=12, slowperiod=26, signalperiod=9
++                )
++                tic_df['macd'] = macd
++                tic_df['macd_signal'] = macd_signal
++                tic_df['macd_hist'] = macd_hist
++            if 'rsi' in tech_indicator_list:
++                tic_df['rsi'] = talib.RSI(tic_df["close"], timeperiod=14)
++            if 'cci' in tech_indicator_list:
++                tic_df['cci'] = talib.CCI(
++                    tic_df["high"], tic_df["low"], tic_df["close"], timeperiod=14
++                )
++            if 'dx' in tech_indicator_list:
++                tic_df['dx'] = talib.DX(
++                    tic_df["high"], tic_df["low"], tic_df["close"], timeperiod=14
++                )
++            final_df = pd.concat([final_df, tic_df], ignore_index=True)
++        df = final_df
++
++    df.sort_values(by=['time','tic'], inplace=True)
++    df.reset_index(drop=True, inplace=True)
++    df = df.dropna(axis=0, how='any').reset_index(drop=True)
++    return df
++
++def fetch_latest_data_crypto(
++    ALPACA_API_KEY,
++    ALPACA_SECRET_KEY,
++    API_BASE_URL,
++    ticker_list,
++    time_interval,          # e.g., '1Day', '5Min', '15Min'
++    tech_indicator_list,    # e.g., ['macd','rsi','cci','dx']
++    start_date=None,
++    end_date=None,
++    exchanges: list = ['US'],
++    select_stockstats_talib=0,  # 0 => stockstats, 1 => TA‑Lib
++    data_source="alpaca",
++    atr_window=14           # ATR window (in number of bars)
++):
++    """
++    Fetch recent crypto bars from Alpaca, compute technical indicators,
++    and return the latest bar’s data plus the full historical dataframe.
++    """
++    api = tradeapi.REST(ALPACA_API_KEY, ALPACA_SECRET_KEY, API_BASE_URL)
++
++    # 1) Parse time_interval into Alpaca’s TimeFrame
++    if time_interval.lower().endswith('day'):
++        number_str = time_interval.lower().replace('day','')
++        tf_value = int(number_str)
++        tf_unit = tradeapi.TimeFrameUnit.Day
++    elif time_interval.lower().endswith('min'):
++        number_str = time_interval.lower().replace('min','')
++        tf_value = int(number_str)
++        tf_unit = tradeapi.TimeFrameUnit.Minute
++    else:
++        raise ValueError(f"Unsupported time_interval: {time_interval}")
++
++    # 2) Determine history window based on bar resolution
++    bar_delta = convert_time_interval_to_timedelta(time_interval)
++    required_bars = 60 + atr_window  # e.g., 60 bars for indicators plus the ATR window
++    if start_date is None:
++        start_date = dt.datetime.now() - required_bars * bar_delta
++    if end_date is None:
++        end_date = dt.datetime.now()
++
++    # Format start and end into RFC3339 strings (no microseconds, T separator, Z suffix)
++    start_str = start_date.strftime("%Y-%m-%dT%H:%M:%SZ")
++    end_str = end_date.strftime("%Y-%m-%dT%H:%M:%SZ")
++
++    data_df_list = []
++    # 3) Pull bars for each ticker
++    for tic in ticker_list:
++        barset = api.get_crypto_bars(
++            symbol=tic,
++            timeframe=tradeapi.TimeFrame(tf_value, tf_unit),
++            start=start_str,
++            end=end_str,
++        )
++        tmp_df = barset.df.reset_index()
++        if tmp_df.empty:
++            continue
++        tmp_df['tic'] = tic
++        tmp_df.rename(columns={'timestamp':'time'}, inplace=True)
++        data_df_list.append(tmp_df)
++
++    if len(data_df_list) == 0:
++        return np.array([]), np.array([]), np.array([]), np.array([]), np.array([]), pd.DataFrame()
++
++    # 4) Concatenate all dataframes
++    df = pd.concat(data_df_list, ignore_index=True)
++
++    # 5) Aggregate to 30Min if needed (retaining your original aggregation logic)
++    if time_interval.lower() == '30min':
++        df['time'] = pd.to_datetime(df['time'])
++        df.set_index('time', inplace=True)
++        df = df.groupby('tic').resample('30T').agg({
++            'open': 'first',
++            'high': 'max',
++            'low': 'min',
++            'close': 'last',
++            'volume': 'sum'
++        }).reset_index()
++
++    # 6) Compute technical indicators
++    df = _calculate_indicators_generic(
++        df=df,
++        data_source=data_source,
++        tech_indicator_list=tech_indicator_list,
++        select_stockstats_talib=select_stockstats_talib
++    )
++    if df.empty:
++        return np.array([]), np.array([]), np.array([]), np.array([]), np.array([]), pd.DataFrame()
++
++    # 7) Select the latest bar for each ticker
++    latest_rows = df.groupby('tic', as_index=False).tail(1).copy()
++    latest_rows['sort_order'] = latest_rows['tic'].apply(lambda x: ticker_list.index(x))
++    latest_rows.sort_values('sort_order', inplace=True)
++
++    latest_price = latest_rows['close'].values.astype(np.float32)
++    latest_high = latest_rows['high'].values.astype(np.float32)
++    latest_low = latest_rows['low'].values.astype(np.float32)
++    latest_close = latest_rows['close'].values.astype(np.float32)
++    tech_list_data = []
++    for indicator in tech_indicator_list:
++        tech_list_data.append(latest_rows[indicator].values.astype(np.float32))
++    latest_tech = np.array(tech_list_data).T  # shape: (#tickers, #indicators)
++
++    return latest_price, latest_tech, latest_high, latest_low, latest_close, df
++
++
++##########################################################################
++#  The Paper Trading Class (Refactored)
++##########################################################################
++
++class AlpacaPaperTradingCryptoLive:
++    """
++    Paper trading class for crypto on Alpaca using TA‑Lib for ATR calculations.
++    Unnecessary functions (fetch_latest_bar_data, fetch_historical_data, custom ATR)
++    have been removed. Data is fetched via fetch_latest_data_crypto.
++    """
++
++    def __init__(
++        self,
++        ticker_list,           # e.g., ["BTCUSD","ETHUSD","SOLUSD"]
++        time_interval,         # e.g., '1Min' or '5Min'
++        drl_lib,               # e.g., 'elegantrl'
++        agent,                 # e.g., 'ppo'
++        cwd,                   # directory with your actor.pth
++        net_dim,               # e.g., [128, 64]
++        state_dim,             # e.g., 1 + 3*action_dim + tech_dim
++        action_dim,            # e.g., len(ticker_list)
++        API_KEY,
++        API_SECRET,
++        API_BASE_URL,
++        tech_indicator_list,   # e.g., ['macd','rsi','cci','dx']
++        max_stock=1e2,         # scale factor for buy/sell
++        tp_multiplier=2,       # TP multiplier
++        sl_multiplier=1,       # SL multiplier
++        atr_window=14,         # ATR window (in bars)
++        max_trade_duration=20, # Max trade duration in steps
++        initial_capital=10000, # Initial capital for paper trading
++        log_file_path=None,
++        actor_filename = "best_actor.pth"  # Name of the actor file to load
++
++    ):
++        # Set up logging
++        self.logger = logging.getLogger(__name__)
++        self.logger.setLevel(logging.INFO)
++        if log_file_path:
++            handler = logging.FileHandler(log_file_path, mode='w')  # 'w' mode to replace contents
++            handler.setLevel(logging.INFO)
++            formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
++            handler.setFormatter(formatter)
++            self.logger.addHandler(handler)
++        else:
++            handler = logging.StreamHandler()
++            handler.setLevel(logging.INFO)
++            formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
++            handler.setFormatter(formatter)
++            self.logger.addHandler(handler)
++
++        self.logger.info("Initializing AlpacaPaperTradingCryptoLive")
++        self.API_SECRET = API_SECRET
++        self.API_KEY = API_KEY
++        self.API_BASE_URL = API_BASE_URL
++        self.actor_filename = actor_filename  
++
++        # 1) Load the trained PPO actor (example using elegantrl)
++        self.drl_lib = drl_lib
++        if agent == 'ppo':
++            if drl_lib == 'elegantrl':
++                from torch import load
++                # from __main__ import AgentPPO  # Adjust the import as needed
++                tmp_agent = AgentPPO(net_dim, state_dim, action_dim)
++                actor = tmp_agent.act
++                try:
++                    actor_path = f"{cwd}/{self.actor_filename}"  # instead of hardcoding best_actor.pth
++
++                    # actor_path = f"{cwd}/best_actor.pth"
++                    self.logger.info(f"| loading actor from: {actor_path}")
++                    actor.load_state_dict(load(actor_path, map_location='cpu'))
++                    self.act = actor
++                    self.device = tmp_agent.device
++                except Exception as e:
++                    self.logger.error(f"Error loading actor: {e}")
++                    raise ValueError("Fail to load agent!") from e
++            else:
++                raise ValueError("DRL library not supported in this snippet.")
++        else:
++            raise ValueError("Agent not supported yet.")
++
++        # 2) Connect to Alpaca
++        try:
++            self.alpaca = tradeapi.REST(self.API_KEY, self.API_SECRET, self.API_BASE_URL)
++            self.logger.info("Alpaca connected.")
++        except Exception as e:
++            self.logger.error(f"Fail to connect Alpaca. Error: {e}")
++            raise ValueError(f"Fail to connect Alpaca. Error: {e}")
++
++        self.time_interval = time_interval
++        self.tech_indicator_list = tech_indicator_list
++        self.max_stock = max_stock
++        self.tp_multiplier = tp_multiplier
++        self.sl_multiplier = sl_multiplier
++        self.atr_window = atr_window
++        self.max_trade_duration = max_trade_duration
++
++        self.stockUniverse = ticker_list
++        self.stocks = np.zeros(len(ticker_list), dtype=float)
++        self.stocks_cd = np.zeros_like(self.stocks)
++        self.cash = initial_capital
++        self.initial_cash = initial_capital
++        self.price = np.zeros(len(ticker_list), dtype=float)
++        self.equities = []
++        self.current_step = 0
++        self.in_position = False
++        self.entry_price = None
++        self.target_price = None
++        self.stop_loss_price = None
++        self.trade_entry_step = None
++
++        self.stop_trading = False  # Flag to control the trading loop
++        self.logger.info(f"PaperTradingCryptoLive with tickers: {ticker_list}")
++
++        # Attributes for logging data
++        self.trade_logs = []
++        self.step_logs = []
++        self.log_file_path = log_file_path
++        self.logger.info(f"Time interval = {self.time_interval}")
++
++    def calculate_atr_avg(self):
++        """Calculate the average ATR from trade logs."""
++        if not self.trade_logs:
++            return 0.0
++        atr_values = [log['atr'] for log in self.trade_logs if 'atr' in log]
++        return np.mean(atr_values) if atr_values else 0.0
++
++    def calculate_profit_loss(self):
++        """Calculate the profit/loss from trade logs."""
++        if not self.trade_logs:
++            return 0.0
++        profit_loss = 0.0
++        for log in self.trade_logs:
++            if log['action'] == 'sell':
++                entry_log = next((l for l in self.trade_logs if l['step'] == log['step'] and l['action'] == 'buy'), None)
++                if entry_log:
++                    profit_loss += (log['price'] - entry_log['price']) * log['quantity']
++        return profit_loss
++
++    def calculate_equity_change(self):
++        """Calculate the change in equity from step logs."""
++        if not self.step_logs:
++            return 0.0
++        equity_values = [log['equity'] for log in self.step_logs if 'equity' in log]
++        return equity_values[-1] - equity_values[0] if equity_values else 0.0
++
++    def calculate_avg_trade_per_day(self):
++        """Calculate the average number of trades per day."""
++        if not self.trade_logs:
++            return 0.0
++        trade_days = set(log['date'].split()[0] for log in self.trade_logs)
++        return len(self.trade_logs) / len(trade_days) if trade_days else 0.0
++
++    def calculate_win_trades(self):
++        """Calculate the number of winning trades."""
++        if not self.trade_logs:
++            return 0
++        return sum(1 for log in self.trade_logs if log.get('result') == 'TP Hit')
++
++    def calculate_lost_trades(self):
++        """Calculate the number of lost trades."""
++        if not self.trade_logs:
++            return 0
++        return sum(1 for log in self.trade_logs if log.get('result') == 'SL Hit')
++
++    def calculate_timeout_trades(self):
++        """Calculate the number of timeout trades."""
++        if not self.trade_logs:
++            return 0
++        return sum(1 for log in self.trade_logs if log.get('result') == 'Timeout')
++
++    def calculate_avg_win(self):
++        """Calculate the average win amount."""
++        if not self.trade_logs:
++            return 0.0
++        win_prices = [log['price'] for log in self.trade_logs if log.get('result') == 'TP Hit']
++        return np.mean(win_prices) if win_prices else 0.0
++
++    def calculate_avg_loss(self):
++        """Calculate the average loss amount."""
++        if not self.trade_logs:
++            return 0.0
++        loss_prices = [log['price'] for log in self.trade_logs if log.get('result') == 'SL Hit']
++        return np.mean(loss_prices) if loss_prices else 0.0
++
++    def calculate_stop_loss_stats(self):
++        """Calculate the total stop loss amount."""
++        if not self.trade_logs:
++            return 0.0
++        return sum(log['price'] for log in self.trade_logs if log.get('result') == 'SL Hit')
++
++        # Save logs to CSV when stopping the trading loop
++        self.save_logs_to_csv()
++
++    def run(self):
++        """Main loop: fetch data, trade, etc. (crypto is 24/7)."""
++        # Cancel any open orders
++        orders = self.alpaca.list_orders(status="open")
++        for order in orders:
++            self.alpaca.cancel_order(order.id)
++
++        self.logger.info("Starting infinite paper trading loop for crypto.")
++        self.logger.info(f'Initial cash balance: {self.cash}')
++        while not self.stop_trading:  # Check the flag
++            self.trade()
++            self.current_step += 1
++            last_equity = float(self.alpaca.get_account().last_equity)
++            self.logger.info(f'Last equity: {last_equity}')
++            self.equities.append((time.time(), last_equity))
++            # Calculate sleep time based on time_interval
++            if self.time_interval.endswith('min'):
++                num_minutes = int(self.time_interval.replace('min', ''))
++                sleep_time = num_minutes * 60
++            elif self.time_interval.endswith('s'):
++                sleep_time = int(self.time_interval.replace('s', ''))
++            else:
++                sleep_time = 60  # default fallback
++            self.logger.info(f"Next bar data will be fetched in {sleep_time // 60} minutes.")
++            time.sleep(sleep_time)
++
++        # Save logs to CSV when stopping the trading loop
++        self.save_logs_to_csv()
++
++    def stop(self):
++        """Stop the trading loop."""
++        self.stop_trading = True
++        self.save_logs_to_csv()
++
++    def trade(self):
++        """Fetch state, compute action, and place trades accordingly."""
++        state = self.get_state()
++        self.logger.info(f"After get_state: self.stocks = {self.stocks}")
++        if self.drl_lib == 'elegantrl':
++            with torch.no_grad():
++                s_tensor = torch.as_tensor(state, dtype=torch.float32, device=self.device).unsqueeze(0)
++                a_tensor = self.act(s_tensor)
++                action = a_tensor.detach().cpu().numpy()[0]
++                print('Action from actor (before scaling):', action)
++        else:
++            action = np.zeros(len(self.stockUniverse))
++
++        self.stocks_cd += 1
++
++        if not self.in_position:
++            if action > 0:
++                # Use fetch_latest_data_crypto to get both latest data and historical data
++                price, tech, high, low, close, hist_df = fetch_latest_data_crypto(
++                    ALPACA_API_KEY=self.API_KEY,
++                    ALPACA_SECRET_KEY=self.API_SECRET,
++                    API_BASE_URL=self.API_BASE_URL,
++                    ticker_list=self.stockUniverse,
++                    time_interval=self.time_interval,
++                    tech_indicator_list=self.tech_indicator_list,
++                    data_source="alpaca",
++                    select_stockstats_talib=1,
++                    atr_window=self.atr_window
++                )
++                if len(hist_df) >= self.atr_window:
++                    # Calculate ATR using TA‑Lib
++                    atr_values = talib.ATR(
++                        hist_df['high'].values,
++                        hist_df['low'].values,
++                        hist_df['close'].values,
++                        timeperiod=self.atr_window
++                    )
++                    atr = atr_values[-1]
++                    self.logger.info(f"ATR value: {atr}")
++                    self.entry_price = price[0]
++                    self.initial_atr = atr  # 🟠 Store ATR at entry
++                    self.target_price = self.entry_price + self.tp_multiplier * self.initial_atr
++                    self.stop_loss_price = max(self.entry_price - self.sl_multiplier * self.initial_atr, 0.01)
++                    self.logger.info(f"Entry Price: {self.entry_price}, TP: {self.target_price}, SL: {self.stop_loss_price}")
++
++                    # Place a buy order using all available cash
++                    qty = self.initial_cash / self.entry_price
++                    self.logger.info(f"Calculated quantity to buy: {qty:.6f}")
++                    if qty > 0:
++                        respSO = []
++                        self.submitOrder(qty, self.stockUniverse[0], 'buy', respSO)
++                        self.stocks[0] = qty
++                        self.logger.info(f"Buy order placed for {self.stocks[0]} of {self.stockUniverse[0]}")
++                        self.stocks_cd[0] = 0
++                        self.in_position = True
++                        self.trade_entry_step = self.current_step
++                        self.logger.info(f"Trade initiated: Entry={self.entry_price}, TP={self.target_price}, SL={self.stop_loss_price}")
++                    # Log trade entry
++                    self.trade_logs.append({
++                        "step": self.current_step,
++                        "date": dt.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
++                        "action": "buy",
++                        "price": self.entry_price,
++                        "quantity": qty,
++                        "target_price": self.target_price,
++                        "stop_loss_price": self.stop_loss_price,
++                        "atr": atr
++                    })
++            else:
++                self.logger.info("Not enough historical data for ATR calculation.")
++        else:
++            # Manage open trade
++            current_price = self.price[0]
++            self.logger.info(f"Trade open. Current price: {current_price}, TP: {self.target_price}, SL: {self.stop_loss_price}")
++            # Manage open trade without recalculating target_price and stop_loss_price
++            self.logger.info(f"Checking exit: current_price={current_price:.2f}, target={self.target_price:.2f}, qty={self.stocks[0]}")
++            if current_price >= self.target_price:
++                qty = self.stocks[0]
++                if qty > 0:
++                    respSO = []
++                    self.submitOrder(qty, self.stockUniverse[0], 'sell', respSO)
++                    self.stocks_cd[0] = 0
++                    self.in_position = False
++                    self.logger.info(f"Take profit: Sold at {current_price}")
++                    # Log trade exit
++                    self.trade_logs.append({
++                        "step": self.current_step,
++                        "action": "sell",
++                        "price": current_price,
++                        "quantity": qty,
++                        "result": "TP Hit"
++                    })
++                self.save_logs_to_csv()  # Save performance data when trade is closed
++
++            elif current_price <= self.stop_loss_price:
++                qty = self.stocks[0]
++                if qty > 0:
++                    respSO = []
++                    self.submitOrder(qty, self.stockUniverse[0], 'sell', respSO)
++                    self.stocks_cd[0] = 0
++                    self.in_position = False
++                    self.logger.info(f"Stop loss: Sold at {current_price}")
++                    # Log trade exit
++                    self.trade_logs.append({
++                        "step": self.current_step,
++                        "action": "sell",
++                        "price": current_price,
++                        "quantity": qty,
++                        "result": "SL Hit"
++                    })
++                self.save_logs_to_csv()  # Save performance data when trade is closed
++
++            elif (self.current_step - self.trade_entry_step) >= self.max_trade_duration:
++                qty = self.stocks[0]
++                if qty > 0:
++                    respSO = []
++                    self.submitOrder(qty, self.stockUniverse[0], 'sell', respSO)
++                    self.stocks_cd[0] = 0
++                    self.in_position = False
++                    self.logger.info(f"Timeout exit: Sold at {current_price}")
++                    # Log trade exit
++                    self.trade_logs.append({
++                        "step": self.current_step,
++                        "action": "sell",
++                        "price": current_price,
++                        "quantity": qty,
++                        "result": "Timeout"
++                    })
++                self.save_logs_to_csv()  # Save performance data when trade is closed
++        # Update cash balance
++        self.cash = float(self.alpaca.get_account().cash)
++        
++        # Log step data
++        self.step_logs.append({
++            "step": self.current_step,
++            "price": self.price[0],
++            "cash": self.cash,
++            "equity": self.cash + (self.price[0] * self.stocks[0]),
++            "in_position": self.in_position
++        })
++        self.cash = float(self.alpaca.get_account().cash)
++
++        # Save logs to CSV after each trade step
++        self.save_logs_to_csv()
++
++    def get_state(self):
++        """
++        Build a state vector by fetching the latest data via fetch_latest_data_crypto.
++        State includes a scaled price, technical indicators, the last percentage change, and an in-trade flag.
++        """
++        price, tech, high, low, close, _ = fetch_latest_data_crypto(
++            ALPACA_API_KEY=self.API_KEY,
++            ALPACA_SECRET_KEY=self.API_SECRET,
++            API_BASE_URL=self.API_BASE_URL,
++            ticker_list=self.stockUniverse,
++            time_interval=self.time_interval,
++            tech_indicator_list=self.tech_indicator_list,
++            data_source="alpaca",
++            select_stockstats_talib=1,
++            atr_window=self.atr_window
++        )
++
++        if price.size == 0:
++            total_length = 1 + len(tech.flatten()) + 2  # scaled_price + indicators + last_pct_change + in_trade_flag
++            return np.zeros(total_length, dtype=np.float32)
++
++        # Get current positions
++        positions = self.alpaca.list_positions()
++        self.logger.info(f"Alpaca positions raw: {[ (p.symbol, p.qty) for p in positions ]}")
++        stock_array = [0] * len(self.stockUniverse)
++        for p in positions:
++            api_sym    = p.symbol            # e.g. "BTCUSD"
++            for idx, tic in enumerate(self.stockUniverse):
++                # tic is "BTC/USD"; drop non-alphas to compare
++                clean_api = api_sym.upper().replace("/", "").replace("-", "")
++                clean_tic = tic .upper().replace("/", "").replace("-", "")
++                if clean_api == clean_tic:
++                    stock_array[idx] = abs(float(p.qty))
++                    break
++
++        self.stocks = np.array(stock_array, dtype=float)
++        self.cash = float(self.alpaca.get_account().cash)
++        self.price = price
++
++        self.logger.info(f"State update - Price: {self.price}, Cash: {self.cash}, Stocks: {self.stocks}")
++
++        if self.current_step == 0:
++            self.last_pct_change = 0.0
++        else:
++            self.last_pct_change = (price[0] - self.price[0]) / self.price[0]
++
++        scaled_price = price[0] / self.price[0]
++        tech_features = tech.flatten() if len(tech.shape) == 2 else tech
++        in_trade_flag = 1.0 if self.in_position else 0.0
++
++        state = np.hstack([
++            np.array([scaled_price], dtype=np.float32).flatten(),
++            tech_features,
++            np.array([self.last_pct_change], dtype=np.float32).flatten(),
++            np.array([in_trade_flag], dtype=np.float32).flatten()
++        ]).astype(np.float32)
++
++        state[np.isnan(state)] = 0.0
++        state[np.isinf(state)] = 0.0
++        return state
++
++    def submitOrder(self, qty, symbol, side, resp):
++        """Place a MARKET order via Alpaca paper trading."""
++        if qty > 0:
++            try:
++                self.alpaca.submit_order(symbol, qty, side, "market", time_in_force="gtc")
++                self.logger.info(f"{side.upper()} {qty} {symbol} completed.")
++                resp.append(True)
++            except Exception as e:
++                self.logger.error(f"{side.upper()} {qty} {symbol} failed. Error: {e}")
++                resp.append(False)
++        else:
++            self.logger.info(f"Quantity=0, skipping order for {symbol} ({side}).")
++            resp.append(True)
++    def save_logs_to_csv(self):
++        """Save trade and step logs to CSV files."""
++        import csv
++        performance_csv_path = self.log_file_path.replace(".log", "_performance_data.csv")
++        performance_data = {
++            "date": dt.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
++            "atr_avg": self.calculate_atr_avg(),
++            "profit_loss": self.calculate_profit_loss(),
++            "equity_change": self.calculate_equity_change(),
++            "avg_trade_per_day": self.calculate_avg_trade_per_day(),
++            "win_trades": self.calculate_win_trades(),
++            "lost_trades": self.calculate_lost_trades(),
++            "timeout_trades": self.calculate_timeout_trades(),
++            "avg_win": self.calculate_avg_win(),
++            "avg_loss": self.calculate_avg_loss(),
++            "stop_loss_stats": self.calculate_stop_loss_stats()
++        }
++        with open(performance_csv_path, mode='a', newline='') as file:  # 'a' mode to append
++            writer = csv.DictWriter(file, fieldnames=performance_data.keys())
++            if file.tell() == 0:  # Check if file is empty to write header
++                writer.writeheader()
++            writer.writerow(performance_data)
++        import csv
++        trade_log_path = self.log_file_path.replace(".log", "_trade_logs.csv")
++        step_log_path = self.log_file_path.replace(".log", "_step_logs.csv")
++        
++        # Save trade logs
++        if self.trade_logs:
++            with open(trade_log_path, mode='w', newline='') as file:
++                writer = csv.DictWriter(file, fieldnames=self.trade_logs[0].keys())
++                writer.writeheader()
++                writer.writerows(self.trade_logs)
++        else:
++            self.logger.info("No trade logs to save.")
++        
++        # Save step logs
++        if self.step_logs:
++            with open(step_log_path, mode='w', newline='') as file:
++                writer = csv.DictWriter(file, fieldnames=self.step_logs[0].keys())
++                writer.writeheader()
++                writer.writerows(self.step_logs)
++        else:
++            self.logger.info("No step logs to save.")
++        
++        self.logger.info(f"Logs saved to {trade_log_path} and {step_log_path}")
++
++        # Save performance data to CSV
++        performance_csv_path = self.log_file_path.replace(".log", "_performance_data.csv")
++        performance_data = {
++            "date": dt.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
++            "atr_avg": self.calculate_atr_avg(),
++            "profit_loss": self.calculate_profit_loss(),
++            "equity_change": self.calculate_equity_change(),
++            "avg_trade_per_day": self.calculate_avg_trade_per_day(),
++            "win_trades": self.calculate_win_trades(),
++            "lost_trades": self.calculate_lost_trades(),
++            "timeout_trades": self.calculate_timeout_trades(),
++            "avg_win": self.calculate_avg_win(),
++            "avg_loss": self.calculate_avg_loss(),
++            "stop_loss_stats": self.calculate_stop_loss_stats()
++        }
++        with open(performance_csv_path, mode='a', newline='') as file:  # 'a' mode to append
++            writer = csv.DictWriter(file, fieldnames=performance_data.keys())
++            if file.tell() == 0:  # Check if file is empty to write header
++                writer.writeheader()
++            writer.writerow(performance_data)
++
+
+# 2025-06-26 14:02:10.459719
++n
+
+# 2025-06-26 14:04:06.790496
++/code
+
+# 2025-06-26 14:04:22.972734
++go ahead and implement the logic 
+
+# 2025-06-29 22:24:58.856590
++yes
+
+# 2025-06-29 22:25:53.352471
++n
+
+# 2025-06-29 22:25:57.707114
++/ask
+
+# 2025-06-29 22:26:18.795997
++/add my_meta/custom_crypto_binance_trading.py
+
+# 2025-06-29 22:26:44.630766
++/add /home/souz_wsl/finrl_proj/FinRL_Meta/binance_paper_bot_test.py
+
+# 2025-06-29 22:26:59.636504
++/add /home/souz_wsl/finrl_proj/FinRL_Meta/my_meta/single_asset_training_ppo.py
+
+# 2025-06-29 22:27:56.483560
++here is error Iam getting in my paper trading test. please got throguh custom crpyo binance trading and check where is error. why I am no table to submit proper orders. 
+
+# 2025-06-29 22:28:20.147810
++here is error 2025-06-29 22:27:18,524 - ERROR - Order failed (unexpected)
++Traceback (most recent call last):
++  File "/home/souz_wsl/finrl_proj/FinRL_Meta/my_meta/custom_crypto_binance_trading.py", line 448, in submitOrder
++    lot        = _get_filter(info["filters"], "LOT_SIZE")
++NameError: name '_get_filter' is not defined
++/home/souz_wsl/.pyenv/versions/finrl/lib/python3.10/site-packages/binance/helpers.py:96: DeprecationWarning:
++
++There is no current event loop
++
++2025-06-29 22:27:19,116 - INFO - STEP 0007 | a=+0.0482 | P=151.680 | cash=10000.00 | eq=10455.04 | budget=5000.00 | ok=False | err=Traceback (most recent call last):
++  File "/home/souz_wsl/finrl_proj/FinRL_Meta/my_meta/custom_crypto_binance_trading.py", line 448, in submitOrder
++    lot        = _get_filter(info["filters"], "LOT_SIZE")
++NameError: name '_get_filter' is not defined
++
+
+# 2025-06-29 22:28:56.683936
++n
+
+# 2025-06-29 22:29:37.007194
++go ahead and implement the changes. 
+
+# 2025-06-29 22:30:21.379887
++/chat
+
+# 2025-06-29 22:30:26.874519
++/code
+
+# 2025-06-29 22:30:34.293833
++go ahead and implement the changes. 
+
+# 2025-06-29 22:32:17.501641
++/architect
+
+# 2025-06-29 22:32:25.078148
++here are addtional error   File "/home/souz_wsl/finrl_proj/FinRL_Meta/my_meta/custom_crypto_binance_trading.py", line 442, in _get_filter
++    return next((f for f in filters if f["filterType"] in types), None)
++TypeError: 'BinancePaperTradingCryptoLive' object is not iterable
++/home/souz_wsl/.pyenv/versions/finrl/lib/python3.10/site-packages/binance/helpers.py:96: DeprecationWarning:
++
++There is no current event loop
++
++2025-06-29 22:31:44,544 - INFO - STEP 0000 | a=+0.2111 | P=151.720 | cash=10000.00 | eq=10455.16 | budget=5000.00 | ok=False | err=Traceback (most recent call last):
++  File "/home/souz_wsl/finrl_proj/FinRL_Meta/my_meta/custom_crypto_binance_trading.py", line 453, in submitOrder
++    lot        = self._get_filter(info["filters"], "LOT_SIZE")
++TypeError: 'BinancePaperTradingCryptoLive' object is not iterable
+
+# 2025-06-29 22:32:42.794192
++yes
+
+# 2025-06-29 22:43:09.075324
++can you explain me how 5000 trade budget works. ? is it something to buy max amount for one go. right. what happens if inital capital and trade budget is equal like 5000. ssecondly. I wanto have a machinsim in place. when system gets into trade. for example, 5000 trade budget or what ever . it keep trade open untill following not happens. if treade hits TP or SL, and untill that time it wont buy anything more. untill previous trade is not closed. so that it keep tracking the and remains open untill TP or SL no thist. and od nothing. Scond point pelase add logs if ppo agent best_atchot.pth is successfull loaded into system. please add some more readable intitutinve loge. but this much quntity. in step no.xxx still waiting for trade to close. etc
+
+# 2025-06-29 22:45:02.007783
++yes
+
+# 2025-06-29 23:05:29.785719
++/chat-mode
+
+# 2025-06-29 23:05:43.925582
++/ask
+
+# 2025-06-29 23:06:36.859600
++please read the logs and  suggest what it s means and expalm me each values . like cash, equ etc. does my code logic correctly. 
++2025-06-29 22:53:53,114 - INFO - Connected to Binance testnet ✔︎
++2025-06-29 22:53:53,114 - INFO - Starting live loop …
++/home/souz_wsl/.pyenv/versions/finrl/lib/python3.10/site-packages/binance/helpers.py:96: DeprecationWarning:
++
++There is no current event loop
++
++2025-06-29 22:53:56,885 - INFO - BUY 5000.00 USDT @ 152.060  (minNotional 5.00)
++2025-06-29 22:53:57,153 - INFO - BUY 32.881758 SOLUSDT @ 152.060 | TP=152.207 SL=151.986 (ATR=0.0737)
++/home/souz_wsl/.pyenv/versions/finrl/lib/python3.10/site-packages/binance/helpers.py:96: DeprecationWarning:
++
++There is no current event loop
++
++2025-06-29 22:53:57,789 - INFO - STEP 0000 | a=+0.1516 | P=152.060 | cash=5446.07 | eq=10446.07 | budget=5000.00 | ok=True | err=None
++/home/souz_wsl/.pyenv/versions/finrl/lib/python3.10/site-packages/binance/helpers.py:96: DeprecationWarning:
++
++There is no current event loop
++
++2025-06-29 22:55:00,970 - INFO - STEP 1 | Waiting for trade to close. Current price: 152.090
++/home/souz_wsl/.pyenv/versions/finrl/lib/python3.10/site-packages/binance/helpers.py:96: DeprecationWarning:
++
++There is no current event loop
++
++2025-06-29 22:55:01,710 - INFO - STEP 0001 | a=+0.1370 | P=152.160 | cash=446.19 | eq=10517.36 | budget=5000.00 | ok=False | err=None
++/home/souz_wsl/.pyenv/versions/finrl/lib/python3.10/site-packages/binance/helpers.py:96: DeprecationWarning:
++
++There is no current event loop
++
++2025-06-29 22:56:07,077 - INFO - STEP 2 | Waiting for trade to close. Current price: 152.150
++/home/souz_wsl/.pyenv/versions/finrl/lib/python3.10/site-packages/binance/helpers.py:96: DeprecationWarning:
++
++There is no current event loop
++
++2025-06-29 22:56:07,838 - INFO - STEP 0002 | a=+0.0911 | P=152.150 | cash=446.19 | eq=10516.69 | budget=5000.00 | ok=False | err=None
++/home/souz_wsl/.pyenv/versions/finrl/lib/python3.10/site-packages/binance/helpers.py:96: DeprecationWarning:
++
++There is no current event loop
++
++2025-06-29 22:57:10,854 - INFO - STEP 3 | Waiting for trade to close. Current price: 152.000
++/home/souz_wsl/.pyenv/versions/finrl/lib/python3.10/site-packages/binance/helpers.py:96: DeprecationWarning:
++
++There is no current event loop
++
++2025-06-29 22:57:11,529 - INFO - STEP 0003 | a=+0.2378 | P=152.000 | cash=446.19 | eq=10506.77 | budget=5000.00 | ok=False | err=None
++/home/souz_wsl/.pyenv/versions/finrl/lib/python3.10/site-packages/binance/helpers.py:96: DeprecationWarning:
++
++There is no current event loop
++
++2025-06-29 22:58:14,553 - INFO - STEP 4 | Waiting for trade to close. Current price: 152.000
++/home/souz_wsl/.pyenv/versions/finrl/lib/python3.10/site-packages/binance/helpers.py:96: DeprecationWarning:
++
++There is no current event loop
++
++2025-06-29 22:58:15,228 - INFO - STEP 0004 | a=+0.2201 | P=152.000 | cash=446.19 | eq=10506.77 | budget=5000.00 | ok=False | err=None
++/home/souz_wsl/.pyenv/versions/finrl/lib/python3.10/site-packages/binance/helpers.py:96: DeprecationWarning:
++
++There is no current event loop
++
++2025-06-29 22:59:22,003 - INFO - SELL 66.188000 SOLUSDT @ 151.870  (minNotional 5.00)
++2025-06-29 22:59:22,287 - INFO - SELL 66.188000 SOLUSDT @ 151.870 – SL
++/home/souz_wsl/.pyenv/versions/finrl/lib/python3.10/site-packages/binance/helpers.py:96: DeprecationWarning:
++
++There is no current event loop
++
++2025-06-29 22:59:23,013 - INFO - STEP 0005 | a=-0.1266 | P=151.870 | cash=446.19 | eq=446.19 | budget=5000.00 | ok=True | err=None
++/home/souz_wsl/.pyenv/versions/finrl/lib/python3.10/site-packages/binance/helpers.py:96: DeprecationWarning:
++
++There is no current event loop
++
++/home/souz_wsl/.pyenv/versions/finrl/lib/python3.10/site-packages/binance/helpers.py:96: DeprecationWarning:
++
++There is no current event loop
++
++2025-06-29 23:00:27,758 - INFO - BUY 5000.00 USDT @ 151.940  (minNotional 5.00)
++2025-06-29 23:00:28,017 - INFO - BUY 32.907726 SOLUSDT @ 151.940 | TP=152.085 SL=151.868 (ATR=0.0723)
++/home/souz_wsl/.pyenv/versions/finrl/lib/python3.10/site-packages/binance/helpers.py:96: DeprecationWarning:
++
++There is no current event loop
++
++2025-06-29 23:00:28,653 - INFO - STEP 0006 | a=+0.0084 | P=151.940 | cash=10433.75 | eq=15433.75 | budget=5000.00 | ok=True | err=None
++/home/souz_wsl/.pyenv/versions/finrl/lib/python3.10/site-packages/binance/helpers.py:96: DeprecationWarning:
++
++There is no current event loop
++
++2025-06-29 23:01:31,876 - INFO - STEP 7 | Waiting for trade to close. Current price: 151.890
++/home/souz_wsl/.pyenv/versions/finrl/lib/python3.10/site-packages/binance/helpers.py:96: DeprecationWarning:
++
++There is no current event loop
++
++2025-06-29 23:01:32,555 - INFO - STEP 0007 | a=-0.0279 | P=151.890 | cash=5433.81 | eq=10466.38 | budget=5000.00 | ok=False | err=None
++/home/souz_wsl/.pyenv/versions/finrl/lib/python3.10/site-packages/binance/helpers.py:96: DeprecationWarning:
++
++There is no current event loop
++
++2025-06-29 23:02:37,483 - INFO - SELL 33.133000 SOLUSDT @ 151.780  (minNotional 5.00)
++2025-06-29 23:02:37,769 - INFO - SELL 33.133000 SOLUSDT @ 151.780 – SL
++/home/souz_wsl/.pyenv/versions/finrl/lib/python3.10/site-packages/binance/helpers.py:96: DeprecationWarning:
++
++There is no current event loop
++
++2025-06-29 23:02:39,213 - INFO - STEP 0008 | a=-0.0368 | P=151.780 | cash=5433.81 | eq=5433.81 | budget=5000.00 | ok=True | err=None
++/home/souz_wsl/.pyenv/versions/finrl/lib/python3.10/site-packages/binance/helpers.py:96: DeprecationWarning:
++
++There is no current event loop
++
++/home/souz_wsl/.pyenv/versions/finrl/lib/python3.10/site-packages/binance/helpers.py:96: DeprecationWarning:
++
++There is no current event loop
++
++2025-06-29 23:03:44,162 - INFO - BUY 5000.00 USDT @ 151.720  (minNotional 5.00)
++2025-06-29 23:03:44,432 - INFO - BUY 32.955444 SOLUSDT @ 151.720 | TP=151.865 SL=151.647 (ATR=0.0727)
++/home/souz_wsl/.pyenv/versions/finrl/lib/python3.10/site-packages/binance/helpers.py:96: DeprecationWarning:
++
++There is no current event loop
++
++2025-06-29 23:03:45,064 - INFO - STEP 0009 | a=+0.0551 | P=151.720 | cash=10433.24 | eq=15433.24 | budget=5000.00 | ok=True | err=None
++/home/souz_wsl/.pyenv/versions/finrl/lib/python3.10/site-packages/binance/helpers.py:96: DeprecationWarning:
++
++There is no current event loop
++
++2025-06-29 23:04:48,197 - INFO - STEP 10 | Waiting for trade to close. Current price: 151.650
++/home/souz_wsl/.pyenv/versions/finrl/lib/python3.10/site-packages/binance/helpers.py:96: DeprecationWarning:
++
++There is no current event loop
++
++2025-06-29 23:04:48,850 - INFO - STEP 0010 | a=+0.1565 | P=151.650 | cash=5433.29 | eq=10461.09 | budget=5000.00 | ok=False | err=None
+
+# 2025-06-29 23:10:42.028834
++on confusion , whay after sell of 60 sol, the value of cash is so lwo like 446. shouldn't it be more. 
+
+# 2025-06-29 23:12:41.216009
++/code
+
+# 2025-06-29 23:13:01.388615
++pelase  implement the suggest code for enhancement in logs and cash update. 
