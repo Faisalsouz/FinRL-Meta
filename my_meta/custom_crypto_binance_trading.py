@@ -451,7 +451,7 @@ class BinancePaperTradingCryptoLive:
         try:
             # ---------- live balances ----------
             self._update_balances()                  # refresh self.cash
-            self.logger.debug("CASH free USDT = %.2f", self.cash)
+            self.logger.debug("CASH before order: %.2f", self.cash)
 
             info       = self.binance.get_symbol_info(symbol)
             lot        = BinancePaperTradingCryptoLive._get_filter(info["filters"], "LOT_SIZE")
@@ -511,6 +511,10 @@ class BinancePaperTradingCryptoLive:
             # ---------- success ----------
             self.logger.debug("ORDER RESPONSE:\n%s", json.dumps(order, indent=2))
             resp.append(True)
+
+            # Update balances after order execution
+            self._update_balances()
+            self.logger.debug("CASH after order: %.2f", self.cash)
 
         except ClientError as ce:
             self.last_order_error = f"{getattr(ce, 'error_code', '?')} {getattr(ce, 'error_message', str(ce))}"
