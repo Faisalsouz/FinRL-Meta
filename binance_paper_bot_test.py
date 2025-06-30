@@ -18,7 +18,7 @@ paper_bot = BinancePaperTradingCryptoLive(
         
         tech_indicator_list= ["macd","rsi","cci","dx"],
         initial_capital    = 10_000,
-        # log_file_path      = "papertrading_binance.log",
+        log_file_path      = "api/papertrading_crypto/papertrading_binance.log",
         trade_budget= 5000,
 )
 

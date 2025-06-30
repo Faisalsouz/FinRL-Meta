@@ -58,7 +58,10 @@ import type { Metadata } from "next";
                </a>  
                <a href="/performance-analysis" className="text-white hover:text-blue-300 transition duration-300 ease-in-out transform hover:scale-105">
                  Performance Analysis
-               </a>                                                                                                                                                                  
+               </a> 
+                 <a href="/binance-paper-trading" className="text-white hover:text-blue-300 transition duration-300 ease-in-out transform hover:scale-105">
+                 Binance Paper Trade
+               </a>                                                                                                                                                                 
              </div>                                                                                                                                                                   
            </nav>                                                                                                                                                                     
          </header>                                                                                                                                                                    

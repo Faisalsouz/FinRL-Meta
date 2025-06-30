@@ -27,7 +27,7 @@ app = FastAPI()
 # Configure CORS
 origins = [
     "http://localhost:3000",
-    " https://b6ff-77-22-186-73.ngrok-free.app" # Add your frontend URL here
+    "https://b6ff-77-22-186-73.ngrok-free.app" # Add your frontend URL here
 ]
 
 app.add_middleware(
@@ -58,10 +58,11 @@ class BinancePaperTradingRequest(BaseModel):
     sl_multiplier: float = Field(1, example=1)
     atr_window: int = Field(14, example=14)
     max_trade_duration: int = Field(20, example=20)
-    log_file_path: str = Field("api/papertrading_crypto/papertrading_binance.log", example="api/papertrading_crypto/papertrading_binance.log")
+    cwd: str = Field("papertrading_crypto", example="/papertrading_crypto")
+    bn_log_file_path: str = Field("papertrading_crypto/papertrading_binance.log", example="/papertrading_crypto/papertrading_binance.log")
     actor_filename: str = Field("best_actor.pth", example="best_actor.pth")
 
-@app.post("/binance-paper-trade")
+@app.post("/binance_paper_trade")
 def binance_paper_trade_endpoint(req: BinancePaperTradingRequest):
     """
     Endpoint to start Binance paper trading with your DRL agent.
@@ -96,7 +97,9 @@ def binance_paper_trade_endpoint(req: BinancePaperTradingRequest):
 def start_binance_paper_trading(req: BinancePaperTradingRequest):
     global binance_paper_trading
     script_dir = os.path.dirname(os.path.abspath(__file__))
-    cwd_path = os.path.join(script_dir, req.log_file_path)
+    cwd_path = os.path.join(script_dir, req.cwd)
+    bin_paper_log_file_path = os.path.join(script_dir, req.bn_log_file_path)
+    logger.info(f"Log file path of binance paper look is >> : {bin_paper_log_file_path}")
 
     binance_paper_trading = BinancePaperTradingCryptoLive(
         ticker_list=req.ticker_list,
@@ -115,7 +118,7 @@ def start_binance_paper_trading(req: BinancePaperTradingRequest):
         sl_multiplier=req.sl_multiplier,
         atr_window=req.atr_window,
         max_trade_duration=req.max_trade_duration,
-        log_file_path=req.log_file_path,
+        log_file_path=bin_paper_log_file_path,
         actor_filename=req.actor_filename
     )
     
