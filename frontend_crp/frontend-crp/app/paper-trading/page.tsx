@@ -105,11 +105,13 @@ export default function PaperTradingPage() {
   const fetchLogs = async () => {
     try {
       console.log(`Fetching logs from: ${API_BASE_URL}/fetch_binance_logs`);
+      console.log(`Fetching logs from: ${API_BASE_URL}/fetch_binance_logs`);
       const res = await fetch(`${API_BASE_URL}/fetch_binance_logs`);
       if (!res.ok) {
         throw new Error(`HTTP error! status: ${res.status}`);
       }
       const data = await res.text();
+      console.log("Fetched logs:", data);  // Debugging line to check the fetched data
       setLogs(data.split('\n').reverse().join('\n'));
     } catch (err: any) {
       console.error(`Error fetching logs: ${err.message}`);
@@ -118,8 +120,12 @@ export default function PaperTradingPage() {
   };
 
   useEffect(() => {
+    console.log("Setting up interval to fetch logs every 6 seconds");
     const interval = setInterval(fetchLogs, 6000); // Fetch logs every 6 seconds
-    return () => clearInterval(interval); // Cleanup interval on component unmount
+    return () => {
+      console.log("Clearing interval for fetching logs");
+      clearInterval(interval); // Cleanup interval on component unmount
+    };
   }, []);
 
   return (
