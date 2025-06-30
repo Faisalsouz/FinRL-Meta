@@ -39,33 +39,133 @@ app.add_middleware(
 
 crp_paper_trading = None
 
-@app.post("/stop_paper_trade")
-def stop_paper_trade_endpoint():
+binance_paper_trading = None
+
+class BinancePaperTradingRequest(BaseModel):
+    ticker_list: list[str] = Field(..., example=["SOLUSDT"])
+    time_interval: str = Field("1min", example="1min")
+    drl_lib: str = Field("elegantrl", example="elegantrl")
+    agent: str = Field("ppo", example="ppo")
+    net_dim: list[int] = Field(..., example=[256, 128, 64, 32])
+    state_dim: int = Field(7, example=7)
+    action_dim: int = Field(1, example=1)
+    API_KEY: str = Field(..., example="BINANCE_TESTNET_KEY")
+    API_SECRET: str = Field(..., example="BINANCE_TESTNET_SECRET")
+    tech_indicator_list: list[str] = Field(..., example=["macd", "rsi", "cci", "dx"])
+    trade_budget: float = Field(5000, example=5000)
+    tp_multiplier: float = Field(2, example=2)
+    sl_multiplier: float = Field(1, example=1)
+    atr_window: int = Field(14, example=14)
+    max_trade_duration: int = Field(20, example=20)
+    log_file_path: str = Field("api/papertrading_crypto/papertrading_binance.log", example="api/papertrading_crypto/papertrading_binance.log")
+    actor_filename: str = Field("best_actor.pth", example="best_actor.pth")
+
+@app.post("/binance-paper-trade")
+def binance_paper_trade_endpoint(req: BinancePaperTradingRequest):
     """
-    Endpoint to stop the live paper trading loop.
+    Endpoint to start Binance paper trading with your DRL agent.
     """
-    global crp_paper_trading
-    logger.info("Received stop paper trading request")
-    
-    if crp_paper_trading:
-        crp_paper_trading.stop()
-        logger.info("Paper trading stopped successfully")
+    logs = []
+    try:
+        logger.info("Received Binance paper trading request")
+        logs.append("Received Binance paper trading request")
+        logger.info(f"Request data: {req.dict()}")
+        logs.append(f"Request data: {req.dict()}")
+
+        # Start paper trading in a separate thread
+        binance_paper_trading_thread = threading.Thread(target=start_binance_paper_trading, args=(req,))
+        binance_paper_trading_thread.start()
+
         return {
-            "message": "Paper trading stopped!",
+            "message": "Binance paper trading started!",
+            "received": req.dict(),
+            "logs": logs,
+            "error": None  # No error occurred
+        }
+    except Exception as e:
+        logger.error(f"Error occurred: {str(e)}")
+        logs.append(f"Error occurred: {str(e)}")
+        return {
+            "message": "Failed to start Binance paper trading!",
+            "received": req.dict(),
+            "logs": logs,
+            "error": str(e)  # Include the error message
+        }
+
+def start_binance_paper_trading(req: BinancePaperTradingRequest):
+    global binance_paper_trading
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    cwd_path = os.path.join(script_dir, req.log_file_path)
+
+    binance_paper_trading = BinancePaperTradingCryptoLive(
+        ticker_list=req.ticker_list,
+        time_interval=req.time_interval,
+        drl_lib=req.drl_lib,
+        agent=req.agent,
+        cwd=cwd_path,
+        net_dim=req.net_dim,
+        state_dim=req.state_dim,
+        action_dim=req.action_dim,
+        API_KEY=req.API_KEY,
+        API_SECRET=req.API_SECRET,
+        tech_indicator_list=req.tech_indicator_list,
+        trade_budget=req.trade_budget,
+        tp_multiplier=req.tp_multiplier,
+        sl_multiplier=req.sl_multiplier,
+        atr_window=req.atr_window,
+        max_trade_duration=req.max_trade_duration,
+        log_file_path=req.log_file_path,
+        actor_filename=req.actor_filename
+    )
+    
+    logger.info("Starting Binance paper trading")
+    binance_paper_trading.run()
+    logger.info("Binance paper trading started successfully")
+
+@app.post("/binance-stop-trading")
+def binance_stop_trading_endpoint():
+    """
+    Endpoint to stop the Binance paper trading loop.
+    """
+    global binance_paper_trading
+    logger.info("Received stop Binance paper trading request")
+    
+    if binance_paper_trading:
+        binance_paper_trading.stop()
+        logger.info("Binance paper trading stopped successfully")
+        return {
+            "message": "Binance paper trading stopped!",
             "logs": [
-                "Received stop paper trading request",
-                "Paper trading stopped successfully"
+                "Received stop Binance paper trading request",
+                "Binance paper trading stopped successfully"
             ]
         }
     else:
-        logger.error("Paper trading instance not found")
+        logger.error("Binance paper trading instance not found")
         return {
-            "message": "Paper trading instance not found!",
+            "message": "Binance paper trading instance not found!",
             "logs": [
-                "Received stop paper trading request",
-                "Paper trading instance not found"
+                "Received stop Binance paper trading request",
+                "Binance paper trading instance not found"
             ]
         }
+
+@app.get("/binance-fetch-paper-logs")
+def binance_fetch_paper_logs():
+    """
+    Endpoint to fetch the Binance paper trading log file contents.
+    """
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    log_file_path = script_dir + "/papertrading_crypto/papertrading_binance.log"
+    return FileResponse(log_file_path, media_type='text/plain')
+
+@app.get("/binance-start-trading")
+def binance_start_trading():
+    """
+    Endpoint to start Binance paper trading.
+    """
+    # This endpoint can be used to trigger the start of trading if needed
+    return {"message": "Binance paper trading start endpoint is available."}
 
 @app.get("/fetch_logs")
 def fetch_logs():
