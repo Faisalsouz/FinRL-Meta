@@ -158,6 +158,10 @@ def binance_fetch_paper_logs():
     """
     script_dir = os.path.dirname(os.path.abspath(__file__))
     log_file_path = script_dir + "/papertrading_crypto/papertrading_binance.log"
+    logger.info(f"Fetching logs from: {log_file_path}")
+    if not os.path.exists(log_file_path):
+        logger.error(f"Log file not found: {log_file_path}")
+        return {"error": "Log file not found"}
     return FileResponse(log_file_path, media_type='text/plain')
 
 # @app.get("/binance-start-trading")
