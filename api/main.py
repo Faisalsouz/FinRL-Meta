@@ -27,7 +27,7 @@ app = FastAPI()
 # Configure CORS
 origins = [
     "http://localhost:3000",
-    "https://b17a-77-22-186-73.ngrok-free.app" # Add your frontend URL here
+    " https://b6ff-77-22-186-73.ngrok-free.app" # Add your frontend URL here
 ]
 
 app.add_middleware(
@@ -151,7 +151,7 @@ def binance_stop_trading_endpoint():
             ]
         }
 
-@app.get("/binance-fetch-paper-logs")
+@app.get("/fetch_binance_logs")
 def binance_fetch_paper_logs():
     """
     Endpoint to fetch the Binance paper trading log file contents.
@@ -160,17 +160,18 @@ def binance_fetch_paper_logs():
     log_file_path = script_dir + "/papertrading_crypto/papertrading_binance.log"
     return FileResponse(log_file_path, media_type='text/plain')
 
-@app.get("/binance-start-trading")
-def binance_start_trading():
-    """
-    Endpoint to start Binance paper trading.
-    """
-    # This endpoint can be used to trigger the start of trading if needed
-    return {"message": "Binance paper trading start endpoint is available."}
+# @app.get("/binance-start-trading")
+# def binance_start_trading():
+#     """
+#     Endpoint to start Binance paper trading.
+#     """
+#     # This endpoint can be used to trigger the start of trading if needed
+#     return {"message": "Binance paper trading start endpoint is available."}
 
 @app.get("/fetch_logs")
 def fetch_logs():
     """
+    alpaca paper trading log file contents. to get performance metrics.
     Endpoint to fetch the log file contents.
     """
     script_dir = os.path.dirname(os.path.abspath(__file__))
