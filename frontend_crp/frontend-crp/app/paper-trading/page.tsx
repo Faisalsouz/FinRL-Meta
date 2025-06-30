@@ -104,13 +104,15 @@ export default function PaperTradingPage() {
 
   const fetchLogs = async () => {
     try {
-      const res = await fetch(`${API_BASE_URL}/fetch_logs`);
+      console.log(`Fetching logs from: ${API_BASE_URL}/fetch_binance_logs`);
+      const res = await fetch(`${API_BASE_URL}/fetch_binance_logs`);
       if (!res.ok) {
         throw new Error(`HTTP error! status: ${res.status}`);
       }
       const data = await res.text();
       setLogs(data.split('\n').reverse().join('\n'));
     } catch (err: any) {
+      console.error(`Error fetching logs: ${err.message}`);
       setError(err.message);
     }
   };
