@@ -27,7 +27,7 @@ app = FastAPI()
 # Configure CORS
 origins = [
     "http://localhost:3000",
-    "https://b6ff-77-22-186-73.ngrok-free.app" # Add your frontend URL here
+    "https://7c82-77-22-186-73.ngrok-free.app" # Add your frontend URL here
 ]
 
 app.add_middleware(
@@ -126,7 +126,7 @@ def start_binance_paper_trading(req: BinancePaperTradingRequest):
     binance_paper_trading.run()
     logger.info("Binance paper trading started successfully")
 
-@app.post("/binance-stop-trading")
+@app.post("/stop_binance_paper_trade")
 def binance_stop_trading_endpoint():
     """
     Endpoint to stop the Binance paper trading loop.
